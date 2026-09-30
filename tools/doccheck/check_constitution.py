@@ -17,7 +17,7 @@ under docs/ and reports:
   5. dimensional audit: every formula-registry `dim:` expression is dimensionally consistent
      under the canonical dimension table in 03; dimension table agrees with registry units
   6. bibliography counts
-  7. repository content: no files other than Markdown and this checker
+  7. repository content: no files other than Markdown, this checker and its mutation suite (mutation_suite.py)
 
 Usage:  python3 tools/doccheck/check_constitution.py [--verbose]
 Exit status 0 iff every gate count is zero.
@@ -492,7 +492,7 @@ def main():
         "AUD": set(re.findall(r"^### (AUD-\d{3})", review_text, re.M)),
     }
     pats = {"T": r"\bT-\d+[a-zN]*\b", "RQ": r"\bRQ-\d+", "D": r"\bD-\d+\b", "H": r"\bH\d+\b", "G": r"\bG\d+\b",
-            "FM": r"\bFM-[A-Z]+-\d+", "RT": r"\bRT-\d+", "F": r"\bF\d{3}\b", "DC": r"\bDC-\d+", "OC": r"\bOC-\d+",
+            "FM": r"\bFM-[A-Z]+-\d+", "RT": r"\bRT-\d+", "F": r"\bF\d{3}\b", "DC": r"(?<!FM-)\bDC-\d+", "OC": r"\bOC-\d+",
             "E": r"(?<![A-Z-])E-\d+\b", "DT": r"\bDT-\d+", "L": r"(?<![A-Z-])L-\d+\b", "S": r"\bS-\d+",
             "A": r"\bA-(?:SCOPE|ACC|AUTH|MKT|STOPLIVE|STOP|TRIG|GAP|LIQ|EXE|STAT|NLA|NUM|TIME|SET|FLOW|MATH)(?:-\d+)?\b",
             "REV": r"\bREV-\d{3}\b", "AUD": r"\bAUD-\d{3}\b"}
@@ -690,7 +690,7 @@ def main():
         if ".git" in p.parts or p.is_dir():
             continue
         rel = p.relative_to(ROOT).as_posix()
-        if rel.endswith(".md") or rel == "tools/doccheck/check_constitution.py":
+        if rel.endswith(".md") or rel in ("tools/doccheck/check_constitution.py", "tools/doccheck/mutation_suite.py"):
             continue
         other.append(rel)
     report["NON_DOCUMENTATION_FILES"] = other

@@ -59,7 +59,10 @@ historical data that enters only in the conservative direction and is bounded by
 *protective meaning* conditional; the condition MUST be named (tiers U/S/G/L, 06 §2).
 **Amendment (v0.2, AUD-002).** Every estimate or model quantity that the hard layer consumes ($\kappa^{\mathrm{out}}$, $\Lambda$, $\mathrm{ADV}$,
 $\Gamma$) is a *hard-layer component*: its estimator definition is frozen, versioned in $\mathsf v$ and set under human authority, and it
-enters only through a policy bound in the conservative direction (F111). Advanced models MUST NOT supply or replace these inputs;
+enters only through a policy bound in the conservative direction (F111): a floor for a cost ($\kappa^{\mathrm{out}}$, $\Gamma$, $\Lambda$) and a cap for a
+capacity ($\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$; closure, AUD-040); a statistical cluster map may only merge clusters of the human-set
+map (S-006). A missing estimate gives $\alpha_t=0$, never the policy bound (AUD-041). Invariant: every hard cap computed with any estimates is $\le$
+the same cap with every estimated input at its policy bound. Advanced models MUST NOT supply or replace these inputs;
 their only channel is a proposed budget $b^{\mathrm{mod}}_k$ (Art. 5). Otherwise a model could enlarge hard caps through their inputs.
 
 **Art. 7 — Exact authority arithmetic.** Every quantity on the authority path is computed exactly in $\mathbb Q$ or with rounding
@@ -275,7 +278,7 @@ $$
 - $\mathcal A^{\mathrm{safe}}(x_t)=\varnothing$ ⇒ NO\_TRADE (or RECOVERY if a floor-safety invariant of the *existing* portfolio fails).
   Never an exception, never a fallback guess.
 - **Viability interpretation (PROVISIONAL; T-21, T-20a, T-20b).** The tiers of 06 correspond to robust controlled-invariant sets under
-  nested disturbance sets (sufficient forms; without partially filled or stale-reserved orders the exact one-step condition replaces $K$ by
+  nested disturbance sets (sufficient forms; when no clamp of F144/F145 is active on a pending order the exact one-step condition replaces $K$ by
   $E-F=K+\Lambda$, T-21, F143): $\{R^{\mathrm{open}}+R^{\mathrm{res}}\le K\}$ under tier S, $\{G^{\mathrm{open}}+G^{\mathrm{res}}\le K\}$ under tier G, and
   $\{Z^{\mathrm{open}}+Z^{\mathrm{res}}\le K\}$ (notional plus exit fees; v0.2, AUD-027) under the maximal disturbance set (any path with prices
   $\ge0$, exits impossible). One-step
@@ -319,6 +322,8 @@ may be very large; the certificate may reject almost all trades. That outcome wo
 | Losses, costs, consumptions, reservations, open risk | toward $+\infty$ | larger consumption is conservative |
 | Quantities | floor to lattice $\mathbb L$ | never exceed a cap |
 | Gap exit bound $p^{\mathrm{gx}}$ (F060, long) | toward $-\infty$ | larger loss |
+| Carried floor references $H_t$, $\nu^{\mathrm{day}}_0$, $\nu^{\mathrm{wk}}_0$, $\nu^{\mathrm{ref}}$ (when stored at a scale) | toward $+\infty$ | a higher reference raises the floor; rounding $H$ down enlarged $K$ by $9{,}000$ USD at $W=10^8$, $U=3\cdot10^6$ (AUD-045) |
+| Units $U_t$ and NAV per unit $\nu_t=W_t/U_t$ | not rounded: exact rationals carried as integer pairs | $U$ raises the floor in F040 and lowers $\nu$ in F037, so no single direction is conservative |
 | Reporting / display only | half-even (or half-up) | never fed back into authority |
 
    Rounding Conservatism (T-24): if every consumption is rounded up and every budget down, the rounded feasible set is a subset of
@@ -328,7 +333,7 @@ may be very large; the certificate may reject almost all trades. That outcome wo
    required, compute a candidate and **certify** it exactly (a candidate $y_2\ge0$ is accepted as an upper bound of $\sqrt{y_1}$ only if
    $y_2^2\ge y_1$ in exact arithmetic **[F028]**). Observed: Python `Decimal.sqrt` and `Decimal.ln` ignore the context rounding mode (floor and ceiling give
    identical results), so directed rounding cannot be obtained by setting the context.
-5. **Special values.** NaN, sNaN, $\pm\infty$ and signed zero are rejected at the boundary. `Decimal.min`/`Decimal.max` MUST NOT be
+5. **Special values.** NaN, sNaN, $\pm\infty$ and signed zero are rejected at the boundary (grammar of item 17 (a)). `Decimal.min`/`Decimal.max` MUST NOT be
    used: they follow IEEE minNum/maxNum semantics and silently discard a quiet NaN (observed: `Decimal('NaN').max(5) → 5`),
    converting "model failed" into "model imposes no limit". Python's built-in `min` on floats is order-dependent with NaN
    (observed: `min(5.0, nan) → 5.0`, `min(nan, 5.0) → nan`). `Decimal(0).ln()` returns `-Infinity` without signalling (observed).
@@ -348,9 +353,13 @@ may be very large; the certificate may reject almost all trades. That outcome wo
     parsing; timestamps as UTC integers; exchange-calendar day boundaries from versioned reference data.
 12. **Parser rules (v0.2, AUD-018).** Snapshots are parsed with a strict parser that rejects the tokens NaN, Infinity and −Infinity and any
     numeral that does not parse exactly to a finite decimal; numbers are parsed as decimals, never as binary floats (common JSON parsers
-    accept NaN and Infinity and map 1e400 to ∞ by default — red-team J01–J03).
-13. **Negative zero.** Negative zero can be produced internally (−0 × 5 = −0, red-team Z05); it MUST be normalised to zero before
-    quantisation, comparison output and serialisation, so equal values have identical canonical bytes.
+    accept NaN and Infinity and map 1e400 to ∞ by default — red-team J01–J03). "Parses to a finite decimal" is not enough: the text must also
+    match the grammar of item 17 (a), which excludes `-0`, exponents and non-ASCII digits.
+13. **Negative zero (one rule, closure AUD-046).** At the boundary a negative zero is **rejected** (items 5, 17 (a)): the field is invalid, so an
+    authoritative input gives $\alpha_t=0$, a REQUIRED model output gives $\mathfrak s=0$ and an OPTIONAL one imposes no constraint (F047). Internally,
+    exact rationals have no negative zero; a decimal intermediate can produce one (−0 × 5 = −0, red-team Z05) and it MUST be normalised to zero
+    before quantisation, comparison output and serialisation, so equal values have identical canonical bytes. F047 maps a finite $y\le0$,
+    including an internal $-0$, to $0$.
 14. **No mixed-type arithmetic.** Exact types only on the authority path; mixing an exact rational with a binary float silently yields a float
     (red-team X01) and is forbidden.
 15. **Money quantisation.** Quantising to the declared cent scale follows the direction table: fees, losses and consumptions round up;
@@ -358,6 +367,43 @@ may be very large; the certificate may reject almost all trades. That outcome wo
 16. **Division guard.** Every division on the authority path has a denominator established as non-zero before it is evaluated: a per-share
     loss only after gate G7 has established it is at least $\ell^{\min}p^{\mathrm{lim}}>0$ (red-team T01–T04, I06); $H_t>0$ and $U_t>0$ (F036–F038);
     $\mu^{K}-f^{\mathrm{trd}}\ne0$ where F100 is evaluated. Otherwise the quantity is undefined and the decision is NO\_TRADE (Art. 4).
+17. **Canonical numeric rule (normative for every future implementation; Phase-0 closure, AUD-036).**
+    (a) *Carrier.* Every authority number in a snapshot, policy file or decision record is a JSON **string**, never a JSON number, whose text
+    matches `-?(0|[1-9][0-9]*)` when the field's declared scale `s` is 0 and `-?(0|[1-9][0-9]*)\.[0-9]{s}` (exactly `s` fractional digits)
+    when `s > 0`, and which is not a negative zero (`-0`, `-0.00`). Hence no exponent, no leading `+`, no leading zeros, no whitespace, no `NaN`,
+    `Infinity` or `-Infinity`. A value with a different number of fractional digits is rejected, never rounded or padded.
+    (b) *Parse.* A conforming string becomes an exact rational (integer numerator and denominator) and is checked against $\bar M$ or $\bar N$
+    (item 6). Any failure — wrong JSON type, non-conforming text, a non-finite token, out of range — makes the field invalid, so $\alpha_t=0$ and the
+    decision is NO\_TRADE naming the field (Art. 4, Art. 18). A JSON parser must be configured to reject non-finite tokens: common defaults accept
+    `NaN` and `Infinity` and turn `1e400` into infinity (red-team J01–J03); even a strict decimal parse turns `1e400` into a finite `1E+400`, which
+    the grammar and the magnitude bound reject.
+    (c) *Arithmetic.* Exact rationals only. Binary floats are rejected by type wherever a value enters the authority path; an exact rational
+    never meets a float (a rational plus a float silently yields a float, X01) or a decimal object. If a decimal type is used instead of
+    rationals, every operation runs in an explicit local context with InvalidOperation, DivisionByZero, Overflow and Inexact trapped, except at
+    declared directed-rounding sites, so no result depends on a global context (a 5-digit context silently rounds 1.23456 to 1.2346).
+    (d) *Rounding.* The only rounding on the authority path is directed rounding at declared sites (items 3 and 15): toward $-\infty$ for budgets,
+    capacities, buying power, lattice quantities ($\delta_q\lfloor\cdot/\delta_q\rfloor$) and the gap exit bound; toward $+\infty$ for losses, costs, fees,
+    reservations, open risk and limit prices. Floor and ceiling have no ties, so half-way values are unambiguous; round-to-nearest (half-up,
+    half-even) is for display only and is never fed back.
+    (e) *Zero.* Exact rationals have no signed zero; an intermediate decimal $-0$ is normalised to $0$ before any comparison output or serialisation
+    (item 13).
+    (f) *Serialise.* Output uses grammar (a) at the field's declared scale; the sign `-` appears only for values $<0$. A value not exactly
+    representable at the declared scale must pass through its directed-rounding site first; otherwise it is an error, never a silent rounding.
+    Keys sorted, UTF-8, no insignificant whitespace (item 10). Equal values therefore have identical bytes (T-14). The per-field scales belong to
+    the schema version in $\mathsf v$ and are **UNDEFINED — REQUIRES RESOLUTION** (roadmap R5).
+    (g) *Strict document (third review, AUD-036).* Duplicate keys in one object are rejected (a common parser keeps the last one and reads
+    `{"cash":"100","cash":"-5"}` as $-5$). Numeric strings use ASCII digits `0`–`9` only: a decimal constructor also accepts `nan`, `-iNfInItY`,
+    surrounding whitespace, `1_000` and non-ASCII digits, so the grammar check precedes any library parse. The document is valid UTF-8 and
+    contains no lone surrogate escapes.
+    (h) *Bytes and hash.* Object keys are ordered by Unicode code point of the key; strings are escaped minimally (only `"`, `\` and control
+    characters, as `\"`, `\\`, `\n`-style or `\u00XX`); no insignificant whitespace; the evidence hash is SHA-256 of these bytes; timestamps are
+    UTC integer nanoseconds since the Unix epoch, carried as integer strings (scale 0).
+    (i) *Runtime-type invariant.* Every value on the authority path is an exact rational at run time. Operations that return a binary float from
+    exact operands are forbidden (`Fraction ** Fraction(1, 2)` and `math.sqrt(Fraction(2))` return floats with no float operand); a type
+    assertion runs at every directed-rounding site and before serialisation. Non-rational functions go through the certification of item 4.
+    (j) *Floor is not truncation.* Lattice and money floors are mathematical floors (toward $-\infty$). Truncation toward zero differs for negative
+    operands (decimal integer division gives $-7\,/\!/\,2=-3$ and `Decimal('-0.01') // 1` gives $-0$). Hard budgets are clamped at $0$ (F049) before
+    any floor, so a floor never meets a negative operand on the authority path.
 
 ## 10. Integration boundary (Phase 19) — requirements only, no schema
 

@@ -40,7 +40,7 @@ Observations that shape the comparison:
   other entry is a candidate *proposer* inside it. Its novelty is therefore low (see 11 §3) — the value lies in exactness and the
   tiered-guarantee accounting, not in the filter idea.
 - **AA-1 is not merely a throttle choice**: T-21 shows the cushion line is the maximal floor-safe policy under tier S (exactly so on a flat
-  book; with held positions the exact condition has slack $\Lambda_t$ (OC-1) plus any OC-4 over-charge); AA-1 is the
+  book; with held positions the exact condition has slack $\Lambda_t$, OC-1); AA-1 is the
   boundary case of BL-3 with $\mu^{K}=1$.
 - **AA-10 may be unnecessary** if OPEN-1 is proved: the tier sets would *be* the viability kernels in closed form.
 - AA-4/AA-5/AA-6/AA-7 require a return or gap law; their guarantees are conditional on RQ-12 and RQ-04.

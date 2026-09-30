@@ -377,14 +377,328 @@ chain findings → corrections stays auditable.*
 | Required correction | Add case (2′) and the hypothesis to T-10; register OC-4 in 05 §4a; state in the cost conservation table that reservations are released only at terminal state. |
 | Test / proof obligation | Regression scenario above: remainder-only reservation must breach; full reservation must not. |
 
+### AUD-034
+
+*Found during Phase-0 closure (re-derivation of the partial-fill construction, after commit `f37c1b6`).*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 05 §4a OC-4, §4b; 06 §5 F144; 08 T-10 case (2′), T-21; 14 F144 (at `f37c1b6`) |
+| Formula / proposition | Charge of a partially filled order: $r^{\mathrm{open}}_i$ plus the full-order reservation $L^{\mathrm{stop}}(n')$ (OC-4) |
+| Finding | The construction is safe but counts **realised** costs a second time: the entry fees already paid (in $W_t$ through cash) and the filled quantity's entry-to-stop risk are charged again inside the full-order reservation. It also made T-21's "only if" false (REV-025) and kept a ledger value (max with $R^{\mathrm{led}}$) that is not the worst case. |
+| Independent reproduction | Exact: order $6$ sh at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.1+0.01n$, fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=2$; $2$ filled (fee $1$ paid), mark $52$, $\Lambda=1.02$: worst loss $12.94$; draft charge $19.20$, over-charge $5.24=q(p^{\mathrm{lim}}-p^{\mathrm{stop}}+\kappa(q))+\phi^{\mathrm{split}}(q)+\phi^{\mathrm{paid}}$ — contains the paid fee. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | A realised cost counted twice (conservative); T-21 necessity false in the presence of such orders. |
+| Required correction | Exact exposure charge F145 ($r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$, fees paid excluded); F144 re-evaluates every reservation from the order state (remaining quantity, remaining cost) without a ledger floor; OC-4 eliminated; T-10 case (2′) and T-21 restated; A-AUTH-02 carries the order state; A-AUTH-05 ledger-only. |
+| Test / proof obligation | Exhaustive enumeration: worst loss $=$ charge $-\Lambda$ in every state; two-period chains: realised plus remaining never below the total worst case (08 T-10 (o)). Third-review findings 3 and 8 (reproduced against `f37c1b6`: reading F144's quantity as the remainder gives $W_{t+1}=F_t-179$; the full ledger vector counts $5{,}001$ of realised cash twice in H14) have this root; the closure F144 names the total quantity $n'$ and charges only remaining quantity, notional and cash. |
+
+### AUD-035
+
+*Found during Phase-0 closure (review of the OC register against "no realised cost counted twice").*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 05 §4a OC-2, OC-3; 06 §4–§5 F048, F074, H3; 14 F048, F074, F078 (at `f37c1b6`) |
+| Formula / proposition | $\mathrm{BP}^{\mathrm{avail}}=\min(\mathrm{BP},C^{\mathrm{avail}})-C^{\mathrm{res}}$; H3 with the current base $B_t$ |
+| Finding | Two registered over-charges were avoidable: pending cash is deducted twice when the broker figure already nets open orders (OC-2), and a realised strategy loss reduces $B_t$ and is subtracted again as $\mathrm{SL}$ (OC-3, a realised loss counted twice). Neither was needed for any theorem. |
+| Independent reproduction | Algebra: with $\mathrm{BP}=C^{\mathrm{avail}}-C^{\mathrm{res}}$ (broker nets orders) the draft gives $C^{\mathrm{avail}}-2C^{\mathrm{res}}$; with loss $\ell$ in window, the draft H3 budget falls by $f^{\mathrm{strat}}_s\ell+\ell$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Conservative double deductions, one of a realised loss. |
+| Required correction | F048 $=\min(\mathrm{BP}_t,C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$ (broker figure only restricts); H3 and F074 use the window-start base $B^{\mathrm{win}}_s$; OC-2, OC-3 eliminated. T-05 unaffected ($B^{\mathrm{win}}_s$ constant; F048 falls by $\Delta$ under a consistent cash reduction). |
+| Test / proof obligation | Metamorphic: broker figure raised ⇒ H14 cap not raised. |
+
+### AUD-036
+
+*Found during Phase-0 closure (numerical-boundary requirement); extended and upgraded by the third independent review (finding 10).*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT (upgraded from MINOR at closure: two conforming parsers could read different snapshots from identical bytes) |
+| Document / section | 01 §9 items 1, 10, 12, 13 (at `f37c1b6`) |
+| Formula / proposition | Canonical numeric form |
+| Finding | "Decimal string at a declared scale" did not fix the grammar: exponent notation (a decimal library may print `1E+2`), a strictly parsed `1e400` (finite `1E+400`), input with more digits than the scale, and `-0.00` on input were not excluded, so two conforming implementations could produce different bytes. |
+| Independent reproduction | Probes: strict decimal JSON parse of `1e400` yields `Decimal('1E+400')`, finite; `Decimal('1E+2')` accepted; `-0.00` preserved by a decimal parse. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Replay determinism (T-14) not guaranteed across implementations. |
+| Required correction | 01 §9 item 17: exact grammar per declared scale, rejection rules, exact-rational parse, trapped decimal contexts, directed rounding only, serialisation grammar. |
+| Test / proof obligation | Grammar test vectors (accept/reject lists) at R5. Third-review extension (reproduced): a common JSON parser keeps the last duplicate key (`{"cash":"100","cash":"-5"}` reads $-5$); a decimal constructor accepts `nan`, `-iNfInItY`, `' 1.5 '`, `1_000` and non-ASCII digits; `Fraction ** Fraction(1, 2)` and `math.sqrt(Fraction)` return floats; decimal `//` truncates ($-7\,/\!/\,2=-3$) and yields $-0$. Correction: 01 §9 item 17 (g)–(j) (duplicate keys rejected, ASCII digits, key order by code point, minimal escaping, SHA-256, UTC integer nanoseconds, runtime-type invariant, floor not truncation). |
+
+### AUD-037
+
+*Found during Phase-0 closure (manual review of every "iff" claim after the checker reached zero).*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 06 §7 throttle-family table, row "Linear in DD" (present since the baseline) |
+| Formula / proposition | "Floor-safe alone: single trade iff $f^{\mathrm{trd}}\le\mu^{K}d^{\max}$" |
+| Finding | The "only if" direction is false. With $B=W$, only $F^{\mathrm{dd}}$ active and no other risk, safety of one trade needs $f^{\mathrm{trd}}H(1-\mathrm{DD})(1-\mathrm{DD}/d^{\max})\le H(d^{\max}-\mathrm{DD})$ for all $\mathrm{DD}\in[0,d^{\max})$, i.e. $f^{\mathrm{trd}}\le d^{\max}$; $\mu^{K}$ does not enter. |
+| Independent reproduction | Exact grid ($1{,}000$ points of DD): $d^{\max}=10\%$, $\mu^{K}=0.5$: $f^{\mathrm{trd}}=5\%$ safe, $f^{\mathrm{trd}}=10\%$ safe although $f^{\mathrm{trd}}>\mu^{K}d^{\max}$, $f^{\mathrm{trd}}=10.1\%$ unsafe. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | A false equivalence in a comparison table (no hard-layer computation uses it). |
+| Required correction | State the exact condition $f^{\mathrm{trd}}\le d^{\max}$ with its hypotheses; qualify the cushion row's "iff" as "in every state". |
+| Test / proof obligation | Grid check above. |
+
+### AUD-038
+
+*Found during Phase-0 closure (manual review of reservation identities).*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 05 §7 F070; 08 T-19; 14 F070 (at `f37c1b6`) |
+| Formula / proposition | $W^{\min}_{t+1}=C_t-Y_t-Z^{\mathrm{res}}_t-L^{\mathrm{abs}}(n)-\sum_i\phi^{\mathrm{sell}}_{i,0}(q_{i,t})-\bar A_{t+1}$ |
+| Finding | With the full reservation held until terminal, $Z^{\mathrm{res}}_t$ of a partially filled order subtracts the whole order's cost although the filled part's cost and fees are already out of $C_t$; its exit fee is also charged in both $Z^{\mathrm{res}}_t$ and the sum over holdings. A realised cost is subtracted twice (conservative). |
+| Independent reproduction | Order $6$ sh at $50$, $2$ filled (cost $100$, fee $1$ paid): `f37c1b6`'s $W^{\min}$ subtracts $6\cdot50+\phi^{\mathrm{buy}}(6)+\phi_0(6)$ plus $\phi_0(2)$, i.e. $100$ of filled cost and $1$ of paid fee again; exhaustive enumeration of the closure form (prices to $0$, remaining fills, up to $N^{\mathrm{ex}}+1$ fee-bearing parts): $W_{t+1}\ge W^{\min}_{t+1}$ always, with equality attained. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | $W^{\min}$ too low (log-domain condition T-19 more restrictive than necessary); no unsafe result. |
+| Required correction | $W^{\min}_{t+1}=C_t-Y_t-C^{\mathrm{res}}_t-L^{\mathrm{abs}}(n)-\sum_i\phi^{\mathrm{split}}_{i,0}(\bar q_i)-\bar A_{t+1}$ with remaining commitments (F144) and $\bar q_i$ the largest quantity that can be held. |
+| Test / proof obligation | Enumeration above. |
+
+### AUD-039
+
+*Found by the third independent review of `f37c1b6` (finding 1); reproduced independently.*
+
+| Field | Value |
+|---|---|
+| Severity | **CRITICAL** (a load-bearing theorem false inside its own hypotheses) |
+| Document / section | 08 T-10 case (2′) and case (2), T-21, T-25, T-06c; 05 §5; 06 §5; 14 F144, F145 (at `f37c1b6` and in the closure draft) |
+| Formula / proposition | Per-share distance $p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n')$ of the unfilled part of a pending order |
+| Finding | G7 checks $p^{\mathrm{stop}}_o<p^{\mathrm{lim}}$ only when the order is placed; a stop trailed to or above the limit later (T-06c asks for trailing) makes the distance negative, and the proof's "using $p'^{\mathrm{lim}}>p^{\mathrm{stop}}_i$" has no hypothesis behind it. The unfilled part may not fill, so a negative term is not a credit. |
+| Independent reproduction | Exact: order $n'=200$ at $50$, stop $49$ at reservation ($\kappa=0.1$, ledger $220$), $100$ filled; at $\tau_t$ $m=52$, $\Lambda_t=1$, stop $51$, $\kappa^{\mathrm{out}}(n)=0.00005n^2$: `f37c1b6` charge $150+220=370=K_t$, worst loss $399$ ⇒ $W_{t+1}=F_t-29$. Closure draft F144 without the clamp on a fresh pending order (stop $51$, limit $50$, $\kappa=0.1$, \$1 minimum fees, $100$ sh): charge $-87$ against worst loss $1.2$. Randomised search: $1{,}126$ breaches in $5{,}882$ trials with the stop at or above the limit (reviewer); $1{,}772$ understatements in $8{,}795$ such trials of the unclamped closure F145 (this audit). |
+| Status | **CONFIRMED** |
+| Mathematical consequence | T-10 (and with it T-21 (a), T-25, T-06c) false for such states at `f37c1b6`; no other theorem affected. |
+| Required correction | Clamp the unfilled part's per-share distance at $0$ in F144 and F145 (tier G likewise); T-10 cases (2), (2′) prove $e\,x\le(n'-q)x^+$; T-21 (b), (c) require inactive clamps; T-10N regression; FM-OPS-11. |
+| Test / proof obligation | Clamped charge: $0$ understatements in $46{,}200$ enumerated scenarios (stops $2$ below to $3$ above the limit) and in $20{,}000$ randomised trials; the T-10N scenario must breach without the clamp. |
+
+### AUD-040
+
+*Found by the third independent review (finding 2); reproduced independently.*
+
+| Field | Value |
+|---|---|
+| Severity | **CRITICAL** (a statistical estimate could enlarge a hard cap without limit) |
+| Document / section | 01 Art. 6 amendment; 06 §5, §5a; 08 T-01 invariant; 14 F111; 02 S-006, S-054 (at `f37c1b6`) |
+| Formula / proposition | $\mathrm{ADV}_{i,t}$ in H12, H13; the cap invariant; the cluster map |
+| Finding | ADV had no policy bound, so H12, H13 grow with the estimate; 06 §5 itself said none exists. The stated invariant "an arbitrarily optimistic estimate never increases $Q^{\mathrm{hard}}$" is false for $\hat\kappa^{\mathrm{out}}$ below a pessimistic value. A statistical cluster map (RQ-10) could split clusters and enlarge H9, H10. |
+| Independent reproduction | H13 with $\rho^{\mathrm{ex}}h^{\mathrm{ex}}=0.1$ day, $q=Q^{\mathrm{res}}=0$: ADV $5{,}000$ ⇒ $500$ sh; ADV $10^7$ ⇒ $1{,}000{,}000$ sh. H1 with $f^{\mathrm{trd}}B=1{,}000$, limit $50$, stop $49$, $\kappa^{\min}=0.001$: $\hat\kappa^{\mathrm{out}}=0.5$ ⇒ $666$ sh, $\hat\kappa^{\mathrm{out}}=0$ ⇒ $953$ sh. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | "No estimate can enlarge a hard cap beyond policy" did not hold for H12, H13 (and H9, H10 under a statistical cluster map). |
+| Required correction | $\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$ (F111; S-299, S-300); statistical cluster maps merge-only (S-006); invariant restated: $Q^{\mathrm{hard}}$(any estimates) $\le Q^{\mathrm{hard}}$(every estimated input at its policy bound). |
+| Test / proof obligation | Metamorphic test of the restated invariant over all estimated inputs. |
+
+### AUD-041
+
+*Found by the third independent review (finding 4); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 06 §5 (at `f37c1b6`) versus 01 Art. 4 |
+| Formula / proposition | "Missing estimator output ⇒ the policy bound is used for $\kappa^{\mathrm{out}},\Gamma,\Lambda$" |
+| Finding | The policy bound is the most permissive admissible value, so an estimator outage loosened every cap it enters. |
+| Independent reproduction | H1 example of AUD-040: estimate $0.5$ ⇒ $666$ sh; estimate missing ⇒ floor ⇒ $953$ sh. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | UNKNOWN treated as the permissive bound (Art. 4 violated); caps stayed within policy, so no hard limit was exceeded. |
+| Required correction | A missing $\hat\kappa^{\mathrm{out}}$, $\hat\Gamma$, $\hat\Lambda$ or $\mathrm{ADV}^{\mathrm{est}}$ ⇒ $\alpha_t=0$ (F111; 06 §5; 01 Art. 6). |
+| Test / proof obligation | Estimator-outage test ⇒ NO\_TRADE naming the input. |
+
+### AUD-042
+
+*Found by the third independent review (finding 5); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 08 T-10, T-21, T-10N; 04 A-ACC-05 (at `f37c1b6`) |
+| Formula / proposition | Tier S with an exposure without an authoritative stop (D-06) |
+| Finding | D-06 charges $u^{\mathrm{open}}$ but A-TRIG is undefined without a stop, and tier S listed neither A-MKT-01 nor A-ACC-05; T-10N listed "D-06 removed" although D-06 was not a hypothesis. |
+| Independent reproduction | Algebra: without A-ACC-05 a model value $\Lambda_{t+1}>q\,m+\phi_0(q)$ loses more than $u^{\mathrm{open}}$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | T-10 tier S and T-21 did not cover books with stopless positions. |
+| Required correction | T-10 case (1′) with A-MKT-01 and A-ACC-05; T-21 attainability and charges include F066. |
+| Test / proof obligation | Simulator: stopless position, prices to $0$ ⇒ $\Delta=-u^{\mathrm{open}}+\Lambda$. |
+
+### AUD-043
+
+*Found by the third independent review (finding 6); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 08 T-19 (at `f37c1b6`) |
+| Formula / proposition | $W_{t+1}\ge W^{\min}_{t+1}$ "surely" |
+| Finding | The assumption list omitted A-MKT-05, A-EXE-05, A-AUTH-02, A-AUTH-04, A-ACC-01…04 and F144. |
+| Independent reproduction | $C=1{,}000$, pending $10$ @ $10$ ($W^{\min}=900$): fill at $12$ then prices → $0$ ⇒ $880$; manual buy $90$ @ $10$ ⇒ $W_{t+1}=0$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Theorem stated with missing hypotheses. |
+| Required correction | T-19 imports T-10's common hypotheses (A-ACC-07 with $\mathrm{Accr}\le\bar A$). |
+| Test / proof obligation | The two scenarios as assumption-violation regressions. |
+
+### AUD-044
+
+*Found by the third independent review (finding 7); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 04 A-ACC-07, A-FLOW-01, A-EXE-04, A-TRIG (at `f37c1b6`) |
+| Formula / proposition | Fail-closed rules "known accrual charged before $K_t$", "pending withdrawal charged against $K_t$", "per-execution fees ⇒ worst case over splits" |
+| Finding | No formula implemented any of the three charges; F140 covers only the exit side. |
+| Independent reproduction | $K_t=r^{\mathrm{open}}=110$, accrual $5$, stop exits at its bound ⇒ $W_{t+1}=F_t-5$; $100$ one-share entry executions at a \$1 minimum pay \$100 against $\phi^{\mathrm{buy}}(100)=1$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Fail-closed rules without a defined computation. |
+| Required correction | Each becomes $\alpha_t=0$ (no new risk), and the period is outside T-10 for exposure already held (breach logged, HALT); exit side under per-execution fees: F140 with $n/\delta_q$ parts. |
+| Test / proof obligation | Accrual, withdrawal and per-execution-fee flags ⇒ NO\_TRADE. |
+
+### AUD-045
+
+*Found by the third independent review (finding 9); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 01 §9 item 3 (at `f37c1b6`) |
+| Formula / proposition | Rounding of carried floor references $H_t$, $\nu^{\mathrm{day}}_0$, $\nu^{\mathrm{wk}}_0$, $\nu^{\mathrm{ref}}$ and of $U_t$ |
+| Finding | No direction was specified; rounding a reference down lowers the floor. |
+| Independent reproduction | $W=10^8$, $U=3\cdot10^6$, $d^{\max}=0.1$: $H$ stored as $33.33$ gives $K=10{,}009{,}000$ instead of $10{,}000{,}000$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | A cushion enlarged by rounding. |
+| Required correction | References rounded toward $+\infty$ when stored at a scale; $U_t$, $\nu_t$ carried as exact integer pairs (01 §9 item 3; FM-DD-9). |
+| Test / proof obligation | Non-terminating $W/U$ test vector. |
+
+### AUD-046
+
+*Found by the third independent review (finding 11); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 01 §9 items 5, 12, 13; 08 T-01, T-03; 14 F047 (at `f37c1b6`) |
+| Formula / proposition | Treatment of $-0$ |
+| Finding | Rejected (item 5), accepted as finite (item 12) and normalised (item 13, T-01, T-03): an OPTIONAL model output $-0$ gives $b^{\mathrm{hard}}$ if rejected and $0$ if normalised. |
+| Independent reproduction | `Decimal('-0.00')` parses as a finite value; the two readings give different $b^{\mathrm{allow}}$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Non-deterministic specification (both readings are within the hard cap). |
+| Required correction | One rule: $-0$ rejected at the boundary (grammar 17 (a)); an internal $-0$ normalised to $0$; F047 maps finite $y\le0$ to $0$. |
+| Test / proof obligation | Boundary and internal $-0$ vectors. |
+
+### AUD-047
+
+*Found by the third independent review (finding 12); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 06 §4; 14 F049; 08 T-01 (at `f37c1b6`) |
+| Formula / proposition | $0\le b^{\mathrm{allow}}_k\le b^{\mathrm{hard}}_k$ |
+| Finding | Impossible when $b^{\mathrm{hard}}_k<0$ (H14 with $C^{\mathrm{res}}>C^{\mathrm{avail}}$); safe through F094's $\{0\}$, but a closed form with truncating division returns a negative quantity. |
+| Independent reproduction | H14 budget $-500$ at limit $50$: a closed form $b/p^{\mathrm{lim}}$ with integer division gives $-10$ sh. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Invariant unsatisfiable as stated; no unsafe result through F094. |
+| Required correction | $b^{\mathrm{allow}}_k=\min((b^{\mathrm{hard}}_k)^+,\mathfrak s(b^{\mathrm{mod}}_k))$ (F049). |
+| Test / proof obligation | Negative hard budget ⇒ $Q_k=0$. |
+
+### AUD-048
+
+*Found by the third independent review (finding 13); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 04 A-TRIG; 08 T-25 (at `f37c1b6`) |
+| Formula / proposition | $\Lambda_{i,t+1}$ inside $\mathrm{XV}$ (F072) |
+| Finding | A jump in the model estimate $\hat\Lambda_{t+1}$ alone breaches the floor, with no price move or stop event, but A-TRIG was classed as purely EXECUTION. |
+| Independent reproduction | $q=100$, $K_t=110$, $\Lambda_t=1$, price unchanged, $\hat\Lambda_{t+1}=200$ ⇒ $\Delta=-199$, $W_{t+1}=F_t-89$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | T-25's attribution correct but its probability has a model component. |
+| Required correction | Name the failure in A-TRIG and T-25. |
+| Test / proof obligation | Valuation-jump scenario attributed to A-TRIG. |
+
+### AUD-049
+
+*Found by the third independent review (finding 14); reproduced.*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 08 T-14, T-03, T-06c; 14 F121 (at `f37c1b6`) |
+| Formula / proposition | Cross-references and assumption lists |
+| Finding | T-14 cited 01 §9 "item 11 (canonical serialisation)" (item 10); T-03 cited item 14 for float rejection (items 1, 12); F121 listed only A-GAP; T-06c did not state $H_{t+1}=\max(H_t,\nu_{t+1})$. |
+| Independent reproduction | T-06c with an intra-period high: $H_t=100$, peak $120$, $\nu_{t+1}=95$ ⇒ $\mathrm{DD}=20.8\%>10\%$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Mis-citations; T-06c needs the epoch-only high-water mark. |
+| Required correction | References corrected; F121 lists the common hypotheses; T-06c assumes the epoch high-water mark. |
+| Test / proof obligation | Checker cross-reference gate; T-06c counterexample as regression. |
+
+### AUD-050
+
+*Found by the third independent review (finding 15); reproduced by argument.*
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Document / section | 04 A-AUTH-05; 08 T-11; 14 F144 (at `f37c1b6`) |
+| Formula / proposition | "Terminal" order state |
+| Finding | Undefined: if a cancel request counted as terminal, a fill racing the cancel after release would be unreserved. |
+| Independent reproduction | Sequence: cancel requested → reservation released → fill confirmed: exposure with no reservation. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Reservation conservation (T-11) could fail at the integration boundary. |
+| Required correction | Terminal = venue-confirmed filled, cancelled, expired or rejected; pending otherwise (F144). |
+| Test / proof obligation | Cancel/fill race in the ledger replay tests. |
+
+### AUD-051
+
+*Found during the closure's manual review (after the checker reached zero); a regression of the uncommitted closure draft, never committed.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT (a fail-closed rule lost) |
+| Document / section | 05 §5 F145 paragraph; 06 G8; 14 F092, F145 (closure draft) |
+| Formula / proposition | ANOMALY rule: a negative raw open-risk value ⇒ $\alpha_t=0$ (05 §5, FM-OPS-3) |
+| Finding | At `f37c1b6` the held part of a partially filled order was charged $r^{\mathrm{open}}(q)$ (F064), which carries the ANOMALY rule. The closure's F145 replaced that charge and the rule no longer applied: a held part marked far below its stop contributes a negative term that frees budget. |
+| Independent reproduction | $q=100$ held at mark $45$, stop $49$, $\kappa^{\mathrm{out}}=0.1$, remainder $100$ at limit $50$: held-part term $100(45-49+0.1)=-390$, remainder $110$, so $r^{\mathrm{pf}}<0$ before fees; under F064 the held part alone ($-390+\phi$) is an ANOMALY. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Exact under A-TRIG, but A-TRIG is implausible exactly in this state (mark below a stop); the draft would have credited cushion from it. |
+| Required correction | The ANOMALY rule applies to $r^{\mathrm{open}}(q_{i,t})$, $g^{\mathrm{open}}(q_{i,t})$ of the held part and to $r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ (05 §5; G8 in 06 and F092). |
+| Test / proof obligation | Held part marked below its stop ⇒ NO\_TRADE (G8). |
+
+## Third independent review of `f37c1b6` — mapping
+
+Every finding was reproduced independently in exact arithmetic (or by argument where stated) before a status was assigned; no reviewer
+output was accepted on authority.
+
+| # | Reviewer severity | Finding (short) | Maps to | Status | Assessed severity |
+|---|---|---|---|---|---|
+| 1 | CRITICAL | T-10 (2′) breach with the stop trailed at or above the limit ($F_t-29$) | AUD-039 | CONFIRMED | CRITICAL |
+| 2 | CRITICAL | ADV unbounded; cap invariant misstated ($666$ vs $953$); cluster splitting | AUD-040 | CONFIRMED | CRITICAL |
+| 3 | IMPORTANT | F144 quantity ambiguous ($F_t-179$) | AUD-034 (extended) | CONFIRMED (resolved by the closure F144) | IMPORTANT |
+| 4 | IMPORTANT | Missing estimate falls back to the permissive bound | AUD-041 | CONFIRMED | IMPORTANT |
+| 5 | IMPORTANT | Stopless positions not covered by tier S | AUD-042 | CONFIRMED | IMPORTANT |
+| 6 | IMPORTANT | T-19 assumptions missing | AUD-043 | CONFIRMED | IMPORTANT |
+| 7 | IMPORTANT | Three fail-closed rules without a formula | AUD-044 | CONFIRMED | IMPORTANT |
+| 8 | IMPORTANT | Realised cash and notional counted twice ($5{,}001$) | AUD-034, AUD-038 (extended) | CONFIRMED (resolved by the closure F144, F070) | IMPORTANT |
+| 9 | IMPORTANT | Floor-reference rounding ($+9{,}000$) | AUD-045 | CONFIRMED | IMPORTANT |
+| 10 | IMPORTANT | Serialisation and parsing gaps | AUD-036 (extended, upgraded) | CONFIRMED | IMPORTANT |
+| 11 | MINOR | $-0$ handled three ways | AUD-046 | CONFIRMED | MINOR |
+| 12 | MINOR | Negative $b^{\mathrm{hard}}_k$ | AUD-047 | CONFIRMED | MINOR |
+| 13 | MINOR | $\hat\Lambda_{t+1}$ jump ($F_t-89$) | AUD-048 | CONFIRMED | MINOR |
+| 14 | MINOR | Cross-references, F121, T-06c high-water mark ($20.8\%$) | AUD-049 | CONFIRMED | MINOR |
+| 15 | MINOR | "Terminal" undefined | AUD-050 | CONFIRMED | MINOR |
+| 16 | MINOR | "$\mu^{K}>1$ admits floor breach" cites T-21 | — | **REJECTED**: "admits" asserts existence, and T-21 (c) with $\Lambda_t=0$ (flat book) exhibits a breaching state for every $\mu^{K}>1$ (choose $K_t$ so that some lattice size has $K_t<L^{\mathrm{stop}}(n)\le\mu^{K}K_t$); the reviewer itself found the wording correct. No change. | — |
+
 ## Summary
 
 | Severity | Count | IDs |
 |---|---|---|
-| CRITICAL | 2 | AUD-001, AUD-002 |
-| IMPORTANT | 20 | AUD-003, 004, 006, 007, 008, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 028, 029, 031, 032, 033 |
-| MINOR | 11 | AUD-005, 009, 020, 021, 022, 023, 024, 025, 026, 027, 030 |
+| CRITICAL | 4 | AUD-001, AUD-002, AUD-039, AUD-040 |
+| IMPORTANT | 29 | AUD-003, 004, 006, 007, 008, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 028, 029, 031, 032, 033, 034, 036, 037, 041, 042, 043, 044, 045, 051 |
+| MINOR | 18 | AUD-005, 009, 020, 021, 022, 023, 024, 025, 026, 027, 030, 035, 038, 046, 047, 048, 049, 050 |
 
-All 33 are CONFIRMED (AUD-031, AUD-032 and AUD-033 were found during correction and are marked as such). None is REJECTED. All are addressed in
-the correction commit except where the correction is itself a research obligation (AUD-019 independent bibliography re-verification;
+All 51 are CONFIRMED (AUD-031 … AUD-033 were found during correction, AUD-034 … AUD-038 and AUD-051 during Phase-0 closure, AUD-039 … AUD-050
+by the third independent review of `f37c1b6` and reproduced here; each is marked). None is REJECTED; one third-review finding was rejected and has no
+AUD entry (mapping above). All are addressed in
+the correction commit (`f37c1b6`) or the final closure commit, except where the correction is itself a research obligation (AUD-019 independent bibliography re-verification;
 AUD-028 definition of SL), which remain explicitly UNRESOLVED with a fail-closed rule or owner.

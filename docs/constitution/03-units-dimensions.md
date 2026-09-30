@@ -85,6 +85,12 @@ phi_sell S-084 USD
 phi_sell0 S-084 USD
 phi_split S-292 USD
 N_ex S-294 1
+B_win S-295 USD
+phi_paid S-296 USD
+r_pf S-297 USD
+q_bar S-298 sh
+g_pf S-297 USD
+u_pf S-297 USD
 phi_fill - USD
 Cjk S-083 USD
 M_mkt S-170 USD
@@ -140,6 +146,8 @@ ell_stop S-093 USD/sh
 gamma_gap S-089 USD/sh
 # liquidity, time, volatility
 ADV S-054 sh/day
+ADV_est S-299 sh/day
+ADV_max S-300 sh/day
 w_in S-260 day
 h_ex S-262 day
 h S-011 day

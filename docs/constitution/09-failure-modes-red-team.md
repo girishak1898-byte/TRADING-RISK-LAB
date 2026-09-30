@@ -71,6 +71,9 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-NUM-15 | Mixed exact/float arithmetic | `Fraction(1,10)+0.2` returns a float (X01) | exactness silently lost | forbid mixed-type operands on the authority path (01 §9 item 14) | observed |
 | FM-NUM-16 | Half-cent quantisation in the wrong direction | limit price or fee exactly at a half cent (HC01–HC04) | half-even removes a fee; a limit price rounded down understates worst-case entry | directed quantisation: fees and limit prices up, budgets down (01 §9 item 15) | observed |
 | FM-NUM-17 | Float oracle in differential tests | float floor under-sizes (`floor(0.3/0.1)=2`, B01–B02) | exact implementation and float oracle disagree; tests become unreliable | differential tests against an exact oracle only | observed |
+| FM-NUM-18 | Duplicate keys in a snapshot object | a common JSON parser keeps the last duplicate: `{"cash":"100","cash":"-5"}` reads $-5$ | two parsers read different snapshots from identical bytes | reject duplicate keys (01 §9 item 17 (g); closure, AUD-036) | observed |
+| FM-NUM-19 | Binary float produced from exact operands | `Fraction(4) ** Fraction(1, 2)` and `math.sqrt(Fraction(2))` return floats with no float operand | the mixed-type rule (item 14) does not catch it; exactness silently lost | runtime-type assertion at rounding sites and serialisation (01 §9 item 17 (i)) | observed |
+| FM-NUM-20 | Truncation used as floor | decimal integer division truncates toward zero: $-7\,/\!/\,2=-3$; `Decimal('-0.01') // 1` gives $-0$ | a negative budget floors to a larger value and can serialise as $-0$ | mathematical floor only; budgets clamped at $0$ first (01 §9 item 17 (j); F049) | observed |
 
 ### Double counting and accounting (FM-DC)
 
@@ -84,6 +87,9 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-DC-4 | Realised + unrealised + $\Delta W$ summed | double count | DC-4 |
 | FM-DC-5 | Open risk measured from entry price rather than current mark | untrailed winners' give-back ignored; understated risk relative to $W$ | DC-5 (open risk from current mark) |
 | FM-DC-6 | Model re-estimation of $\Lambda$ booked as trading P&L | spurious P&L | DC-9 |
+| FM-DC-9 | Full-order reservation kept beside the held part's open risk after a partial fill | fees already paid and the filled quantity's risk charged twice (over-charge $5.24$ incl. the paid fee in the 05 §5 example) | exact exposure charge F145 (closure, AUD-034) |
+| FM-DC-10 | Strategy loss cap on a moving base $B_t$ | realised strategy loss reduces $B_t$ and is subtracted again as $\mathrm{SL}$ | window-start base $B^{\mathrm{win}}_s$ (F078; closure, AUD-035) |
+| FM-DC-11 | Pending cash subtracted from a broker figure that already nets open orders | pending cash deducted twice | F048: $\min(\mathrm{BP}_t,C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$ (closure, AUD-035) |
 
 ### Drawdown and floors (FM-DD)
 
@@ -97,6 +103,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-DD-6 | Negative wealth | $B\le0$ ⇒ negative budgets without clamp | $(\cdot)^+$; RECOVERY |
 | FM-DD-7 | Daily/weekly floor reset after a gain day | cushion invariant breaks without a new high (06 §7) | RECOVERY + trailing obligation |
 | FM-DD-8 | Withdrawal inside a period with an absolute floor | $F^{\mathrm{abs}}$ breached although every stop held | flows only at epoch boundaries |
+| FM-DD-9 | Floor reference stored rounded down | $H=W/U$ non-terminating ($W=10^8$, $U=3\cdot10^6$) stored as $33.33$: $K$ enlarged by $9{,}000$ USD | carried references rounded toward $+\infty$, $U$ and $\nu$ exact (01 §9 item 3; closure, AUD-045) |
 
 ### Tail and gap (FM-TAIL)
 
@@ -144,14 +151,15 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-AUTH-3 | Wrong account scope | decision about another account | account-identifier binding in $x^{A}_t$ (UNDEFINED method) |
 | FM-OPS-1 | Crossed/locked market | mid ill-defined | G7/validity: invalid |
 | FM-OPS-2 | Corporate action between decision and fill | $q$/price scale mismatch vs reservation | UNDEFINED handling (05 §9) |
-| FM-OPS-3 | Held position with $m<p^{\mathrm{stop}}$ and no trigger | negative "risk" frees budget | ANOMALY ⇒ $\alpha=0$ |
+| FM-OPS-3 | Held position with $m<p^{\mathrm{stop}}$ and no trigger | negative "risk" frees budget | ANOMALY ⇒ $\alpha=0$; also for the held part of a partially filled order (F145; AUD-051) |
 | FM-OPS-4 | DST / half-day / holiday boundaries | wrong daily floor reset | versioned exchange calendar (RQ-31) |
 | FM-OPS-5 | Sequential allocation order | non-replayable allocations (T-23) | authoritative ordering key |
 | FM-OPS-6 | Stop triggered but not filled at the cut; stop not live on early partial fills | loss beyond $r^{\mathrm{open}}$ with A-STOP technically intact | A-TRIG (position level, F072); A-STOPLIVE |
 | FM-OPS-7 | Per-execution minimum fees on split fills | fees exceed $\phi(n)$ | A-EXE-04; RQ-35 |
 | FM-OPS-8 | Corporate action inside a period | split booked as a loss (05 §1) | split the period at $\tau^{\mathrm{CA}}$ |
 | FM-OPS-9 | Exit split into several fee-bearing parts under per-order minimum fees (partial fill at the cut; one child stop per entry fill) | fees paid plus the remainder's valuation fee exceed $\phi^{\mathrm{sell}}(q)$; floor breached by 1 for a new order (AUD-001 fill pattern, REV-029) | position-level A-TRIG (F072); split envelope F140 with the declared $N^{\mathrm{ex}}$ |
-| FM-OPS-10 | Reservation computed with inputs older than the epoch's (exit-cost estimate raised, stop widened) | pending order under-charged; floor breached by 40 in the T-10N example | F144: charge the larger of ledger and re-evaluated reservation |
+| FM-OPS-10 | Reservation computed with inputs older than the epoch's (exit-cost estimate raised, stop widened) | pending order under-charged; floor breached by 40 in the T-10N example | F144: every reservation re-evaluated from the order state at $\tau_t$ |
+| FM-OPS-11 | Stop of a pending or partially filled order trailed to or above its limit after G7 | the unclamped per-share distance is negative: charge $-87$ for a fresh order, floor breached by $29$ for a partially filled one (08 T-10N) | per-share distance clamped at $0$ in F144, F145 (closure, AUD-039) |
 
 ### Dimensional (FM-DIM, added v0.2, AUD-031)
 

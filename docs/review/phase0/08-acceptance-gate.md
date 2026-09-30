@@ -123,3 +123,138 @@ T-06b, T-09N, T-10N, T-11N, T-12N, T-20b, T-22N, T-24N) · NOT YET PROVEN 4 (T-1
 are registered research obligations with fail-closed rules or named owners. PASSED does not mean any hard-layer guarantee is
 unconditional: every floor theorem is PROOF REQUIRES ADDITIONAL ASSUMPTIONS, and A-STOP / A-TRIG / A-GAP are known to fail in gaps and
 halts. The proofs are paper proofs, reviewed by this audit and one independent agent, not mechanised (Art. 14).
+
+## 9. Phase-0 closure (final closure-correction commit)
+
+§1–§8 record the state at `f37c1b6` and are kept as written. Two of their verdicts were wrong at that commit and are superseded here: §6
+"hard-layer inputs … holds" (ADV had no policy bound, AUD-040) and §8 "PHASE 0 = PASSED" (a third independent review found two CRITICAL
+defects, AUD-039 and AUD-040).
+
+### 9.1 Commit chain
+
+| Stage | Commit | Content |
+|---|---|---|
+| BASELINE | `69a381dd44da2b0c9feca1f99bc049604a2c622b` | v0.1 (not modified) |
+| PRE-REGISTRY ADVERSARIAL CORRECTION | `8198877eed4614ca889187794b0a4e79f1c26c38` | v0.1.1 |
+| FORMAL FINDINGS | `ad1a884e631a942067d0c1ec9637fe69e521faf9` | registries, red team, audits, checker |
+| CORRECTIONS | `f37c1b612dedcb58d019f0ea5d6204660b814435` | v0.2 (§1–§8 of this file) |
+| FINAL PHASE-0 CLOSURE CORRECTIONS | the child of `f37c1b6` | this section; SHA reported in the Phase-0 final report |
+
+History was not rewritten: no amend, squash, rebase or reorder.
+
+### 9.2 What the closure changed
+
+1. **Realised costs charged once** (AUD-034, AUD-035, AUD-038): exact exposure charge F145 for a partially filled order (fees already paid
+   excluded); F144 re-evaluates every reservation from the order state (total quantity $n'$, remaining quantity, remaining cost; no ledger
+   floor); F048 deducts pending cash once; H3 uses the window-start base; F070 subtracts remaining commitments only. OC-2, OC-3, OC-4
+   eliminated; OC-1 kept (future-cost over-charge, proved necessary for T-07).
+2. **Third independent review of `f37c1b6`** (16 findings; mapping in [02](02-self-audit-finding-registry.md)): unfilled per-share
+   distances clamped at $0$ (AUD-039); $\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$, merge-only statistical cluster maps and the cap invariant
+   restated (AUD-040); missing estimate ⇒ $\alpha_t=0$ (AUD-041); stopless exposures in tier S (AUD-042); T-19 hypotheses (AUD-043); undefined
+   fail-closed charges replaced by $\alpha_t=0$ (AUD-044); floor references rounded up (AUD-045); one $-0$ rule (AUD-046); hard budgets clamped at
+   $0$ (AUD-047); A-TRIG's model component (AUD-048); cross-references and T-06c (AUD-049); terminal = venue-confirmed (AUD-050); strict
+   canonical document (AUD-036, upgraded to IMPORTANT). Finding 16 REJECTED with reasons. The manual review (§9.9) found one regression of the
+   closure draft itself and restored the rule (AUD-051).
+3. **T-21** separated into sufficiency, necessity and equivalence; T-10 case (1′); the 06 §7 linear-throttle "iff" corrected (AUD-037).
+4. **Input classification** of every hard cap (06 §5a) and the **canonical numeric rule** (01 §9 item 17).
+5. **Checker**: four new gates (theorem fields and status, status–assumption consistency, assumption classes and fail-closed checks,
+   cost-conservation table) and a committed mutation suite.
+
+### 9.3 PASS rule
+
+| Condition | Result | Evidence |
+|---|---|---|
+| GATE_TOTAL = 0 | **0** | §9.8 |
+| UNRESOLVED_CRITICAL_FINDINGS = 0 | **0** | CRITICAL: REV-001, 002, 003, 005, 006, 007, 008, 028 and AUD-001, 002 (resolved by `f37c1b6`); AUD-039, AUD-040 (resolved here) |
+| Load-bearing theorem statements internally consistent | **yes** (manual review §9.9) | T-10, T-19, T-21, T-25, T-06c restated; statuses unchanged: 22 / 8 / 11 / 4 / 1 |
+| No dimensional contradiction | **yes** | DIMENSIONAL_CONFLICTS = 0; F145 and F111 `dim` expressions updated |
+| No known cost double count | **yes** | 05 §4b (no realised cost charged twice); OC-1 is a registered, necessary future-cost over-charge, not a realised-cost double count |
+| No known risk understatement | **yes** | §9.5 (0 understatements in every enumeration and randomised search) |
+| Hard limits cannot be enlarged by model output | **yes** | §9.6 |
+| Non-finite numeric states fail closed | **yes** | §9.7 |
+| No executable trading functionality | **yes** | only `tools/doccheck/check_constitution.py` and `tools/doccheck/mutation_suite.py` (documentation linters); NON_DOCUMENTATION_FILES = 0, FORBIDDEN_IMPORTS = 0 |
+
+### 9.4 Independent re-derivations (exact arithmetic, this audit; scripts kept outside the repository)
+
+| Object | Result |
+|---|---|
+| F072 / A-TRIG | Position-level bound re-derived; the summed form in T-10 step (3) follows by A-ACC-04 and G11. Model component named (AUD-048). |
+| F140 | Non-decreasing, $\ge\phi$, equal to $\phi$ for linear and super-additive schedules (checked on the lattice to $n=100$). The 05 §5 figures reproduce: $113$, $115$; $4{,}888$ vs $4{,}887$. |
+| Partial-exit fee envelope | Exits in up to $N^{\mathrm{ex}}+1$ fee-bearing parts (exit orders plus a remainder at the cut) are covered; one child stop per entry fill needs $N^{\mathrm{ex}}\ge$ number of fills (REV-029). |
+| T-10 | Cases (1), (1′), (2), (2′) re-derived; (2) and (2′) now bound $e\,x\le(n'-q)x^+$ for either sign of the per-share distance. |
+| T-21 | (a) by summation; (b) by the attained comonotone outcome, valid only with inactive clamps; (c) = (a) + (b), with inactive clamps; (d) F120 sufficient; it coincides with (c) when $\Lambda_t=0$ and is not necessary when $\Lambda_t>0$. |
+| OC-4 / full-reservation rule | The full-order reservation beside the held part's open risk over-charges by $q(p^{\mathrm{lim}}-p^{\mathrm{stop}}+\kappa(q))+\phi^{\mathrm{split}}(q)+\phi^{\mathrm{paid}}$ (example: $5.24$, including the paid fee $1$); the remainder-only reservation under-charges ($2.84$ in the same example). F145 is exact. OC-4 eliminated. |
+| A-AUTH-05 | Ledger bookkeeping only; the engine does not read ledger reservation values (F144). Terminal = venue-confirmed (AUD-050). |
+| Economic cost conservation table (05 §4b) | Each cost appears once: realised costs in $W_t$ through cash; future costs in open risk or reservations; OC-1 is the only registered duplicate (future exit cost against $\Lambda$). |
+| Model-controlled inputs | §9.6. |
+
+### 9.5 Exact-arithmetic coverage of fills and costs
+
+All exact (`Fraction`); worst case over every admissible outcome inside T-10's hypotheses; per-order minimum fee $\max(1,0.005k)$ and linear fees;
+constant, super-additive and convex $\kappa^{\mathrm{out}}$.
+
+| Case | Enumeration | Result |
+|---|---|---|
+| Full fill, partial fill, multiple partial fills, remaining open quantity | one exposure, order of $6$ sh, $0$–$6$ filled at $\tau_t$, further fills in the period, marks $49,50,52$, fees paid at once or late, $N^{\mathrm{ex}}=1,2,3$ ($26{,}088$ scenarios, $252$ states) | worst loss $=$ charge $-\Lambda_{i,t}$ in every state (exact, never understated) |
+| Split execution and minimum per-order fee | exits in every partition into up to $N^{\mathrm{ex}}+1$ fee-bearing parts | included above; F140 required (without it: $W_{t+1}=F_t-1$, AUD-001, REV-029) |
+| Stop trailed to or above the limit | stops $48$–$53$ around limit $50$ ($46{,}200$ scenarios, $1{,}800$ states); randomised ($20{,}000$ trials, $8{,}795$ with stop $\ge$ limit) | clamped charge: $0$ understatements (exact in $1{,}250$ states); unclamped: $1{,}772$ understatements |
+| Realised plus remaining (two periods) | reservation at $\tau_0$, partial fills and mark moves, continuation ($1{,}260$ chains) | realised loss plus remaining charge never below the total worst case; the worst life-of-order loss $39/4$ equals the initial reservation |
+| Tiers G and U | same grid with the gap and zero-price bounds | exact in all states; F070 closure form: $0$ violations |
+
+**Adversarial split-fill example (05 §5).** Order $6$ sh at limit $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.1+0.01n$, fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=2$;
+$2$ sh filled (fee $1$ paid), mark $52$, $\Lambda_{i,t}=1.02$. Worst outcome: $4$ more fill at $50$, exits of $2$ and $2$ sh at $49-\kappa^{\mathrm{out}}(6)=48.84$ each paying $1$, remainder
+$2$ valued at the cut: loss $12.94$. Charge $r^{\mathrm{pf}}=13.96$, and $13.96-1.02=12.94$: exact. The paid fee ($1$) and the filled shares' entry cost ($100$) are
+in $W_t$ and not in $r^{\mathrm{pf}}$, so no realised cost is counted twice; `f37c1b6`'s charge $19.20$ counted them again ($+5.24$), a remainder-only
+reservation ($16.80$) understates by $2.84$.
+
+### 9.6 Hard-safety independence
+
+Every input of every cap is classified in 06 §5a. MODEL OUTPUT enters only through $\min((b^{\mathrm{hard}}_k)^+,\mathfrak s(b^{\mathrm{mod}}_k))$ (F049) or as an extra
+blocking condition (F027); OPTIMISER OUTPUT only through the verifier F126 ($\le Q^{\mathrm{hard}}$); STATISTICAL ESTIMATES only through $\max$ with a
+policy floor (costs) or $\min$ with a policy cap (ADV), and merge-only for clusters; the broker figure only through $\min$ (F048). Each $Q_k$ is
+monotone in each estimated input (T-07, T-08), so $Q^{\mathrm{hard}}$ with any estimates $\le Q^{\mathrm{hard}}$ at the policy bounds; a missing estimate gives
+$\alpha_t=0$. Randomised exact check (H1, H4, H5, H13, H14; $9{,}000$ trials with arbitrary estimates, invalid and hostile model budgets and
+proposals): $0$ violations. Verdict: **no MODEL or OPTIMISER output can enlarge a hard cap; estimates cannot exceed the policy value.**
+
+### 9.7 Numerical red team
+
+| Input | Rule (01 §9) | Outcome |
+|---|---|---|
+| NaN, sNaN, $\pm$Infinity, `1e400` | grammar 17 (a) and strict parser (item 12) | field invalid ⇒ $\alpha_t=0$ |
+| $-0$ | rejected at the boundary; internal $-0$ normalised (item 13) | invalid ⇒ $\alpha_t=0$ / F047 |
+| Binary float into exact arithmetic | rejected by type (items 1, 14, 17 (c)) | invalid |
+| Fraction → float coercion from exact operands | runtime-type invariant (17 (i)) | forbidden, asserted |
+| Non-finite JSON tokens, duplicate keys, non-ASCII digits | strict document (17 (b), (g)) | invalid |
+| Decimal context dependence | explicit local context with traps (17 (c)) | no global dependence |
+| Rounding ambiguity | directed rounding only, floor not truncation (items 3, 15, 17 (d), (j)); floor references up (AUD-045) | no ties, no half-rounding |
+
+Per-field scales remain **UNDEFINED — REQUIRES RESOLUTION** (R5). Verdict: **every non-finite or ambiguous numeric state fails closed**.
+
+### 9.8 Mechanical checks
+
+Checker: every gate count $0$, `GATE_TOTAL = 0` (16 gates, output as in §3 with `_BIBLIOGRAPHY_TOTAL = 115`). Mutation suite
+(`python3 tools/doccheck/mutation_suite.py`): $19$ mutations (18 documentation defects and one code file with a network import), all
+detected; the unmodified copy returns `GATE_TOTAL = 0`.
+
+### 9.9 Manual review after automation
+
+Reviewed by hand after the checker reached zero: all CRITICAL findings (REV and AUD); every theorem statement in 08; every "iff" (T-21 (c)
+restricted to inactive clamps; 06 §7 cushion row; the linear-throttle row corrected, AUD-037); every floor and ceiling (lattice floors,
+directed rounding, floor references); every min/max (F047, F048, F049, F111, F126, F140); the reservation identities (F144, F145, F108, T-11);
+the cost-conservation identities (05 §4b, F055–F058, F070); the hard-cap invariants (06 §5a, T-01, T-03). One further defect was found: F145 had dropped the ANOMALY rule that F064 applied to the held part
+of a partially filled order ("negative risk frees budget"); restored in 05 §5, G8 and F092 (AUD-051). No other defect found.
+
+### 9.10 Findings
+
+| Registry | Total | CONFIRMED | REJECTED | PARTIALLY CONFIRMED | UNRESOLVED | Severity |
+|---|---|---|---|---|---|---|
+| REV | 36 | 36 | 0 | 0 | 0 | CRITICAL 8 · IMPORTANT 12 · MINOR 16 |
+| AUD | 51 | 51 | 0 | 0 | 2 research obligations (AUD-019, AUD-028), 1 owner item (AUD-012) — none CRITICAL | CRITICAL 4 · IMPORTANT 29 · MINOR 18 |
+| Third review (mapped) | 16 | 15 | 1 | 0 | 0 | as mapped in 02 |
+
+### 9.11 Decision
+
+**PHASE 0 = PASS** at the documentation level: every condition of §9.3 holds. This is not a claim that any floor guarantee is unconditional:
+every floor theorem is PROOF REQUIRES ADDITIONAL ASSUMPTIONS, A-TRIG / A-GAP fail in gaps and halts, and the proofs are paper proofs checked by
+exact enumeration, not mechanised (Art. 14). The closure corrections themselves (AUD-039 … AUD-051) have been verified by this audit only; each
+of the three earlier independent reviews found a CRITICAL defect in the state it reviewed.

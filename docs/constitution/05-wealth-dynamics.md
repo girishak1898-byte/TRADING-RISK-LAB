@@ -125,14 +125,16 @@ correct because the account did not hold the shares before the fill.
 ### 4a. Register of deliberate conservative over-charges (OC)
 
 An over-charge is a term deducted twice (once in state, once in a hard budget) **on purpose**. Each is conservative (it can only reduce
-$Q^{\mathrm{hard}}$), is never used by an identity (Art. 12), and is listed with its size and removal condition.
+$Q^{\mathrm{hard}}$), is never used by an identity (Art. 12), and is listed with its size and removal condition. **Closure status:** OC-2, OC-3 and
+OC-4 were eliminated at Phase-0 closure (AUD-034, AUD-035) — two of them charged an already *realised* cost again. Only OC-1 remains: it
+over-charges a *future* exit cost, never a realised one, and it is necessary for T-07 (below).
 
 | ID | Term charged twice | First charge (state) | Second charge (hard budget) | Size of over-charge | Why kept | Removal condition |
 |---|---|---|---|---|---|---|
-| OC-1 | Liquidation cost of held positions (incl. exit fee, F035) | $W_t=E_t-\Lambda_t$ (F034) ⇒ $K_t$ | $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}}$ (F064–F066) carry $\kappa^{\mathrm{out}}$ and $\phi^{\mathrm{sell}}$ without $+\Lambda_{i,t}$ credit | $\Lambda_t$ per aggregate | T-07 liquidity monotonicity; T-10 uses $\Lambda_{i,t}\ge0$ only | none in v0 |
-| OC-2 | Cash committed to pending buy orders | broker buying power $\mathrm{BP}_t$ may already net open orders | H14: $\mathrm{BP}^{\mathrm{avail}}_t=\min(\mathrm{BP}_t,C^{\mathrm{avail}}_t)-C^{\mathrm{res}}_t$ (F048) | up to $C^{\mathrm{res}}_t$ | broker BP semantics unverified (RQ-20); UNKNOWN ≠ SAFE | primary-source verification that $\mathrm{BP}$ excludes open orders (then OC-2 vanishes by definition) or includes them (then drop $\mathrm{BP}$ from the min) |
-| OC-3 | Realised strategy loss | reduces $W$, hence $B$ (F073) | H3 subtracts $\mathrm{SL}_{s,t}$ again (F078) | at most $\mathrm{SL}_{s,t}$ | strategy budgets are loss-since-epoch caps; $\mathrm{SL}$ itself is UNDEFINED (RQ-11) | definition of $\mathrm{SL}$ relative to a fixed epoch base (RQ-11) |
-| OC-4 | Stop-risk of the filled part of a partially filled order (added v0.2, AUD-033) | $r^{\mathrm{open}}_i$ of the filled quantity in $R^{\mathrm{open}}_t$ | the full reservation $L^{\mathrm{stop}}(n')$ stays in $R^{\mathrm{res}}_t$ until the order is terminal (T-11) | at most $L^{\mathrm{stop}}$ of the filled quantity | exit costs are super-additive: releasing the filled part early under-charges the combined exposure (08 T-10 case 2′: $420<440$) | an incremental add-on charge proved with pending orders (RQ-34) |
+| OC-1 | Liquidation cost of held positions (incl. exit fee, F035) — a future cost, not a realised one | $W_t=E_t-\Lambda_t$ (F034) ⇒ $K_t$ | $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}},r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ carry $\kappa^{\mathrm{out}}$ and the exit fee without $+\Lambda_{i,t}$ credit | exactly $\Lambda_t$ (T-21) | **necessary for T-07**: crediting $\Lambda$ makes the floor room *grow* when liquidity worsens — in budgets of the form $f^{\mathrm{port}}B$ (08 T-07) and in the cushion at a new high, where $F^{\mathrm{dd}}=(1-d^{\max})W$ gives $K+\Lambda=d^{\max}E+(1-d^{\max})\Lambda$ (exact: cash $100{,}000$, $1{,}000$ sh at $50$, stop $45$, $\kappa^{\mathrm{out}}=0.05$, $d^{\max}=10\%$: H4 room $10{,}040$ at $\Lambda=100$ but $10{,}400$ at $\Lambda=500$; without the credit $9{,}940$ and $9{,}900$) | none in v0 |
+| OC-2 | Cash committed to pending buy orders | — | — | — | **ELIMINATED at closure (AUD-035):** F048 is now $\min(\mathrm{BP}_t,\ C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$; pending cash is deducted once, from own ledger cash, and the broker figure can only restrict | — |
+| OC-3 | Realised strategy loss | — | — | — | **ELIMINATED at closure (AUD-035):** H3 uses the window-start base $B^{\mathrm{win}}_s$ (F078), so realised strategy loss enters once, through $\mathrm{SL}_{s,t}$ | — |
+| OC-4 | Filled part of a partially filled order | — | — | — | **ELIMINATED at closure (AUD-034):** the instrument is charged the exact exposure charge F145 (held part and remainder together, fees already paid excluded) instead of open risk plus the full-order reservation, which counted the paid entry fee and the filled quantity's risk twice | — |
 
 ### 4b. Economic cost conservation table (added v0.2, AUD-012)
 
@@ -152,9 +154,9 @@ summed) or UNRESOLVED with an owner.
 | Execution cost of other (manual, risk-reducing) exits | [USD] | F057 ('other' chain) inside $p^{\mathrm{fill}}_j$ | via F055 | none ex ante: such orders are outside the floor theorems (A-EXE-05) | no | single location; a period with such an order is outside T-10 |
 | Liquidation cost of holdings $\Lambda_t$ (incl. exit fee, F035) | [USD] | F034; $\Delta\Lambda$ in F055 | via F055 | not credited in $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}}$ | **yes** | **OC-1** |
 | Model re-estimation $\Delta\Lambda$ | [USD] | F055 valuation adjustment | via F055 | through $K_t$ only | no | DC-9 |
-| Pending-order cash $C^{\mathrm{res}}$ | [USD] | none until fill (then F052) | none | H14 (F048, F089) | **possibly** (broker BP) | **OC-2** |
-| Pending-order risk $R^{\mathrm{res}},G^{\mathrm{res}},Z^{\mathrm{res}},N^{\mathrm{res}},Q^{\mathrm{res}}$ | [USD], [sh$_i$] | none until fill; on fill the filled part also becomes open risk, while the full reservation is held until the order is terminal and only then released by $L^{\mathrm{stop}}(n)-L^{\mathrm{stop}}(e)$ (T-11 (d)) | none | F074, F075, F091, H8–H13 | filled part charged in open risk and in the reservation (**OC-4**); re-evaluating an already reserved opportunity as new would charge it twice; dropping its ledger entry would charge it zero (unsafe) | double charge on one instrument prevented by G11 ($Q^{\mathrm{res}}_{i,t}\ne0$ blocks); a dropped entry violates A-AUTH-02 and is undetectable by the pure engine — **UNRESOLVED: idempotency obligation of the integration contract** (owner: Phase-10 integration contract; fail-closed there: an opportunity identifier present in the ledger is never re-reserved) |
-| Realised strategy loss $\mathrm{SL}_{s,t}$ | [USD] | inside $W$ via F055 | via F055 | H3 (F078) | **yes** | **OC-3**; $\mathrm{SL}$ undefined ⇒ AUD-028 rule (06 §4) |
+| Pending-order cash $C^{\mathrm{res}}$ | [USD] | none until fill (then F052) | none | H14 via F048, remaining cost $(n'-q)p'^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ (F144) | no | deducted once from own cash; broker $\mathrm{BP}$ only restricts (F048) |
+| Pending-order risk $R^{\mathrm{res}},G^{\mathrm{res}},Z^{\mathrm{res}},N^{\mathrm{res}},Q^{\mathrm{res}}$ | [USD], [sh$_i$] | none until fill; filled parts enter $q$ (F051), paid fees enter cash (F052) | none | re-evaluated at $\tau_t$ from the order state (F144): remaining quantity and remaining cost only; a partially filled order is charged $r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ (F145) and its held part no separate open risk | no (realised entry price and fees are in $W$ only) | single charge per exposure; re-evaluating an already reserved opportunity as new is blocked by G11 ($Q^{\mathrm{res}}_{i,t}\ne0$); a dropped order violates A-AUTH-02 and is undetectable by the pure engine — **UNRESOLVED: idempotency obligation of the integration contract** (owner: Phase-10 integration contract; fail-closed there: an opportunity identifier present in the ledger is never re-reserved). The ledger's own full-reservation rule (A-AUTH-05) is bookkeeping for T-11, not an engine input |
+| Realised strategy loss $\mathrm{SL}_{s,t}$ | [USD] | inside $W$ via F055 | via F055 | H3 (F078) against the window-start base $B^{\mathrm{win}}_s$ | no | counted once in H3; $\mathrm{SL}$ undefined ⇒ AUD-028 rule (06 §4) |
 | Income $\mathrm{Inc}$ | [USD] | F052 | via F055 | not credited ex ante (T-10 assumes $\ge0$) | ex-date drop in $\mathcal M$ vs cash | DC-7 (distinct real events) |
 | Financing $\mathrm{Fin}$ | [USD] | F052 | via F055 | v0: $0$ (cash account, D-02); T-10 assumes $0$ | no | single location |
 | Accruals $\mathrm{Accr}$, payments $\mathrm{Pay}$ | [USD] | F052, F053 | via F055 ($\mathrm{Pay}$ cancels) | $\bar A_{t+1}$ in $W^{\min}$ (F070); T-10 assumes $\mathrm{Accr}=0$ | $\mathrm{Pay}$ in cash and in $Y$ | cancels exactly (§2) |
@@ -162,8 +164,9 @@ summed) or UNRESOLVED with an owner.
 | Corporate action | [USD] (zero net) | F054 restatement | via F055 (value-neutral) | stop restated with the position | no | A-ACC-02 |
 | Borrow, short dividends, margin interest, FX, taxes | [USD] | not modelled | — | — | — | out of v0 scope (A-SCOPE-01, A-SCOPE-03, A-SCOPE-04); **UNDEFINED** if scope widens |
 
-Result: every row has exactly one state-transition location; the four state/risk duplicates are OC-1…OC-4 (conservative); the
-expectation/bound pair is a layer separation; one idempotency item is UNRESOLVED with an owner outside the pure engine.
+Result (closure): every row has exactly one state-transition location; **no realised cost is charged twice**; the only state/risk
+duplicate is OC-1 (a future exit cost, conservative by exactly $\Lambda_t$, necessary for T-07); the expectation/bound pair is a layer
+separation; one idempotency item is UNRESOLVED with an owner outside the pure engine.
 
 ## 5. Ex-ante scenario losses for a new long entry (PROVISIONAL definitions)
 
@@ -209,14 +212,31 @@ untriggered, fully exited and partially exited exposures, so every exit fee is c
 The v0.1.1 per-case form (remainder valued with its own fee) double-counted fees. Scenario (AUD-001 fill pattern, stated for a new order
 because v0.2 forces $\Lambda_t\ge1$ on a held position, REV-030): new order $100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}=0.1$, fee $\max(1,0.005k)$ per
 order; $50$ filled at $48.9$ by the stop, remainder valued at $2{,}444$: $\mathrm{XV}=4{,}888<4{,}889$ **violates** F072 and, with $L^{\mathrm{stop}}=112=K_t$,
-$W_{t+1}=F_t-1$ — a real market/fee outcome, so F072 is an assumption that can fail. Fail-closed rule (A-EXE-04, RQ-35): if the fee
-schedule is not super-additive, i.e. $\phi(k)+\phi(n-k)>\phi(n)$ for some lattice $k$, the hard layer replaces $\phi^{\mathrm{sell}}$ and $\phi^{\mathrm{sell}}_{\cdot,0}$ in
-F061–F066, F070 and on the right-hand side of F072 by the split envelope
+$W_{t+1}=F_t-1$ — a real market/fee outcome, so F072 is an assumption that can fail. Rule (A-EXE-04, RQ-35; closure form): the hard layer
+**always** uses, in place of $\phi^{\mathrm{sell}}$ and $\phi^{\mathrm{sell}}_{\cdot,0}$ in F061–F066, F070, F145 and on the right-hand side of F072, the split envelope
 $\phi^{\mathrm{split}}(n)=\max\{\sum_{k=1}^{N^{\mathrm{ex}}+1}\phi^{\mathrm{sell}}(n_k):n_k\in\mathbb L_{\ge0},\sum_kn_k=n\}$ **[F140]**, where $N^{\mathrm{ex}}$ is the maximum number of exit
 orders per exposure per period ($N^{\mathrm{ex}}+1$ parts: those orders plus a part still held at the cut). With one exit order the scenario
 satisfies F072 with equality ($4{,}888\ge4{,}890-2$), $L^{\mathrm{stop}}=113$ and $W_{t+1}=F_t$. The two-part form is not enough when an exposure is
 exited by several orders: one child stop per entry fill ($34/33/33$, each paying the \$1 minimum) gives $\mathrm{XV}=4{,}887<4{,}888$ and
-$W_{t+1}=F_t-1$ with $L^{\mathrm{stop}}=113$ (REV-029); with $N^{\mathrm{ex}}=3$ the charge is $115$ and F072 holds. Unknown $N^{\mathrm{ex}}$ ⇒ per-execution worst case.
+$W_{t+1}=F_t-1$ with $L^{\mathrm{stop}}=113$ (REV-029); with $N^{\mathrm{ex}}=3$ the charge is $115$ and F072 holds. Unknown $N^{\mathrm{ex}}$ ⇒ F140 with $n/\delta_q$ parts (every lot a
+separate execution).
+For a super-additive schedule ($\phi(k)+\phi(n-k)\le\phi(n)$ for all $k$) the envelope equals $\phi^{\mathrm{sell}}(n)$, so the rule changes nothing there.
+
+**Partially filled order (closure, AUD-033, AUD-034).** An instrument holding $q_{i,t}>0$ from an order of total $n'$ at limit $p'^{\mathrm{lim}}$ that is still
+pending is one exposure. It is charged the exact worst case of the held part and the unfilled remainder together, with the entry fees already
+paid, $\phi^{\mathrm{paid}}_o$, excluded because they are realised and already in $W_t$:
+$r^{\mathrm{pf}}_i=q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+(n'-q_{i,t})(p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))^++\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ **[F145]**
+(tier G with $p^{\mathrm{gx}}_i(n')$, tier U with exit price $0$), in place of $r^{\mathrm{open}}_i$ plus the order's reservation (F144). The clamp $(\cdot)^+$ is needed
+because the unfilled part may not fill ($e=0$) while the stop can have been trailed to or above the limit after G7 checked it; the worst case over
+$0\le e\le n'-q_{i,t}$ of a term linear in $e$ is at an end point (AUD-039). Exhaustive exact enumeration (full, partial and multiple partial fills;
+per-order minimum fees; up to $N^{\mathrm{ex}}=3$ exit orders plus a remainder at the cut; fees billed at once or late) gives worst loss $=r^{\mathrm{pf}}_i-\Lambda_{i,t}$ in
+every state with the stop below the limit; with stops from $2$ below to $3$ above the limit ($46{,}200$ scenarios, $1{,}800$ states) the clamped
+charge is never understated and is exact in $1{,}250$ states. No realised cost is inside it. The ANOMALY rule of the held positions applies to the
+held part: if the raw open risk of the held quantity alone, $r^{\mathrm{open}}_i(q_{i,t})$ or $g^{\mathrm{open}}_i(q_{i,t})$ (F064, F065 with F140), or any of $r^{\mathrm{pf}}_i,g^{\mathrm{pf}}_i,u^{\mathrm{pf}}_i$
+is negative, then $\alpha_t=0$ — never a credit from "negative risk" (closure, AUD-051: F145 had dropped this rule, which F064 carried at `f37c1b6`). Example:
+order $6$ sh at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.1+0.01n$, fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=2$; $2$ sh filled (fee $1$ paid), mark $52$,
+$\Lambda_{i,t}=1.02$: worst loss $12.94$, $r^{\mathrm{pf}}_i=13.96$; the draft's $r^{\mathrm{open}}_i+L^{\mathrm{stop}}(6)=19.20$ over-charged by $5.24$, which includes the paid
+fee $1$ a second time.
 
 **One exposure per instrument (A-SCOPE-05, added after review).** $\kappa^{\mathrm{out}}$ and $\Lambda$ are super-additive in quantity, so the
 risk of adding $n$ to a held $q$ is **not** $r^{\mathrm{open}}(q)+L^{\mathrm{stop}}(n)$. Counterexample (exact): $q=100$ at $50$, stop $49$,
@@ -239,10 +259,12 @@ drawdowns and daily/weekly floors are defined on $\nu$ and scaled by $U_t$ (F037
 1. $W_t>0$ (otherwise the ratio is undefined; every budget is already $0$).
 2. $W_{t+1}(a)>0$ $\mathbb Q$-a.s. for **every** $\mathbb Q$ in the model / ambiguity set. For long-only, unlevered portfolios with prices
    $\ge0$, $X_{t+1}=0$, $\mathrm{Fin}_{t+1}=0$ and liquidation values $\ge-$exit fees (A-ACC-05), every position may become worthless, so
-   $W_{t+1}\ge W^{\min}_{t+1}(a)$ with $W^{\min}_{t+1}(a)=C_t-Y_t-Z^{\mathrm{res}}_t-L^{\mathrm{abs}}(n)-\sum_i\phi^{\mathrm{sell}}_{i,0}(q_{i,t})-\bar A_{t+1}$ **[F070]**,
-   where $Z^{\mathrm{res}}_t$ charges pending orders at full $L^{\mathrm{abs}}$ (incl. fees), $\phi^{\mathrm{sell}}_{\cdot,0}$ is replaced by $\phi^{\mathrm{split}}$ (F140) when fees are
-   not super-additive (a sale of part of a holding at price $0$ plus the remainder's valuation fee otherwise gives $W_{t+1}=W^{\min}_{t+1}-1$,
-   REV-034), and $\bar A_{t+1}$ is an $\mathcal F_t$-measurable upper bound on
+   $W_{t+1}\ge W^{\min}_{t+1}(a)$ with $W^{\min}_{t+1}(a)=C_t-Y_t-C^{\mathrm{res}}_t-L^{\mathrm{abs}}(n)-\sum_i\phi^{\mathrm{split}}_{i,0}(\bar q_i)-\bar A_{t+1}$ **[F070]**
+   (closure form, AUD-038), where $C^{\mathrm{res}}_t$ is the remaining cash commitment of pending orders (F144: remaining quantity at the limit plus
+   remaining entry fees; fees already paid and the filled part's cost are in $C_t$ and are not subtracted again), $\bar q_i$ is the largest quantity of
+   $i$ that can be held in the period ($q_{i,t}$, or the total $n'$ of a pending order on $i$), $\phi^{\mathrm{split}}_{i,0}$ is F140 applied to the sell fee at price
+   $0$ (a sale of part of a holding at price $0$ plus the remainder's valuation fee otherwise gives $W_{t+1}=W^{\min}_{t+1}-1$, REV-034), and
+   $\bar A_{t+1}$ is an $\mathcal F_t$-measurable upper bound on
    $\mathrm{Accr}_{t+1}$. Every term is known at $\tau_t$ (revised after review: the earlier form contained future quantities and omitted flows). A
    sufficient condition is $W^{\min}_{t+1}(a)>0$ (T-19).
 3. The argument is dimensionless (ratio); $\log W$ alone is dimensionally invalid (03).

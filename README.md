@@ -10,10 +10,12 @@ A later layer never overrides an earlier one.
 
 ## Status
 
-**Phase 0 — Mathematical Constitution v0.2 (DRAFT, awaiting human decision SDR-001).** Revised twice after independent review: v0.1.1
-(adversarial review, revision note in 08) and v0.2 (Phase-0 independent mathematical review; record and acceptance gate in
-[docs/review/phase0/](docs/review/phase0/README.md)). No trading code exists. No formula has been adopted. No parameters have been chosen.
-The only code in the repository is a documentation linter, `tools/doccheck/check_constitution.py` (no trading logic, no network).
+**Phase 0 — Mathematical Constitution v0.2: Phase-0 gate PASS at the documentation level after the closure corrections (acceptance gate §9);
+not adopted — awaiting human decision SDR-001.** Revised after three independent reviews:
+v0.1.1 (adversarial review, revision note in 08), v0.2 (Phase-0 independent mathematical review) and the Phase-0 closure corrections
+(revision R3 in 08; record and acceptance gate in [docs/review/phase0/](docs/review/phase0/README.md)). No trading code exists. No formula has
+been adopted. No parameters have been chosen. The only code in the repository is documentation tooling: the linter
+`tools/doccheck/check_constitution.py` and its mutation suite `tools/doccheck/mutation_suite.py` (no trading logic, no network).
 
 ## Hard prohibitions (this phase)
 

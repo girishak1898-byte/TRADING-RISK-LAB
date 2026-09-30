@@ -21,13 +21,14 @@ the world. Conflating the two is the central error this architecture is designed
 Common hypotheses of every floor tier (T-10): A-MATH-01, A-SCOPE-03 (long-only), A-SCOPE-05 with gate G11 (one exposure per
 instrument), A-FLOW-01 ($X_{t+1}=0$ inside the period), A-ACC-01…04, A-ACC-06 ($\Lambda\ge0$), A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$),
 A-MKT-05 (every entry fill $\le p^{\mathrm{lim}}$), A-EXE-01, A-EXE-02, A-EXE-03 (cumulative fill $\le$ order quantity), A-EXE-04 (fees on cumulative
-filled quantity), A-EXE-05 (no other orders), A-AUTH-02, A-AUTH-04 (snapshot and ledger form one cut), A-AUTH-05 (full reservation held
-until the order is terminal), reservations charged by F144.
+filled quantity), A-EXE-05 (no other orders), A-AUTH-02 (complete ledger, including each pending order's filled quantity and fees paid),
+A-AUTH-04 (snapshot and ledger form one cut); reservations and partially filled orders charged by F144 and F145 (per-share distances clamped
+at $0$); an exposure without an authoritative stop charged $u^{\mathrm{open}}$ (D-06) and covered in every tier by the tier-U bound (A-MKT-01, A-ACC-05).
 
 | Tier | Guarantee holds if, in addition … | Constraint family | Assumption strength |
 |---|---|---|---|
 | **U** — unconditional | prices $\ge0$ (A-MKT-01); position-level tier-U exit value $\mathrm{XV}_i\ge-\phi^{\mathrm{sell}}_{i,0}(q^{\mathrm{exp}}_i)$ (A-ACC-05, F072); ledger/custody integrity (A-AUTH-01) | notional, gross, concentration, buying power, absolute-loss cushion H16 | weakest (structural facts for long cash equities) |
-| **S** — stop | position-level exit-value bound $\mathrm{XV}_i\ge q^{\mathrm{exp}}_i(p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i))-\phi^{\mathrm{sell}}_i(q^{\mathrm{exp}}_i)$ (A-TRIG, F072, at the $\tau_t$ inputs), for which A-STOP, A-STOPLIVE, A-EXE-04, at most $N^{\mathrm{ex}}$ exit orders per exposure with $\phi^{\mathrm{split}}$ (F140) when fees are not super-additive, and a remainder at the cut valued no lower than its stop bound are sufficient (04 A-TRIG) | stop-risk budgets ($R$-family) | strong; **known to fail** in gaps and halts |
+| **S** — stop | position-level exit-value bound $\mathrm{XV}_i\ge q^{\mathrm{exp}}_i(p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i))-\phi^{\mathrm{sell}}_i(q^{\mathrm{exp}}_i)$ (A-TRIG, F072, at the $\tau_t$ inputs), for which A-STOP, A-STOPLIVE, A-EXE-04, at most $N^{\mathrm{ex}}$ exit orders per exposure with $\phi^{\mathrm{split}}$ (F140), and a remainder at the cut valued no lower than its stop bound are sufficient (04 A-TRIG); the remainder's valuation uses the estimate $\hat\Lambda_{t+1}$, so the bound has a model component (AUD-048) | stop-risk budgets ($R$-family) | strong; **known to fail** in gaps and halts |
 | **G** — gap stress | position-level bound with exit price $p^{\mathrm{gx}}=\min((1-\Gamma_i)p^{\mathrm{stop}},p^{\mathrm{stop}}-\kappa^{\mathrm{out}})$ (A-GAP, F060, F072) | gap-risk budgets ($G$-family) | medium; fails beyond the stress level |
 | **L** — liquidity proxy | future tradable volume is not below the policy fraction of trailing ADV (A-LIQ, A-MKT-06) | participation and exit-horizon caps | medium; fails in liquidity collapse |
 
@@ -70,11 +71,12 @@ must be vector-valued over every constraint family (Art. 5).
 **Hard stop-risk budget** (all $R$-family constraints have the form $L^{\mathrm{stop}}(n)\le b$, so they collapse to one scalar):
 
 $$
-R^{\mathrm{hard}}_t=\Big(\min\big\{\,f^{\mathrm{trd}}B_t,\ \ f^{\mathrm{port}}B_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t,\ \ f^{\mathrm{strat}}_sB_t-R^{\mathrm{open}}_{s,t}-R^{\mathrm{res}}_{s,t}-\mathrm{SL}_{s,t},\ \ f^{\mathrm{clr}}B_t-R^{\mathrm{open}}_{c,t}-R^{\mathrm{res}}_{c,t},\ \ \mu^{K}K_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t\,\big\}\Big)^{+}
+R^{\mathrm{hard}}_t=\Big(\min\big\{\,f^{\mathrm{trd}}B_t,\ \ f^{\mathrm{port}}B_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t,\ \ f^{\mathrm{strat}}_sB^{\mathrm{win}}_s-R^{\mathrm{open}}_{s,t}-R^{\mathrm{res}}_{s,t}-\mathrm{SL}_{s,t},\ \ f^{\mathrm{clr}}B_t-R^{\mathrm{open}}_{c,t}-R^{\mathrm{res}}_{c,t},\ \ \mu^{K}K_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t\,\big\}\Big)^{+}
 $$
 [F074]
 
-with $s$ the opportunity's strategy and $c=\mathrm{cl}(i)$.
+with $s$ the opportunity's strategy and $c=\mathrm{cl}(i)$. The strategy term uses the risk base at the start of the strategy's loss window,
+$B^{\mathrm{win}}_s$, so a realised strategy loss enters once, through $\mathrm{SL}_{s,t}$, not again through a falling $B_t$ (closure, AUD-035).
 
 **Fail-closed rule for $\mathrm{SL}_{s,t}$ (v0.2, AUD-028).** $\mathrm{SL}_{s,t}$ is **UNDEFINED** (RQ-11). Until it is defined, the strategy term of F074
 (and H3) is omitted **only** if the human policy explicitly disables strategy budgets (policy flag "strategy budgets = OFF", recorded in
@@ -88,7 +90,8 @@ G^{\mathrm{hard}}_t=\Big(\min\big\{\,f^{\mathrm{gap}}B_t,\ \ \mu^{G}K_t-G^{\math
 $$
 [F075]
 
-**Model tightening** (Art. 5): $b^{\mathrm{allow}}_k=\min\big(b^{\mathrm{hard}}_k,\ \mathfrak s(b^{\mathrm{mod}}_k)\big)$ for every $k$; in particular
+**Model tightening** (Art. 5): $b^{\mathrm{allow}}_k=\min\big((b^{\mathrm{hard}}_k)^+,\ \mathfrak s(b^{\mathrm{mod}}_k)\big)$ for every $k$ — every hard budget is clamped at $0$,
+since some can be negative (e.g. H14 when $C^{\mathrm{res}}_t>C^{\mathrm{avail}}_t$; closure, AUD-047); in particular
 $R^{\mathrm{allow}}_t=\min(R^{\mathrm{hard}}_t,\mathfrak s(R^{\mathrm{mod}}_t))$ **[F049]**, with the sanitiser $\mathfrak s$ of F047 (invalid model output: $0$ if the
 model is REQUIRED, no constraint if OPTIONAL). The REQUIRED/OPTIONAL flag of each model is policy.
 
@@ -106,27 +109,78 @@ with $g_k(0)=0$ and $g_k$ non-decreasing in $n$ under A-EXE-01/02 — this is wh
 exposure (held positions, reservations, realised loss) belong to $b_k$: e.g. H8 reads $g_k(n)=n\,p^{\mathrm{lim}}$, $b_k=f^{\mathrm{conc}}B_t-q_{i,t}m_{i,t}-N^{\mathrm{res}}_{i,t}$.
 Existing exposure uses the current mark; the new order uses $p^{\mathrm{lim}}$. Open-risk terms carry no $\Lambda$ credit (DC-5, OC-1).
 Aggregates: $R^{\mathrm{open}}_t=\sum_ir^{\mathrm{open}}_{i,t}$, $G^{\mathrm{open}}_t=\sum_ig^{\mathrm{open}}_{i,t}$, $Z^{\mathrm{open}}_t=\sum_iu^{\mathrm{open}}_{i,t}$, $N^{\mathrm{open}}_t=\sum_i\lvert q_{i,t}\rvert m_{i,t}$ **[F050]**;
-available buying power $\mathrm{BP}^{\mathrm{avail}}_t=\min(\mathrm{BP}_t,C^{\mathrm{avail}}_t)-C^{\mathrm{res}}_t$ **[F048]** (OC-2).
-**Reservations in budgets (v0.2, REV-028).** Each pending order is charged the larger of its ledger reservation and its F108 vector
-re-evaluated at $\tau_t$ with the current F111 inputs, fee schedule and stop: $R^{\mathrm{res}}_t=\sum_o\max(R^{\mathrm{led}}_o,L^{\mathrm{stop}}(n))$, likewise
-$G^{\mathrm{res}}_t$, $Z^{\mathrm{res}}_t$ **[F144]**. A reservation computed with older inputs (or before a stop was widened) would otherwise under-charge the order
-(08 T-10N: floor breached by $40$).
+available buying power $\mathrm{BP}^{\mathrm{avail}}_t=\min(\mathrm{BP}_t,\ C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$ **[F048]** — pending cash is deducted once, from own
+ledger cash, and the broker figure can only restrict (closure: the former form double-deducted when $\mathrm{BP}$ nets open orders, AUD-035).
+**Reservations in budgets (closure form, REV-028, AUD-034).** Every reservation component is re-evaluated at $\tau_t$ from the order state —
+current F111 inputs, fee schedule and stop, total quantity $n'$ ordered, remaining quantity $n'-q$, fees already paid $\phi^{\mathrm{paid}}_o$ **[F144]** — and an instrument whose
+order is partially filled is charged the exact exposure charge $r^{\mathrm{pf}}_i,g^{\mathrm{pf}}_i,u^{\mathrm{pf}}_i$ **[F145]** (05 §5) instead of open risk plus a reservation.
+The per-share distance of the unfilled part, $p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n')$ (and $p'^{\mathrm{lim}}-p^{\mathrm{gx}}_i(n')$), is clamped at $0$: G7 checks the stop
+only when the order is placed, and a stop trailed to or above the limit afterwards made the unclamped charge negative (third review:
+$W_{t+1}=F_t-29$ at `f37c1b6`; AUD-039). An order is pending until it is venue-confirmed terminal (AUD-050).
+Ledger values are not engine inputs. A reservation computed with older inputs (or before a stop was widened) would under-charge the order
+(08 T-10N: floor breached by $40$); a full-order reservation kept beside the held part's open risk would charge realised entry fees and the
+filled quantity's risk twice (05 §4a, OC-4 eliminated).
 
 **Hard-layer inputs (v0.2, AUD-002; 01 Art. 6).** The inputs through which a model could enlarge a cap are bounded by policy in the
 conservative direction and computed by frozen, versioned estimators under human authority **[F111]**:
 $\kappa^{\mathrm{out}}=\max(\kappa^{\min}p^{\mathrm{stop}},\hat\kappa^{\mathrm{out}})$; $\Gamma_i=\max(\Gamma^{\min},\hat\Gamma_i)$;
-$\Lambda_{i,t}=\max(\Lambda^{\mathrm{floor}}_{i,t},\hat\Lambda_{i,t})$ with $\Lambda^{\mathrm{floor}}_{i,t}=q_{i,t}\varsigma_{i,t}/2+\phi^{\mathrm{sell}}_i(q_{i,t})$; $\mathrm{ADV}_{i,t}$ from a frozen
-estimator whose version is part of $\mathsf v$. Each $Q_k$ is non-increasing in $\kappa^{\mathrm{out}},\Gamma_i,\Lambda$ and non-decreasing in ADV (T-07, T-08), so an
-optimistic estimate can at most reach the policy bound; an advanced model may only propose $b^{\mathrm{mod}}_k$ (F049). Metamorphic
-obligation: replacing every estimator input to F111 by an arbitrarily optimistic one never increases $Q^{\mathrm{hard}}$ (testable invariant of T-01; review 05-hard-safety-cap-audit). Missing
-estimator output ⇒ the policy bound is used for $\kappa^{\mathrm{out}},\Gamma,\Lambda$ and $\alpha_t=0$ for ADV (no policy bound exists for an upper-bounded
-input; UNKNOWN ≠ SAFE).
+$\Lambda_{i,t}=\max(\Lambda^{\mathrm{floor}}_{i,t},\hat\Lambda_{i,t})$ with $\Lambda^{\mathrm{floor}}_{i,t}=q_{i,t}\varsigma_{i,t}/2+\phi^{\mathrm{sell}}_i(q_{i,t})$;
+$\mathrm{ADV}_{i,t}=\min(\mathrm{ADV}^{\mathrm{est}}_{i,t},\mathrm{ADV}^{\max}_i)$ with $\mathrm{ADV}^{\mathrm{est}}$ from a frozen estimator whose version is part of $\mathsf v$ and $\mathrm{ADV}^{\max}_i$ a policy cap
+(closure, AUD-040: without it H13 grew from $500$ to $1{,}000{,}000$ sh as the estimate went from $5{,}000$ to $10^7$). Each $Q_k$ is non-increasing in
+$\kappa^{\mathrm{out}},\Gamma_i,\Lambda$ and non-decreasing in ADV (T-07, T-08), so an optimistic estimate can at most reach the cap's value at the policy
+bound; an advanced model may only propose $b^{\mathrm{mod}}_k$ (F049). A statistical cluster map may only merge clusters of the human-set map
+$\mathrm{cl}$ (S-006): merging never lowers a cluster aggregate, splitting could enlarge H9, H10. Metamorphic obligation (restated at closure; the
+former "an arbitrarily optimistic estimate never increases $Q^{\mathrm{hard}}$" was false: H1 with $f^{\mathrm{trd}}B=1{,}000$, limit $50$, stop $49$, $\kappa^{\min}=0.001$ gives
+$666$ sh at $\hat\kappa^{\mathrm{out}}=0.5$ and $953$ at $\hat\kappa^{\mathrm{out}}=0$): $Q^{\mathrm{hard}}$ with any estimates $\le Q^{\mathrm{hard}}$ with every estimated input at its policy
+bound (testable invariant of T-01). A **missing** estimate ($\hat\kappa^{\mathrm{out}},\hat\Gamma,\hat\Lambda$ or $\mathrm{ADV}^{\mathrm{est}}$) gives $\alpha_t=0$: the policy bound is the
+most permissive admissible value, so using it on an outage would loosen the caps (closure, AUD-041; Art. 4; UNKNOWN ≠ SAFE).
+
+**Input classification and independence from models (closure, §5a).** Every input of every hard cap and gate is one of: AUTHORITATIVE
+DETERMINISTIC INPUT (ledger, execution reports, versioned policy and reference data), EXTERNAL OBSERVATION (quotes, trading status, event
+flags, broker figures), STATISTICAL ESTIMATE (frozen, versioned estimators of admissible historical data, Art. 6 amendment), MODEL OUTPUT,
+OPTIMISER OUTPUT. The order parameters of the opportunity ($i,d,s,p^{\mathrm{lim}},p^{\mathrm{stop}}_o$) are the *action being evaluated*: they select the point at
+which the deterministic function $Q^{\mathrm{hard}}$ is evaluated and do not change that function.
+
+| Input | Class | Enters | Effect on caps |
+|---|---|---|---|
+| $q_{i,t}$, $C_t$, $Y_t$, pending orders ($n',p'^{\mathrm{lim}}$, stop, filled $q$, $\phi^{\mathrm{paid}}_o$), live stops $p^{\mathrm{stop}}_i$, $\mathrm{SL}_{s,t}$, $B^{\mathrm{win}}_s$ | AUTHORITATIVE | $W,K,B$, F050, F144, F145, H3, H8–H16 | defines the state |
+| $\theta$ (all fractions, $\mu^K,\mu^G$, $d^{\max}$, $\Gamma^{\min},\kappa^{\min},\ell^{\min}$, $\chi$, $n^{\min}$, $\bar N,\bar M$, $p^{\min},p^{\max}$, $F^{\mathrm{abs}}$, $N^{\mathrm{ex}}$), fee schedules $\phi$, cluster map $\mathrm{cl}$, $\mathrm{ADV}^{\max}_i$, calendar | AUTHORITATIVE (human-set, versioned) | every budget and gate | defines the envelope |
+| quotes $p^{\mathrm{bid}},p^{\mathrm{ask}}$ (hence $m,\varsigma$), $\mathrm{st}_i$, $\mathrm{ev}_i$, corporate actions | EXTERNAL OBSERVATION | $W$, open risks, G2, G5, G6, G8, G10 | state of the world; gates only block |
+| $\mathrm{BP}_t$ | EXTERNAL OBSERVATION | F048 only through $\min(\cdot)$ | **restrictive only** |
+| $\hat\kappa^{\mathrm{out}},\hat\Gamma_i,\hat\Lambda_i$ | STATISTICAL ESTIMATE | only through $\max$ with a policy floor (F111) | every cap is non-increasing in $\kappa^{\mathrm{out}},\Gamma_i,\Lambda$ (T-07, T-08), so the cap never exceeds its value at the policy floor: **restrictive only** |
+| $\mathrm{ADV}^{\mathrm{est}}_{i,t}$ | STATISTICAL ESTIMATE (frozen estimator) | H12, H13 only through $\min(\cdot,\mathrm{ADV}^{\max}_i)$ (F111) | caps are non-decreasing in ADV, so the cap never exceeds its value at $\mathrm{ADV}^{\max}_i$: **restrictive only** relative to the policy cap; no model may supply it (Art. 6 amendment) |
+| statistical cluster map (RQ-10) | STATISTICAL ESTIMATE | H9, H10 only by merging clusters of $\mathrm{cl}$ | merging only enlarges cluster aggregates: **restrictive only** |
+| $b^{\mathrm{mod}}_k$, $R^{\mathrm{mod}}_t$ | MODEL OUTPUT | only through $\min(b^{\mathrm{hard}}_k,\mathfrak s(b^{\mathrm{mod}}_k))$ (F049) | **restrictive or neutral** (T-01) |
+| $\mathrm{LB}_t$ (certificate) | MODEL OUTPUT | only as an extra condition for TRADE (F027) | **restrictive or neutral** (T-12) |
+| proposal $\tilde n$ | OPTIMISER OUTPUT | only through the verifier F126 | $V(\tilde n)\le Q^{\mathrm{hard}}$: **restrictive or neutral** (T-03) |
+
+Per cap (A = authoritative, X = external observation, S = statistical estimate floored by policy (F111) unless marked, O = order parameters of
+the action evaluated; every cap additionally passes through F049 for MODEL OUTPUT and F126 for OPTIMISER OUTPUT):
+
+| Cap / gate | Inputs by class |
+|---|---|
+| H1 | O: $p^{\mathrm{lim}},p^{\mathrm{stop}}_o$; A: $f^{\mathrm{trd}}$, $\phi$ (F140); S: $\kappa^{\mathrm{out}}$; A+X: $B$ (from $W$; $\Lambda$ is S) |
+| H2, H10 | as H1, plus A: $f^{\mathrm{port}},f^{\mathrm{clr}}$, $\mathrm{cl}$ (merge-only statistical refinement), pending orders; A+X+S: $R^{\mathrm{open}},R^{\mathrm{res}}$ (F050, F144, F145) |
+| H3 | as H2, plus A: $f^{\mathrm{strat}}_s$, $B^{\mathrm{win}}_s$, $\mathrm{SL}_{s,t}$ (UNDEFINED ⇒ fail-closed rule §4) |
+| H4 | as H2, plus A: $\mu^{K}$, floor parameters; A+X+S: $K_t$ |
+| H5, H6 | O: $p^{\mathrm{lim}},p^{\mathrm{stop}}_o$; S: $\Gamma_i$, $\kappa^{\mathrm{out}}$; A: $\mu^{G},f^{\mathrm{gap}}$; A+X+S: $K_t$, $G^{\mathrm{open}},G^{\mathrm{res}}$ |
+| H7, H8, H9, H11 | O: $p^{\mathrm{lim}}$; A: $f^{\mathrm{ord}},f^{\mathrm{conc}},f^{\mathrm{clu}},\lambda^{\mathrm{gross}}$, $q$, pending orders, $\mathrm{cl}$; X: $m$; A+X+S: $B,W$ |
+| H12, H13 | A: $\rho^{\mathrm{in}},w^{\mathrm{in}},\rho^{\mathrm{ex}},h^{\mathrm{ex}}$, $q$, $Q^{\mathrm{res}}$, $\mathrm{ADV}^{\max}_i$; S (capped by policy): $\mathrm{ADV}_{i,t}=\min(\mathrm{ADV}^{\mathrm{est}}_{i,t},\mathrm{ADV}^{\max}_i)$ |
+| H14 | O: $p^{\mathrm{lim}}$; A: $\phi^{\mathrm{buy}}$, $C^{\mathrm{avail}}$, $C^{\mathrm{res}}$ (F144); X: $\mathrm{BP}_t$ (only restrictive) |
+| H16 | O: $p^{\mathrm{lim}}$; A: $\phi$, $q$, pending orders; X: $m$; A+X+S: $K_t$ |
+| G1–G11, post-filter | A: validators, $\theta$, universe, $q$, $Q^{\mathrm{res}}$, $n^{\min}$; X: $\mathrm{st}_i,\varsigma_i,m_i,\mathrm{ev}_i$; A+X+S: $K_t,\mathrm{DD}_t$; O: $d$, $p^{\mathrm{lim}},p^{\mathrm{stop}}_o$ (G7 uses S: $\kappa^{\mathrm{out}}$) — gates only block |
+
+Hence no MODEL OUTPUT or OPTIMISER OUTPUT can raise any $Q_k$ or $Q^{\mathrm{hard}}$ for a given order: each enters only through $\min$, a verifier
+bounded by $Q^{\mathrm{hard}}$, or an additional blocking condition. The stop of the order is not a model channel: S-family caps are evaluated
+against the stop that will be live with the order (A-STOPLIVE); G-family caps are bounded over *all* admissible stops because
+$L^{\mathrm{gap}}(n)\ge n\Gamma_ip^{\mathrm{lim}}\ge n\Gamma^{\min}p^{\mathrm{lim}}$ (from $p^{\mathrm{stop}}_o<p^{\mathrm{lim}}$, G7), so $n\,p^{\mathrm{lim}}\le f^{\mathrm{gap}}B_t/\Gamma^{\min}$; H7–H9, H11, H12–H14, H16
+do not depend on the stop.
 
 | ID | Brief's cap | Constraint $g_k(n)\le b_k$ | Formula | Tier | Assumptions | Required inputs |
 |---|---|---|---|---|---|---|
 | H1 | risk (per trade) | $L^{\mathrm{stop}}(n)\le f^{\mathrm{trd}}B_t$ | F076 | S | A-TRIG, A-EXE-01, A-EXE-02 | $p^{\mathrm{lim}},p^{\mathrm{stop}}_o,\kappa^{\mathrm{out}},\phi$ |
 | H2 | portfolio risk | $L^{\mathrm{stop}}(n)\le f^{\mathrm{port}}B_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t$ | F077 | S | as H1; A-AUTH-02, A-AUTH-04 | all open stops; ledger |
-| H3 | strategy loss/risk | $L^{\mathrm{stop}}(n)\le f^{\mathrm{strat}}_sB_t-R^{\mathrm{open}}_{s,t}-R^{\mathrm{res}}_{s,t}-\mathrm{SL}_{s,t}$; $\mathrm{SL}_{s,t}$ **UNDEFINED — REQUIRES RESOLUTION** (RQ-11) ⇒ fail-closed rule of §4 | F078 | S | as H2 | strategy attribution |
+| H3 | strategy loss/risk | $L^{\mathrm{stop}}(n)\le f^{\mathrm{strat}}_sB^{\mathrm{win}}_s-R^{\mathrm{open}}_{s,t}-R^{\mathrm{res}}_{s,t}-\mathrm{SL}_{s,t}$; $\mathrm{SL}_{s,t}$ **UNDEFINED — REQUIRES RESOLUTION** (RQ-11) ⇒ fail-closed rule of §4 | F078 | S | as H2 | strategy attribution |
 | H4 | daily / weekly loss, drawdown, capital floor | $L^{\mathrm{stop}}(n)\le \mu^{K}K_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t$ | F079 | S | T-10 hypotheses (§2) | $W,F$ components |
 | H5 | gap loss (portfolio) | $L^{\mathrm{gap}}(n)\le \mu^{G}K_t-G^{\mathrm{open}}_t-G^{\mathrm{res}}_t$ | F080 | G | A-GAP, §2 common | $\Gamma$ for all positions |
 | H6 | gap loss (per trade) | $L^{\mathrm{gap}}(n)\le f^{\mathrm{gap}}B_t$ | F081 | G | A-GAP | $\Gamma_i$ |
@@ -144,7 +198,8 @@ input; UNKNOWN ≠ SAFE).
 Zero–one **gates** **[F092]** (independent of $n$): G1 $\alpha_t=1$; G2 $\mathrm{st}_i=\text{TRADING}$; G3 $K_t>0$; G4 $\mathrm{DD}_t<d^{\max}$;
 G5 $\varsigma_i/m_i\le\varsigma^{\max}$; G6 event policy on $\mathrm{ev}_i$ (**UNDEFINED — REQUIRES RESOLUTION**); G7 opportunity validity
 ($0<p^{\mathrm{stop}}_o<m^{\mathrm{arr}}$, $p^{\mathrm{stop}}_o<p^{\mathrm{lim}}\le p^{\mathrm{ask}}(1+\chi)$, per-share stop loss
-$p^{\mathrm{lim}}-p^{\mathrm{stop}}_o+\kappa^{\mathrm{out}}\ge\ell^{\min}p^{\mathrm{lim}}$); G8 no anomalies in held positions; G9 $d=+1$ (D-01); G10 $i\in\mathbb I_t$ and
+$p^{\mathrm{lim}}-p^{\mathrm{stop}}_o+\kappa^{\mathrm{out}}\ge\ell^{\min}p^{\mathrm{lim}}$); G8 no anomalies in held positions (05 §5: a negative raw open-risk value of F064–F066, of the held part of a partially filled order, or of
+F145 ⇒ fail, never "negative risk"; AUD-051); G9 $d=+1$ (D-01); G10 $i\in\mathbb I_t$ and
 $p^{\min}\le m^{\mathrm{arr}}\le p^{\max}$ (A-MKT-06); **G11** $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=0$ (one exposure per instrument, A-SCOPE-05 — per-lot risk is not
 additive under super-additive exit costs, 05 §5).
 
@@ -211,17 +266,17 @@ binding stop-risk term (e.g. $f^{\mathrm{trd}}\le f^{\mathrm{strat}}_s$ and $f^{
 $\mathrm{DD}^{*}=\frac{\mu^{K}d^{\max}-f^{\mathrm{trd}}}{\mu^{K}-f^{\mathrm{trd}}}$ **[F100]** (when $\mu^{K}d^{\max}>f^{\mathrm{trd}}$), and exactly $0$ at $\mathrm{DD}=d^{\max}$. The
 **aggregate** capacity $\mu^{K}K_t=\mu^{K}H_tU_t(d^{\max}-\mathrm{DD}_t)$ (F102) is linear in $\mathrm{DD}$.
 
-**Why the cushion line, not a chosen shape.** T-21 (restated v0.2, AUD-032, REV-025): under the disturbance set of tier S, with no partially
-filled order and no stale reservation, $W_{t+1}\ge F_t$ holds for every admissible scenario **iff** aggregate stop-risk $\le K_t+\Lambda_t=E_t-F_t$
-(sufficiency by summation, necessity by the comonotone "all stops hit" scenario). The hard layer uses $K_t$, conservative by $\Lambda_t$ (OC-1)
-and by any OC-4 over-charge; on a flat book the conditions coincide. Hence a
+**Why the cushion line, not a chosen shape.** T-21 (closure form): under the disturbance set of tier S with attainable bounds and no active
+clamp on a pending order, $W_{t+1}\ge F_t$ for every admissible scenario is **equivalent** to aggregate stop-risk $\le K_t+\Lambda_t=E_t-F_t$
+(sufficiency by summation, necessity by the comonotone "all stops hit" scenario; both proved; with an active clamp only sufficiency holds). The hard layer's condition with $K_t$ is sufficient and conservative by exactly $\Lambda_t$ (OC-1, kept
+for T-07); it is also necessary exactly when $\Lambda_t=0$, e.g. on a flat book. Hence a
 throttle that must be floor-safe in every state lies pointwise below the cushion line; choosing *among* safe throttles is a
 preference/performance question for Phase 16, not a safety question.
 
 | Family | Form | Continuous | Monotone in $\mathrm{DD}$ | Zero at $d^{\max}$ | Floor-safe alone (tier S) | Sensitivity | Path-dependent |
 |---|---|---|---|---|---|---|---|
-| Cushion-induced (CPPI-type) | $\vartheta_K$ above | yes | yes | yes | yes iff $\mu^{K}\le1$ with aggregate risk | bounded: $\le\frac{\mu^{K}}{f^{\mathrm{trd}}(1-d^{\max})}$ on $[0,d^{\max}]$ (F101) | no (function of $W,H$) |
-| Linear in $\mathrm{DD}$ | $(1-\mathrm{DD}/d^{\max})^+$ (F104) | yes | yes | yes | single trade iff $f^{\mathrm{trd}}\le \mu^{K}d^{\max}$; aggregate still needs H4 | $1/d^{\max}$ | no |
+| Cushion-induced (CPPI-type) | $\vartheta_K$ above | yes | yes | yes | in every state iff $\mu^{K}\le1$ (necessity on a flat book, T-21 (c)) | bounded: $\le\frac{\mu^{K}}{f^{\mathrm{trd}}(1-d^{\max})}$ on $[0,d^{\max}]$ (F101) | no (function of $W,H$) |
+| Linear in $\mathrm{DD}$ | $(1-\mathrm{DD}/d^{\max})^+$ (F104) | yes | yes | yes | single trade (with $B=W$, only $F^{\mathrm{dd}}$ active, no other risk) iff $f^{\mathrm{trd}}\le d^{\max}$ — the loss $f^{\mathrm{trd}}H(1-\mathrm{DD})(1-\mathrm{DD}/d^{\max})$ must not exceed $K=H(d^{\max}-\mathrm{DD})$, i.e. $f^{\mathrm{trd}}(1-\mathrm{DD})\le d^{\max}$ for all $\mathrm{DD}$ (closure, AUD-037; the former condition $f^{\mathrm{trd}}\le\mu^{K}d^{\max}$ is sufficient only); aggregate still needs H4 | $1/d^{\max}$ | no |
 | Piecewise step | $\sum_k\vartheta^{\mathrm{step}}_k\mathbb 1[\mathrm{DD}\in\mathcal I_k]$ (F103) | **no** | if $\vartheta^{\mathrm{step}}_k$ non-increasing | if last $\vartheta^{\mathrm{step}}_k=0$ | only if below cushion line pointwise | **unbounded** at steps (chattering) | no |
 | Exponential | $e^{-\zeta\,\mathrm{DD}}$ (F105) | yes | yes | **never** | **no** — cannot enforce a floor | $\zeta$ | no |
 | Multiplicative per loss | e.g. halve after each loss, reset at new high | n/a | not a function of $(W,H)$ | no | no | — | **yes** (needs extra state) |
