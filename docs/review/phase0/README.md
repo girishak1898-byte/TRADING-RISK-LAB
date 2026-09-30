@@ -9,8 +9,8 @@ contact, no parameter optimisation, no backtesting, no Trading OS integration.
 |---|---|---|
 | BASELINE | `69a381d` | Phase-0 constitution v0.1 (immutable) |
 | Pre-registry corrections | `8198877` | Fixes for the 24 reviewer findings, applied **before** this registry existed (v0.1.1). Retained, not rewritten. Every change in it is mapped to a REV ID in [01](01-reviewer-finding-registry.md). |
-| REVIEW FINDINGS | the commit adding this directory | Finding registries, numerical red team, bibliography and cap audits, pre-correction mechanical check output, and the documentation checker. **No constitution document is changed in this commit.** |
-| CORRECTIONS | the following commit | Smallest documentation corrections for confirmed findings, plus the acceptance gate ([08-acceptance-gate.md](08-acceptance-gate.md)). |
+| REVIEW FINDINGS | `ad1a884` (the commit adding this directory) | Finding registries, numerical red team, bibliography and cap audits, pre-correction mechanical check output, and the documentation checker. **No constitution document is changed in this commit.** |
+| CORRECTIONS | the child of `ad1a884` | Smallest documentation corrections for confirmed findings (v0.2), AUD-031 … AUD-033 found during correction, and the acceptance gate ([08-acceptance-gate.md](08-acceptance-gate.md)). |
 
 Ordering note: because `8198877` preceded the registry, the strict order BASELINE → FINDINGS → CORRECTIONS holds for the second
 correction round; for the first round the registry documents, per finding, which lines of `8198877` correct it and whether the correction
@@ -20,7 +20,9 @@ was complete. Diffs `69a381d..8198877` and `<findings>..<corrections>` are each 
 
 The review agent referred to in the Phase-0 closing instruction had already completed within this session before the instruction
 arrived; its report (4 BLOCKER, 9 MAJOR, 11 MINOR) is registered verbatim in substance as REV-001 … REV-024 and every load-bearing claim
-was reproduced independently in exact arithmetic ([03](03-numerical-red-team.md) §B).
+was reproduced independently in exact arithmetic ([03](03-numerical-red-team.md) §B). A second independent agent reviewed the
+uncommitted correction draft; its twelve findings are registered as REV-025 … REV-036 (each reproduced independently, one upgraded to
+CRITICAL) and corrected in the same correction commit.
 
 ## 3. Contents
 
@@ -32,7 +34,7 @@ was reproduced independently in exact arithmetic ([03](03-numerical-red-team.md)
 | [04-bibliography-audit.md](04-bibliography-audit.md) | §11 bibliography and novelty |
 | [05-hard-safety-cap-audit.md](05-hard-safety-cap-audit.md) | §7 hard-safety cap audit |
 | [07-mechanical-checks-pre-correction.md](07-mechanical-checks-pre-correction.md) | §3–§5 mechanical checks before correction |
-| [08-acceptance-gate.md](08-acceptance-gate.md) | §13 acceptance gate (added by the correction commit) |
+| [08-acceptance-gate.md](08-acceptance-gate.md) | §13 acceptance gate and §14 correction record (added by the correction commit) |
 
 Mechanical checker: `python3 tools/doccheck/check_constitution.py [--verbose]` — a documentation linter (no trading logic, no network,
 no market data). Exit status 0 iff every gate count is zero.

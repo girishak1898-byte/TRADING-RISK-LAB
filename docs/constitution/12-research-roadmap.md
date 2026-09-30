@@ -1,4 +1,11 @@
-# 12 — Dependency-Ordered Research Roadmap (v0.1.1-draft)
+# 12 — Dependency-Ordered Research Roadmap (v0.2-draft)
+
+**Phase-0 review status (v0.2, AUD-024).** An independent mathematical review of the Phase-0 constitution has been performed and its
+confirmed findings corrected (reviewer findings REV-001 … REV-036 from two independent reviews, self-audit findings AUD-001 … AUD-033; record and acceptance gate in
+`docs/review/phase0/`). It delivered part of R1's exit gate ahead of R0: symbol registry v0.2 with zero unregistered symbols, a formula
+registry (14) and a machine-checked dimension table, each verified by `tools/doccheck/check_constitution.py`. Still open in R1: the
+human controller's sign-off (D-11) and the definitional UNDEFINED items listed below. The review does not change the critical path:
+R0 (13) remains the next task.
 
 Each stage has an **entry gate** (what must be true to start) and an **exit gate** (evidence required to finish). A stage's output is
 never "done" because a document or code exists (OUTPUT ≠ COMPLETION). No stage involves a broker, credentials, network access at
@@ -28,11 +35,11 @@ R0 Scope decisions ──► R1 Constitution review & symbol freeze ──► R2
 
 | Stage | Content | Entry gate | Exit gate |
 |---|---|---|---|
-| **R0** Scope decisions | D-01..D-07 (13) | this constitution delivered | signed decision record |
-| **R1** Constitution review & symbol freeze v0.2 | independent adversarial review of 01–12; resolve definitional UNDEFINED items that do not need data ($B_t$ candidates narrowed, trigger semantics, calendar, ruin definition, D-08..D-11) | R0 | reviewer sign-off; registry v0.2 with zero unregistered symbols; every UNDEFINED item either resolved or scheduled |
+| **R0** Scope decisions | D-01..D-07 and D-12 (13) | this constitution delivered | signed decision record |
+| **R1** Constitution review & symbol freeze | independent adversarial review of 01–14 (**performed for Phase 0**, see status above); resolve definitional UNDEFINED items that do not need data ($B_t$ candidates narrowed, trigger semantics, calendar, ruin definition, $\mathrm{SL}$ definition, D-08..D-11) | R0 | human sign-off (D-11); registry with zero unregistered symbols (**met at v0.2**); every UNDEFINED item either resolved or scheduled |
 | **R2** Wealth dynamics & ECAI specification | corporate actions, flows/unitisation timing, day/week boundaries, $\Lambda$ interface (model left pluggable but monotone) | R1 | identities re-proved with the final accounting rules; worked ledger examples |
 | **R3** Hard-envelope specification v1 | final constraint catalogue for v0 scope, gates, parameter-admissibility box, reservation vector, reason codes | R2 | every constraint monotone (proved) with tier label; dimension check passes |
-| **R4** Proof review | T-01..T-05, T-10, T-11, T-13, T-17, T-18, T-20..T-25 re-proved against the R3 spec by an independent reviewer; optional mechanised pilot (RQ-33) | R3 | reviewed proofs; each mapped to a testable invariant |
+| **R4** Proof review | T-01..T-05, T-10, T-11, T-13, T-17a, T-17b, T-18, T-20a..T-25 re-proved against the R3 spec by an independent reviewer; optional mechanised pilot (RQ-33) | R3 | reviewed proofs; each mapped to a testable invariant |
 | **R5** Numerical contract v1 | representation choice (RQ-16), rounding table per field, serialisation schema, hashing, magnitude bounds | R3 | T-24 argument per field; canonical-serialisation test vectors |
 | **R6** Required-input registry & decision-record schema (engine side) | $\mathcal R^{\mathrm{req}}$, TTLs (RQ-19), read-set check method (RQ-18) | R3, R5 | read-set ⊆ registry demonstrable by construction |
 | **R7** Reference implementation — **hard layer only** | pure Python, typed inputs, exact arithmetic, no I/O; outputs $Q^{\mathrm{hard}}$, all $Q_k$, binding set, tiers, reservation vector, evidence hash | R4, R5, R6 **and explicit human approval to begin coding** | builds; import deny-list check passes (no network/broker/persistence modules) |

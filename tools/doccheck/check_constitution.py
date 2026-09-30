@@ -8,6 +8,10 @@ under docs/ and reports:
   1. deliverable presence (01..14)
   2. cross-reference closure (T-, RQ-, D-, H, G, FM-, RT-, F###, DC-, OC-, E-, DT-, L-, S-, A-, REV-, AUD-)
   3. symbol closure: UNREGISTERED_SYMBOLS, DUPLICATE_MEANING_SYMBOLS, registry row completeness
+  3b. theorem register: eight canonical fields, one of the five statuses, status consistent with the classes of
+      the cited assumptions (PROVED may not rest on MARKET/EXECUTION/STATISTICAL/OPERATIONAL/RESEARCH assumptions)
+  3c. assumptions: one of the seven classes and a fail-closed check per assumption
+  3d. economic cost conservation table present in 05 with the required columns
   4. formula closure: display equations tagged with a formula ID; ":=" definitions tagged;
      formula-registry rows complete; referenced IDs exist
   5. dimensional audit: every formula-registry `dim:` expression is dimensionally consistent
@@ -70,7 +74,8 @@ OPERATORS = set("""max min inf sup log exp lim arg det dim sqrt frac sum prod in
  forall exists mid lvert rvert vert lVert rVert langle rangle circ pm mp approx sim propto equiv infty emptyset varnothing
  star ast prime quad qquad text textbf mathbf mathrm operatorname boxed underbrace overbrace left right big Big bigg Bigg
  displaystyle textstyle hat bar tilde widehat widetilde check dot ddot vec overline underline sqrt
- not colon ge le gg ll uparrow downarrow top bot perp nabla oplus otimes checkmark""".split())
+ not colon ge le gg ll uparrow downarrow top bot perp nabla oplus otimes checkmark begin end cases leftrightarrow
+ ni tfrac dfrac binom ldots vdots overset underset limits nolimits phantom""".split())
 UNIT_NAMES = {"USD", "sh", "T", "day", "unit"}
 NAMED_OK = {"sgn", "RN", "arg"}  # operator names written with \operatorname / \mathrm
 
@@ -109,8 +114,15 @@ def _group(tk):
     tk.i = i + 1
     return s[i]
 
-def _label_of(sup):
+def _label_of(sup, base=""):
     sup = sup.strip()
+    sup = re.sub(r"(\\prime|')+$", "", sup).strip() or sup
+    if sup in (r"\min", r"\max"):
+        return sup[1:]
+    if base.startswith("mathcal") and sup in ("+", "-"):
+        return sup
+    if base.startswith("mathbb") and re.fullmatch(r"[A-Za-z]", sup):
+        return None
     m = re.fullmatch(r"\\mathrm\{([^}]*)\}", sup)
     if m:
         return m.group(1).replace(" ", "")
@@ -194,9 +206,11 @@ def tokenize(math):
                 continue
             grp = _group(tk)
             if ch == "^":
-                lab = _label_of(grp)
-                if lab is not None and not (lab in ("'",) and False):
+                lab = _label_of(grp, key)
+                if lab is not None:
                     label_parts.append("^" + lab)
+                    if re.search(r"\\prime|'", grp):
+                        label_parts.append("'")
                 else:
                     p2, i2 = tokenize(grp)
                     index += p2 + i2
@@ -263,12 +277,29 @@ def split_row(line):
 
 REG_COLS = ["ID", "Symbol", "Meaning", "Type", "Domain", "Codomain", "Units", "Sign", "Valid range", "Source", "Class"]
 
+def _strip_args(seg):
+    """Remove parenthesised argument lists at brace depth 0 (keeps labels such as ^{(0)})."""
+    out, depth, par = [], 0, 0
+    for ch in seg:
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        if depth == 0 and ch == "(":
+            par += 1
+            continue
+        if depth == 0 and ch == ")" and par:
+            par -= 1
+            continue
+        if par == 0:
+            out.append(ch)
+    return "".join(out)
+
 def load_registry(reg_text):
     rows = []  # (id, section, cells-dict, keys, scope)
     for section, header, trs in md_tables(reg_text):
-        if len(header) < 2 or header[0] != "ID" or header[1] not in ("Symbol",):
-            if not (header and header[0] == "Scope"):
-                continue
+        if not header or header[0] != "ID" or "Symbol" not in header:
+            continue
         for r in trs:
             d = dict(zip(header, r))
             sid = d.get("ID", "")
@@ -276,9 +307,14 @@ def load_registry(reg_text):
                 continue
             sym = d.get("Symbol", "")
             ks = []
-            for disp, seg in math_segments(sym):
-                p, _ = tokenize(seg)
-                ks += p
+            typ = d.get("Type", "").strip().lower()
+            if not (typ.startswith("alias") or typ.startswith("compound")):
+                for disp, seg in math_segments(sym):
+                    seg = seg.split("=")[0] if not seg.lstrip().startswith("(") else seg
+                    if not seg.lstrip().startswith("("):
+                        seg = _strip_args(seg)
+                    p, _ = tokenize(seg)
+                    ks += p
             rows.append({"id": sid, "section": section, "cells": d, "keys": ks, "scope": d.get("Scope", "").strip()})
     return rows
 
@@ -286,11 +322,22 @@ def load_registry(reg_text):
 def scopes_of(docname, text):
     """Split a doc into (scope_name, text). 08 is split per theorem block."""
     short = docname[:2]
+    if short == "14":
+        # a formula-registry row is read in the namespace of the theorem(s) its Location column names
+        out = []
+        for line in text.splitlines(keepends=True):
+            cells = split_row(line) if line.startswith("| F") else []
+            if len(cells) >= 11:
+                tids = re.findall(r"\bT-\d+[a-zN]*", cells[10])
+                out.append(("14" + "".join(f"|08:{x}" for x in tids), line))
+            else:
+                out.append(("14", line))
+        return out
     if short == "08":
-        parts = re.split(r"(?m)^(### (?:T-\d+|OPEN-\d+)[^\n]*)$", text)
+        parts = re.split(r"(?m)^(### (?:T-\d+[a-zN]*|OPEN-\d+)\b[^\n]*)$", text)
         out = [("08", parts[0])]
         for k in range(1, len(parts), 2):
-            tid = re.match(r"### ((?:T-\d+|OPEN-\d+))", parts[k]).group(1)
+            tid = re.match(r"### ((?:T-\d+[a-zN]*|OPEN-\d+))", parts[k]).group(1)
             out.append((f"08:{tid}", parts[k] + parts[k + 1]))
         return out
     return [(short, text)]
@@ -299,21 +346,17 @@ def scopes_of(docname, text):
 BASES = ("USD", "sh", "day", "T", "unit")
 
 def parse_dim(s):
-    s = s.strip()
-    if s in ("1", "[1]"):
+    """Parse 'USD/sh', 'sh/day', 'day^(-1/2)', '1' into a dimension dict (exponents as Fractions)."""
+    from fractions import Fraction
+    s = s.strip().strip("[]").replace(" ", "")
+    if s in ("1", ""):
         return {}
-    s = s.strip("[]")
     dims = collections.Counter()
-    num, den = (s.split("/", 1) + [""])[:2] if "/" in s else (s, "")
-    for part, sign in ((num, 1), (den, -1)):
-        for f in re.findall(r"([A-Za-z]+)(?:\^\(?(-?\d+(?:/\d+)?)\)?)?", part):
-            base, exp = f
-            if base == "1":
-                continue
-            if base not in BASES:
-                raise ValueError(f"unknown base {base} in {s}")
-            e = eval(exp) if exp else 1
-            dims[base] += sign * e
+    for op, base, e1, e2 in re.findall(r"([*/]?)([A-Za-z]+)(?:\^\((-?\d+(?:/\d+)?)\)|\^(-?\d+))?", s):
+        if base not in BASES:
+            raise ValueError(f"unknown base {base} in {s}")
+        e = Fraction(e1 or e2 or "1")
+        dims[base] += -e if op == "/" else e
     return {k: v for k, v in dims.items() if v}
 
 def registry_units_dim(u):
@@ -326,11 +369,14 @@ def registry_units_dim(u):
 class DimError(Exception):
     pass
 
+def _same(a, b):
+    return a is None or b is None or a == b
+
 def dim_eval(node, table):
     if isinstance(node, ast.Expression):
         return dim_eval(node.body, table)
     if isinstance(node, ast.Constant):
-        return {}
+        return None if node.value == 0 else {}
     if isinstance(node, ast.Name):
         if node.id not in table:
             raise DimError(f"unknown name {node.id}")
@@ -340,9 +386,11 @@ def dim_eval(node, table):
     if isinstance(node, ast.BinOp):
         a, b = dim_eval(node.left, table), dim_eval(node.right, table)
         if isinstance(node.op, (ast.Add, ast.Sub)):
-            if a != b:
+            if not _same(a, b):
                 raise DimError(f"add/sub mismatch {a} vs {b} at {ast.unparse(node)}")
-            return a
+            return a if a is not None else b
+        if a is None or b is None:
+            return None
         if isinstance(node.op, ast.Mult):
             c = collections.Counter(a); c.update(b)
             return {k: v for k, v in c.items() if v}
@@ -363,28 +411,33 @@ def dim_eval(node, table):
         d0 = dim_eval(node.left, table)
         for comp in node.comparators:
             d1 = dim_eval(comp, table)
-            if d0 != d1:
+            if not _same(d0, d1):
                 raise DimError(f"comparison mismatch {d0} vs {d1} at {ast.unparse(node)}")
         return {}
     if isinstance(node, ast.Call):
         fn = node.func.id if isinstance(node.func, ast.Name) else "?"
         args = [dim_eval(a, table) for a in node.args]
-        if fn in ("min", "max", "floor", "ceil", "pos", "abs", "E", "ES", "VaR", "inf", "sup", "argmax", "sum_t", "sum_j", "sum_k", "lattice_floor"):
-            for a in args[1:]:
-                if a != args[0]:
-                    raise DimError(f"{fn} arguments differ {args}")
-            return args[0] if args else {}
+        if fn in ("floor", "ceil"):
+            if args[0]:
+                raise DimError(f"{fn} of a dimensioned quantity {args[0]} at {ast.unparse(node)} (floor must act on a dimensionless count)")
+            return {}
+        if fn in ("min", "max", "pos", "abs", "E", "ES", "VaR", "inf", "sup", "sum_t", "sum_j", "sum_k"):
+            known = [a for a in args if a is not None]
+            for a in known[1:]:
+                if a != known[0]:
+                    raise DimError(f"{fn} arguments differ {args} at {ast.unparse(node)}")
+            return known[0] if known else None
         if fn == "sum_i":   # sum across instruments: shares of different instruments are incommensurable
-            if any(k == "sh" for k in args[0]):
+            if args[0] and any(k == "sh" for k in args[0]):
                 raise DimError(f"sum over instruments of a share-dimensioned term at {ast.unparse(node)}")
             return args[0]
         if fn in ("log", "exp", "P", "ind"):
-            if fn in ("log", "exp") and args[0]:
+            if fn in ("log", "exp") and args and args[0]:
                 raise DimError(f"{fn} of dimensioned argument {args[0]} at {ast.unparse(node)}")
             return {}
         if fn == "sqrt":
             from fractions import Fraction
-            return {k: v * Fraction(1, 2) for k, v in args[0].items()}
+            return {k: v * Fraction(1, 2) for k, v in (args[0] or {}).items()}
         raise DimError(f"unknown function {fn}")
     raise DimError(f"unsupported syntax {ast.dump(node)[:60]}")
 
@@ -420,7 +473,7 @@ def main():
     review_text = "\n".join(p.read_text(encoding="utf-8") for p in sorted(review_dir.glob("*.md"))) if review_dir.exists() else ""
     d = lambda n: docs.get(next((k for k in docs if k.startswith(n)), ""), "")
     defs = {
-        "T": set(re.findall(r"### (T-\d+[a-z]?)\b", d("08"))),
+        "T": set(re.findall(r"### (T-\d+[a-zN]*)\b", d("08"))),
         "RQ": set(re.findall(r"\| (RQ-\d+) \|", d("07"))),
         "D": set(re.findall(r"\| (D-\d+) \|", d("04"))),
         "H": set(re.findall(r"\| (H\d+) \|", d("06"))),
@@ -438,7 +491,7 @@ def main():
         "REV": set(re.findall(r"^### (REV-\d{3})", review_text, re.M)),
         "AUD": set(re.findall(r"^### (AUD-\d{3})", review_text, re.M)),
     }
-    pats = {"T": r"\bT-\d+[a-z]?\b", "RQ": r"\bRQ-\d+", "D": r"\bD-\d+\b", "H": r"\bH\d+\b", "G": r"\bG\d+\b",
+    pats = {"T": r"\bT-\d+[a-zN]*\b", "RQ": r"\bRQ-\d+", "D": r"\bD-\d+\b", "H": r"\bH\d+\b", "G": r"\bG\d+\b",
             "FM": r"\bFM-[A-Z]+-\d+", "RT": r"\bRT-\d+", "F": r"\bF\d{3}\b", "DC": r"\bDC-\d+", "OC": r"\bOC-\d+",
             "E": r"(?<![A-Z-])E-\d+\b", "DT": r"\bDT-\d+", "L": r"(?<![A-Z-])L-\d+\b", "S": r"\bS-\d+",
             "A": r"\bA-(?:SCOPE|ACC|AUTH|MKT|STOPLIVE|STOP|TRIG|GAP|LIQ|EXE|STAT|NLA|NUM|TIME|SET|FLOW|MATH)(?:-\d+)?\b",
@@ -449,6 +502,8 @@ def main():
         if k in ("REV", "AUD") and not review_text:
             continue
         miss = sorted(u for u in used if u not in defs[k])
+        if k == "T":  # a v0.1.1 family ID (e.g. T-06) is defined when its split parts (T-06a, T-06b, ...) are
+            miss = [u for u in miss if not any(re.fullmatch(re.escape(u) + r"[a-zN]+", d) for d in defs["T"])]
         if k == "F" and not defs["F"]:
             miss = []  # no formula registry yet
         xref += [f"{k}:{m}" for m in miss]
@@ -477,15 +532,73 @@ def main():
                 for kk in keys_in(seg):
                     if kk.startswith("op:") and kk[3:] in NAMED_OK:
                         continue
-                    if kk in glob:
+                    base_k = kk.replace("'", "")
+                    if kk in glob or ("'" in kk and base_k in glob):
                         continue
-                    if any(scope == r["scope"] or scope.startswith(r["scope"] + ":") or r["scope"] == scope.split(":")[0] and ":" not in r["scope"]
-                           for r in local.get(kk, [])):
+                    kk = base_k if "'" in kk and base_k in local else kk
+                    if scope == "02" and kk in local:
                         continue
-                    unreg[kk].add(scope)
+                    names = scope.split("|")
+                    if any(nm == r["scope"] or nm.split(":")[0] == r["scope"]
+                           for nm in names for r in local.get(kk, [])):
+                        continue
+                    unreg[kk].add(names[0])
     report["UNREGISTERED_SYMBOLS"] = sorted(f"{k} [{', '.join(sorted(v))}]" for k, v in unreg.items())
     shadows = sorted(f"{k} (local {', '.join(sorted({r['scope'] for r in v}))})" for k, v in local.items() if k in glob)
     report["_SHADOWED_LOCAL_SYMBOLS (explicitly namespaced)"] = shadows
+
+    # 3b. theorem register: eight canonical fields, exactly one status, status consistent with assumption classes
+    FIELDS = ["THEOREM ID", "STATEMENT", "ASSUMPTIONS", "PROOF STATUS", "PROOF", "COUNTEREXAMPLE ATTEMPT",
+              "NUMERICAL EDGE CASES", "MACHINE-TESTABLE INVARIANT"]
+    STATUSES = ["PROOF REQUIRES ADDITIONAL ASSUMPTIONS", "NOT YET PROVEN", "DISPROVED", "UNDEFINED", "PROVED"]
+    aclass = {}
+    for section, header, trs in md_tables(d("04")):
+        if header and header[0] == "ID" and "Class" in header:
+            for r in trs:
+                row = dict(zip(header, r))
+                aclass[row["ID"]] = row["Class"].strip()
+    world = {"MARKET", "EXECUTION", "STATISTICAL", "OPERATIONAL", "RESEARCH"}
+    thm_bad, thm_incons = [], []
+    blocks = re.split(r"(?m)^### ((?:T-\d+[a-zN]*|OPEN-\d+))\b[^\n]*$", d("08"))
+    for k in range(1, len(blocks), 2):
+        tid, body = blocks[k], blocks[k + 1]
+        fields = {}
+        for f in FIELDS:
+            m = re.search(r"\*\*" + re.escape(f) + r"(?: \([^)]*\))?\.\*\*(.*?)(?=\n\*\*[A-Z][A-Z -]+(?: \([^)]*\))?\.\*\*|\n---|\Z)", body, re.S)
+            if not m:
+                thm_bad.append(f"{tid}: missing {f}")
+            else:
+                fields[f] = m.group(1).strip()
+        st = fields.get("PROOF STATUS", "")
+        if st not in STATUSES:
+            thm_bad.append(f"{tid}: status '{st[:40]}' not in the five-value vocabulary")
+            continue
+        cited = set(re.findall(pats["A"], fields.get("ASSUMPTIONS", "")))
+        unknown = [a for a in cited if a not in aclass]
+        worldly = {a for a in cited if aclass.get(a) in world}
+        inherits = re.search(r"T-10|tier-S", fields.get("ASSUMPTIONS", ""))
+        if unknown:
+            thm_incons.append(f"{tid}: cites unregistered assumption(s) {unknown}")
+        if st == "PROVED" and worldly:
+            thm_incons.append(f"{tid}: PROVED but ASSUMPTIONS cite {sorted(worldly)}")
+        if st == "PROOF REQUIRES ADDITIONAL ASSUMPTIONS" and not worldly and not inherits:
+            thm_incons.append(f"{tid}: PROOF REQUIRES ADDITIONAL ASSUMPTIONS but cites no world assumption")
+    report["THEOREMS_MISSING_FIELDS_OR_STATUS"] = thm_bad if len(blocks) > 1 else ["08 has no theorem blocks"]
+    report["THEOREM_STATUS_ASSUMPTION_INCONSISTENCIES"] = thm_incons
+    # 3c. assumptions: every row has one of the seven classes and a fail-closed check
+    CLASSES = {"MATHEMATICAL", "MARKET", "EXECUTION", "STATISTICAL", "NUMERICAL", "OPERATIONAL", "RESEARCH"}
+    unrec = [f"{a}: class '{c}'" for a, c in aclass.items() if c not in CLASSES]
+    for section, header, trs in md_tables(d("04")):
+        if header and header[0] == "ID" and "Class" in header:
+            for r in trs:
+                row = dict(zip(header, r))
+                if not row.get("Fail-closed check", "").strip():
+                    unrec.append(f"{row['ID']}: no fail-closed check")
+    report["UNRECORDED_ASSUMPTIONS"] = unrec if aclass else ["04 has no classified assumption table"]
+    # 3d. economic cost conservation table present with the required columns
+    need_cols = ["Term", "Unit", "State transition location", "Objective location", "Risk location", "Duplicate elsewhere?", "Resolution"]
+    has_ecct = any(header == need_cols for section, header, trs in md_tables(d("05")))
+    report["COST_CONSERVATION_TABLE_MISSING"] = [] if has_ecct else ["05: economic cost conservation table with the required columns"]
 
     # 4. formula closure
     fdoc = d("14")
@@ -496,13 +609,13 @@ def main():
         t = strip_code(text)
         for m in re.finditer(r"\$\$(.+?)\$\$", t, re.S):
             after = t[m.end():m.end() + 160]
-            if not re.search(r"\[F\d{3}(?:[–,-]F?\d{3})*\]", after):
+            if not re.search(r"\[F\d{3}(?:\s*[–,-]\s*F?\d{3})*\]", after):
                 untagged.append(f"{name}: {m.group(1).strip()[:50]}...")
         for dispflag, seg in math_segments(text):
             if ":=" in seg and not dispflag:
                 pos = t.find(seg)
                 ctx = t[pos:pos + len(seg) + 200] if pos >= 0 else ""
-                if not re.search(r"\[F\d{3}\]", ctx):
+                if not re.search(r"\[F\d{3}(?:\s*[–,-]\s*F?\d{3})*\]", ctx):
                     untagged.append(f"{name}: inline definition {seg[:50]}")
     report["UNTAGGED_EQUATIONS"] = untagged if fdoc else ["formula registry 14 missing"]
     frows = []

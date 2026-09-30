@@ -351,17 +351,191 @@ Correction location: commit `8198877` applied corrections for these findings **b
 | Correction location | `8198877`. |
 | Test / proof obligation | Ledger replay with payments. |
 
+## Second independent review (of the uncommitted v0.2 correction draft)
+
+Source: a second independent agent, launched in this session after the first correction draft, reviewed the new mathematics adversarially
+(no CRITICAL by its own rating; 5 IMPORTANT, 7 MINOR). Every numeric claim was **reproduced independently** in exact rational arithmetic before
+a status was assigned; the assessed severity is this audit's own. All twelve are corrected in the correction commit.
+
+### REV-025
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | IMPORTANT / IMPORTANT |
+| Document / section | 08 T-21 (v0.2 draft); 14 F143; 06 §7; 01 §7; 10 AA-1 note |
+| Formula / proposition | T-21 "only if" with the OC-4 double charge |
+| Reviewer claim | With an order partially filled at τ_t the charge exceeds the attainable worst loss, so the restated iff is false. |
+| Independent reproduction | Exact: 100 sh held marked 52, order 200 at limit 50, stop 49, κ^out(n)=0.001n, no fees, Λ_t=1, K_t=439: charge 310+240=550 > K_t+Λ_t=440, worst attainable change −439 ⇒ W_{t+1}=F_t (no breach). |
+| Status | **CONFIRMED** |
+| Mathematical consequence | False necessity claim in the draft; sufficiency unaffected. |
+| Required correction | Restrict (⇒) to ledgers without partially filled orders and without stale-reservation excess; state the general slack as Λ_t + OC-4 over-charge + ledger excess. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Boundary scenario per case. |
+
+### REV-026
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | IMPORTANT / IMPORTANT |
+| Document / section | 08 T-20a; 04 A-EXE-06 (v0.2 draft; the gap exists since the baseline) |
+| Formula / proposition | Cushion invariance under hold, static floor |
+| Reviewer claim | A stop triggered with nothing executed at the cut is neither untriggered nor fully exited; the proof misses it and the invariant fails. |
+| Independent reproduction | Exact: q=100, stop 49, κ^out=0.1, no fees; τ_t bid/ask 49.99/50.01 (Λ_t=1), K_t=R^open_t=110; τ_{t+1} triggered, unexecuted, bid/ask 48.9/49.0 (Λ=5): XV=4,890 ≥ 4,890 (A-TRIG holds), ΔW=−109, K_{t+1}=1 < r^open_{t+1}=5. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | T-20a false under its listed hypotheses. |
+| Required correction | A-EXE-06: every stop triggered in the period is fully executed by the cut; fail-closed: triggered or partially executed stop ⇒ RECOVERY. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Regression scenario above. |
+
+### REV-027
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | IMPORTANT / IMPORTANT |
+| Document / section | 02 S-290; 05 §5; 04 A-TRIG (v0.2 draft) |
+| Formula / proposition | Exposure quantity q^exp in T-10 case (2′) |
+| Reviewer claim | The definition gives q^exp=q_{i,t} for a held position, so A-TRIG says nothing about shares filled in the period on a partially filled order. |
+| Independent reproduction | Text comparison: case (2′) uses q^exp=q_{i,t}+e, not covered by S-290's two cases. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Proof step (2′) not supported by the assumption as defined. |
+| Required correction | Third case: held position with a pending remainder of the same order, q^exp=q_{i,t}+e. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Definition check. |
+
+### REV-028
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | IMPORTANT / **CRITICAL** (upgraded: the floor is breached under the theorem's own hypotheses; same class as AUD-001) |
+| Document / section | 08 T-10 cases (2), (2′); 06 §5; 04 A-AUTH-05 (the gap exists since the baseline) |
+| Formula / proposition | Pending-order reservation vs A-TRIG inputs |
+| Reviewer claim | The reserved L^stop was computed with reservation-time inputs (κ^out, fees, stop) while A-TRIG and r^open use τ_t inputs; nothing ties them. |
+| Independent reproduction | Exact: pending 100 at limit 50, stop 49, reserved with κ^out=0.1 ⇒ R^res=110=K_t; at τ_t F111 gives κ^out=0.5; fill and exit at the A-TRIG bound 48.5 ⇒ ΔW=−150, W_{t+1}=F_t−40. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | T-10 false as stated; the hard layer could admit a floor breach inside its assumptions (also after a stop is widened). |
+| Required correction | Charge each pending order the larger of the ledger reservation and its F108 vector re-evaluated at τ_t (F144); cite in T-10. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Metamorphic: raising any F111 input or widening a stop after reservation never lowers the charged reservation. |
+
+### REV-029
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | IMPORTANT / IMPORTANT |
+| Document / section | 04 A-TRIG sufficient conditions; 05 §5; 06 §2; 09 FM-OPS-9; 14 F140 (v0.2 draft) |
+| Formula / proposition | Two-part split envelope F140 |
+| Reviewer claim | With several exit orders per exposure (a child stop per entry fill) more than two fee-bearing parts arise; the stated sufficient conditions then do not imply A-TRIG. |
+| Independent reproduction | Exact: new order 100 at 50, stop 49, κ^out=0.1, fee max(1,0.005k) per order, L^stop=110+1+2=113=K_t; fills 34/33/33 each with its own stop exiting at 48.9: XV=4,890−3=4,887 < 4,888, ΔW=−114 ⇒ W_{t+1}=F_t−1. With N^ex=3: charge 115, F072 holds. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | False sufficiency claim; T-10 itself unaffected (assumes A-TRIG). |
+| Required correction | Generalise F140 to N^ex+1 parts (N^ex declared, unknown ⇒ per-execution worst case); align 06 §2 with 04. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Regression scenario above. |
+
+### REV-030
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / MINOR |
+| Document / section | 05 §5; 08 T-10, T-10N, T-20a; 09 FM-OPS-9 (v0.2 draft) |
+| Formula / proposition | AUD-001 example with Λ_t=0 |
+| Reviewer claim | v0.2 forces Λ_t ≥ φ^sell(100)=1, so the held-position example no longer breaches; the v0.2-relevant breach is a new order. |
+| Independent reproduction | Exact: Λ_t=1, K=111: ΔW=−111 ⇒ W_{t+1}=F_t; new order with L^stop=112: ΔW=−113 ⇒ F_t−1; with F140 L^stop=113 ⇒ F_t. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Examples mislabelled for v0.2 accounting. |
+| Required correction | Label Λ_t=0 as v0.1.1 accounting; restate v0.2 examples as a new order. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | — |
+
+### REV-031
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / MINOR |
+| Document / section | 08 T-10 case (2′) (v0.2 draft) |
+| Formula / proposition | Final inequality of case (2′) |
+| Reviewer claim | The displayed bound drops +Λ_{i,t}, which step (3) and T-21 (⇐) need. |
+| Independent reproduction | The intermediate line carries +Λ_{i,t}; the final one does not. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Presentation gap. |
+| Required correction | Keep +Λ_{i,t} in the final bound. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | — |
+
+### REV-032
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / MINOR |
+| Document / section | 08 T-10, T-10N; 14 F120; 06 §2 (v0.2 draft) |
+| Formula / proposition | Assumption lists |
+| Reviewer claim | T-10 omits A-ACC-01…03 needed by F055; the race counterexample removes A-AUTH-02, not A-AUTH-04; F120 omits A-AUTH-02, A-AUTH-05, A-ACC-04, A-ACC-06, A-EXE-01…03; 06 §2 folds the quantity bound into A-MKT-05; "without anomaly" unused. |
+| Independent reproduction | Text comparison of the four lists. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Lists incomplete or mis-attributed. |
+| Required correction | Align the lists; relabel the race item; drop the unused condition. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Checker THEOREM_STATUS_ASSUMPTION_INCONSISTENCIES. |
+
+### REV-033
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / MINOR |
+| Document / section | 05 §5 add-on paragraph (baseline numbers) |
+| Formula / proposition | Add-on numbers |
+| Reviewer claim | "Per-lot charges 210" and "100+130=230" use the rejected Λ credit. |
+| Independent reproduction | Exact: r^open(100)=110, L^stop(100)=110 ⇒ per-lot 220; combined worst 230 = r^open−Λ+F068 = 110−10+130; r^open+F068 = 240. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Stale numbers. |
+| Required correction | Restate with OC-1. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | — |
+
+### REV-034
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / **IMPORTANT** (upgraded: T-19's bound was false under its v0.1.1 hypotheses) |
+| Document / section | 05 §7 F070; 08 T-19 |
+| Formula / proposition | W^min with non-super-additive fees |
+| Reviewer claim | Selling part of a holding at price 0 and valuing the remainder with its own fee gives two fees where F070 charges one. |
+| Independent reproduction | Exact: fee max(1,0.005k), 100 sh, 50 sold at 0 (fee 1), remainder Λ=1 (A-ACC-05 with equality): W_{t+1}=C−Y−2 < W^min=C−Y−1. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | T-19's lower bound false without the envelope. |
+| Required correction | Apply F140 to φ^sell_{·,0} in F070; cite in T-19. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Regression scenario above. |
+
+### REV-035
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / MINOR |
+| Document / section | 05 §4b; 08 T-11 |
+| Formula / proposition | Cost table and ledger semantics |
+| Reviewer claim | No row for execution cost of other (manual) exits; the fees row does not mention F140; T-11 does not say what FILL does under A-AUTH-05 or that the ledger's Op is not R^open_t. |
+| Independent reproduction | Text inspection. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Documentation gaps; no missing economic term or unregistered duplicate. |
+| Required correction | Add the row and the two sentences. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Checker COST_CONSERVATION_TABLE_MISSING. |
+
+### REV-036
+| Field | Value |
+|---|---|
+| Reviewer severity / assessed | MINOR / MINOR |
+| Document / section | 10 AA-1 row; 07 RQ-32; 06 §6; 08 T-02; 10 AA-1 note; 01 §7 |
+| Formula / proposition | Cross-document wording |
+| Reviewer claim | A-STOP where A-TRIG is meant; E-18 cited for F095 instead of E-05; OC-4 slack missing in the T-21 qualifications. |
+| Independent reproduction | Text inspection. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Wording inconsistencies. |
+| Required correction | Replace references and add the qualification. |
+| Correction location | correction commit (v0.2). |
+| Test / proof obligation | Cross-reference check. |
+
 ## Summary
 
 | Status | Count | IDs |
 |---|---|---|
-| CONFIRMED | 24 | REV-001 … REV-024 |
+| CONFIRMED | 36 | REV-001 … REV-036 |
 | REJECTED | 0 | — |
 | PARTIALLY CONFIRMED | 0 | — |
 | REQUIRES ADDITIONAL ASSUMPTION | 0 | — |
 | UNRESOLVED | 0 | — |
 
-Assessed severity: CRITICAL 7 (REV-001, 002, 003, 005, 006, 007, 008) · IMPORTANT 7 (REV-004, 009, 010, 011, 012, 013, 016) ·
-MINOR 10 (REV-014, 015, 017–024). Severity disagreements with the reviewer: REV-004 downgraded; REV-005, 006, 007, 008 and 016 upgraded.
+Assessed severity: CRITICAL 8 (REV-001, 002, 003, 005, 006, 007, 008, 028) · IMPORTANT 12 (REV-004, 009, 010, 011, 012, 013, 016, 025, 026, 027,
+029, 034) · MINOR 16 (REV-014, 015, 017–024, 030, 031, 032, 033, 035, 036). Severity disagreements with the reviewers: REV-004 downgraded; REV-005, 006, 007, 008, 016, 028 and 034 upgraded.
 Residual defects in the corrections: REV-001/005 → AUD-001; REV-004 → AUD-003; REV-006 → AUD-015; REV-007 → AUD-004;
 REV-011/012/023 → AUD-006/007; REV-002 → AUD-022.

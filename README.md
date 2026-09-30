@@ -10,8 +10,10 @@ A later layer never overrides an earlier one.
 
 ## Status
 
-**Phase 0 — Mathematical Constitution v0.1.1 (DRAFT, awaiting human review; revised once after an independent adversarial review — see the revision note in 08).** No code exists. No formula has been adopted. No
-parameters have been chosen.
+**Phase 0 — Mathematical Constitution v0.2 (DRAFT, awaiting human decision SDR-001).** Revised twice after independent review: v0.1.1
+(adversarial review, revision note in 08) and v0.2 (Phase-0 independent mathematical review; record and acceptance gate in
+[docs/review/phase0/](docs/review/phase0/README.md)). No trading code exists. No formula has been adopted. No parameters have been chosen.
+The only code in the repository is a documentation linter, `tools/doccheck/check_constitution.py` (no trading logic, no network).
 
 ## Hard prohibitions (this phase)
 
@@ -35,11 +37,14 @@ no dependency on, or imitation of, any previous Trading OS risk implementation.
 | 11 | Literature / Novelty Research Plan | [docs/constitution/11-literature-novelty-plan.md](docs/constitution/11-literature-novelty-plan.md) |
 | 12 | Dependency-Ordered Research Roadmap | [docs/constitution/12-research-roadmap.md](docs/constitution/12-research-roadmap.md) |
 | 13 | Exactly One Smallest Next Task | [docs/constitution/13-next-task.md](docs/constitution/13-next-task.md) |
+| 14 | Formula Registry (single authority for equations; added v0.2) | [docs/constitution/14-formula-registry.md](docs/constitution/14-formula-registry.md) |
+| — | Phase-0 independent review record (findings, red team, bibliography and cap audits, acceptance gate) | [docs/review/phase0/README.md](docs/review/phase0/README.md) |
 
 Math is written in GitHub-flavoured Markdown with `$…$` notation.
 
 ## Status vocabulary
 
 Project items: CONFIRMED · PROVISIONAL · OPEN · BLOCKED · SUPERSEDED.
-Mathematical claims: PROVED · PROVED BY CONSTRUCTION · DISPROVED · COUNTEREXAMPLE FOUND · REQUIRES ADDITIONAL ASSUMPTION · UNDEFINED ·
-NOT YET PROVEN. Unresolved objects are marked **UNDEFINED — REQUIRES RESOLUTION**.
+Theorem statuses (08, v0.2): PROVED · DISPROVED · PROOF REQUIRES ADDITIONAL ASSUMPTIONS · UNDEFINED · NOT YET PROVEN.
+Red-team classification (09) additionally uses COUNTEREXAMPLE FOUND (= the unrestricted claim is DISPROVED). Unresolved objects are marked
+**UNDEFINED — REQUIRES RESOLUTION**.

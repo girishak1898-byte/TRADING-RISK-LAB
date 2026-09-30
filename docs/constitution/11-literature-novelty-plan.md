@@ -1,14 +1,18 @@
-# 11 — Literature and Novelty Research Plan (v0.1.1-draft)
+# 11 — Literature and Novelty Research Plan (v0.2-draft)
 
 ## 0. Verification status of this bibliography
 
-Every reference below was checked in this session against a publisher, DOI, JSTOR/RePEc/Project Euclid, arXiv or author page
-for **existence, authors, year, title and venue** (115 checked: 111 verified as given, 4 corrected — Sun & Boyd subtitle, and years
-added for Shapiro–Dentcheva–Ruszczyński, McNeil–Frey–Embrechts, Cowlishaw). **No volume/page numbers are given** because they were
-not verified. **Content claims** are separately marked: only four were checked, from abstracts (see §2); every other statement about
-what a paper *shows* is a reading task in §4, not a verified fact. Attributions of standard results (coherence of ES, the
-Rockafellar–Uryasev representation, the 1/N estimation-error finding of DeMiguel et al.) point to canonical sources but were not
-re-verified against the text in this session.
+**Provenance (qualified in v0.2, AUD-019).** In the Phase-0 authoring session a research subagent checked every reference below by web
+search against a publisher, DOI, JSTOR/RePEc/Project Euclid, arXiv or author page for **existence, authors, year, title and venue**
+(115 checked: 111 reported as given, 4 corrected — Sun & Boyd subtitle, and years added for Shapiro–Dentcheva–Ruszczyński,
+McNeil–Frey–Embrechts, Cowlishaw). That verification is **subagent-reported**: its evidence URLs are now recorded in
+`docs/review/phase0/04-bibliography-audit.md` §3, but the independent review could **not** re-resolve them because this environment's
+egress policy blocks doi.org, api.crossref.org and the publisher hosts tried. Status: TOTAL 115, DUPLICATES 0, independently re-verified 0,
+subagent-verified 115, CORRECTED 4, BROKEN IDENTIFIERS 0 (no DOIs are printed in this document). Independent re-verification is an
+**OPEN** research obligation (L-9). **No volume/page numbers are given** because they were not verified. **Content claims** are separately
+marked: only four were checked, from abstracts (see §2); every other statement about what a paper *shows* is a reading task in §4, not a
+verified fact. Attributions of standard results (coherence of ES, the Rockafellar–Uryasev representation, the 1/N estimation-error finding
+of DeMiguel et al.) point to canonical sources but were not re-verified against the text.
 
 ## 1. Bibliography by topic
 
@@ -123,14 +127,25 @@ Neumaier & Shcherbina (2004) *Safe bounds in linear and mixed-integer linear pro
 
 ## 3. Novelty assessment — current position (no claim made)
 
-| Novelty type | Candidate element | Prior work that must be checked before any claim | Current status |
-|---|---|---|---|
-| Mathematical | Tier-indexed floor-preservation theorems (T-10, T-21) | CPPI theory (Black & Perold; Balder et al.); drawdown control (Grossman & Zhou; Cvitanić & Karatzas); viability theory | **No claim.** Results are elementary; very likely known in some form |
-| Mathematical | Binary64 floor safety condition (T-22) | floating-point error analysis (Higham; Goldberg); safe-bounds literature (Neumaier & Shcherbina) | **No claim.** Standard error analysis applied to a specific operation |
-| Algorithmic | Exact monotone lattice search for caps with non-linear fees | integer programming; monotone search | **No claim** |
-| Risk-architecture | Separation of deterministic tiered envelope, feasibility-defined model caps (T-09), and certified advantage against no-trade | safety filters/shields (Wabersich & Zeilinger; Alshiekh et al.); robust MPC; risk-constrained Kelly | **No claim.** Filter/shield architecture is established; the finance-specific tier accounting *may* be a composition contribution — unverified |
-| Systems-composition | Snapshot-bound, pure, exact-arithmetic risk engine with evidence hashes | industry risk systems (largely unpublished); event-sourcing literature | **No claim**; hard to assess because industrial practice is unpublished |
-| Implementation | Directed-rounding table + certified non-rational evaluation in a risk engine | interval arithmetic (Moore et al.) | **No claim** |
+v0.2 (AUD-029): every component is mapped to its closest prior literature and exactly one of the categories KNOWN / KNOWN COMBINATION /
+POSSIBLE SYSTEMS NOVELTY / POSSIBLE MATHEMATICAL NOVELTY — REQUIRES FORMAL COMPARISON / UNSUPPORTED NOVELTY CLAIM.
+
+| Component | Closest prior literature (§1) | Category |
+|---|---|---|
+| Kelly / fractional Kelly sizing inside caps (F020, F138) | Kelly 1956; Breiman 1961; MacLean, Ziemba & Blazenko 1992; Thorp 2006 | KNOWN |
+| Risk-constrained / distributionally robust growth (F022) | Busseti, Ryu & Boyd 2016; Sun & Boyd 2018; Rujeerapaiboon, Kuhn & Wiesemann 2016 | KNOWN |
+| Cushion-proportional risk budget, floor preservation (F079, T-21) | Black & Perold 1992; Grossman & Zhou 1993; Cvitanić & Karatzas 1995 | KNOWN |
+| Gap-risk cushion multiplier $\le1/\Gamma_i$ (F106) | Balder, Brandl & Mahayni 2009 | KNOWN |
+| Tiered guarantees U/S/G/L as nested disturbance sets with one-step invariance (T-10, T-21) | viability theory (Aubin 1991); set invariance (Bertsekas 1972); robust MPC (Mayne, Seron & Raković 2005); CPPI | KNOWN COMBINATION (elementary results; very likely known in some form) |
+| Position-level exit-value bound and split fee envelope (F072, F140) | execution-cost and transaction-cost accounting (Perold 1988); no specific source surveyed | KNOWN COMBINATION (elementary; stated as an assumption, not a result) |
+| Deterministic safety filter with exact projection around an arbitrary proposer (F126) | Wabersich & Zeilinger 2021; Alshiekh et al. 2018; Ames et al. 2019 | KNOWN |
+| Feasibility-defined model caps, monotone in the ambiguity set (T-09) | DRO literature (Mohajerin Esfahani & Kuhn 2018); comparative statics not surveyed | POSSIBLE MATHEMATICAL NOVELTY — REQUIRES FORMAL COMPARISON |
+| Certified advantage against no-trade via the infimum of the difference (T-12a, F117) | maxmin / multiple priors (Gilboa & Schmeidler 1989); robust optimisation | KNOWN (the inequality is elementary) |
+| Binary64 floor-safety condition (T-22, F116) | Higham 2002; Goldberg 1991; Neumaier & Shcherbina 2004 | KNOWN (standard error analysis applied to one operation) |
+| Exact monotone lattice search for caps with non-linear fees (F094) | integer programming; monotone (bisection) search | KNOWN |
+| Directed-rounding table + certified non-rational evaluation (01 §9) | interval arithmetic (Moore, Kearfott & Cloud 2009) | KNOWN COMBINATION |
+| Composition: snapshot-bound pure exact engine + tiered envelope + feasibility-defined model caps + certified no-trade comparison + evidence hashing | industry practice largely unpublished; safety filters; robust control; event sourcing | POSSIBLE SYSTEMS NOVELTY (unverified; requires the prior-art search L-6) |
+| Any claim of a "new risk formula" | — | UNSUPPORTED NOVELTY CLAIM (none is made) |
 
 Default position: **the programme's value is correctness and assurance, not novelty.** A novelty claim requires §4 L-6 to be completed
 with a documented search showing the absence of the specific construct.
@@ -147,6 +162,7 @@ with a documented search showing the absence of the specific construct.
 | L-6 | Systematic prior-art search for the risk-architecture composition (safety filter + tiered guarantees + certified advantage vs no-trade) in finance, control and safe-RL literatures | novelty memo | L-1..L-5 |
 | L-7 | Empirical gap-risk literature (overnight returns, earnings-announcement jumps, halts) — search task | input to RQ-04, RQ-21 | — |
 | L-8 | Backtest-overfitting and multiple-testing methods for the Phase-16 protocol | protocol spec | — |
+| L-9 | Independent re-verification of all 115 references (existence, authors, year, title, venue) from an environment whose egress allows doi.org, api.crossref.org and publisher hosts; re-resolve every evidence URL of the review's register | verification log with per-entry result | — |
 
 Every new reference added by these tasks must pass the same verification (existence, authors, year, title, venue) before it is cited,
 and every content claim must cite the section it comes from.

@@ -1,486 +1,1203 @@
-# 08 — Theorem Register (v0.1.1-draft)
+# 08 — Theorem Register (v0.2-draft)
 
-Status vocabulary: **PROVED** (written proof of the stated proposition under the stated assumptions; *paper proof about the
-specification*, pending independent review — Art. 14) · **PROVED BY CONSTRUCTION** (true because the specification defines it so;
-the substantive risk is implementation conformance) · **DISPROVED** · **COUNTEREXAMPLE FOUND** · **REQUIRES ADDITIONAL
-ASSUMPTION** · **UNDEFINED** · **NOT YET PROVEN**. No entry is promoted by tests. "Observed" marks a counterexample reproduced
-numerically in this session (Python 3.11, exact rationals as reference).
+**Canonical format (v0.2, AUD-013).** Every entry has exactly the eight fields THEOREM ID, STATEMENT, ASSUMPTIONS, PROOF STATUS, PROOF,
+COUNTEREXAMPLE ATTEMPT, NUMERICAL EDGE CASES, MACHINE-TESTABLE INVARIANT, and exactly one status:
+
+- **PROVED** — the statement follows by the written proof from definitions, A-MATH-01 and hypotheses written into the statement
+  itself (conditional statements whose hypotheses are checkable conditions on inputs).
+- **PROOF REQUIRES ADDITIONAL ASSUMPTIONS** — the proof also uses at least one MARKET, EXECUTION, STATISTICAL, OPERATIONAL or
+  RESEARCH assumption of [04](04-assumption-and-decision-registry.md) (listed); it is proved under them and can fail when they fail.
+- **DISPROVED** — a counterexample, reproduced in exact arithmetic, refutes the statement.
+- **UNDEFINED** — the statement cannot be evaluated because an object it names is undefined.
+- **NOT YET PROVEN** — well defined; neither proof nor counterexample.
+
+v0.1.1 entries with compound statuses are split: suffix **N** is the naive or negated variant that is DISPROVED; letters **a, b, c** are
+parts with different status. Proofs are paper proofs about the *specification* (Art. 14); PROVED never means "implemented correctly".
+"Observed" = reproduced numerically (Python 3.11, exact rationals as reference; review record `docs/review/phase0/03-numerical-red-team.md`).
+Formula IDs refer to [14](14-formula-registry.md). Symbols local to one theorem are registered in 02 §M with that theorem as scope.
+Worked examples use $\delta_q=1$ sh and USD prices unless stated.
 
 ## Summary
 
-| ID | Name | Status |
-|---|---|---|
-| T-01 | Hard Risk Dominance | PROVED (specified composition); COUNTEREXAMPLE FOUND (naive float/Decimal-method composition) |
-| T-02 | Integer Sizing Safety | PROVED (exact, monotone $g$); COUNTEREXAMPLE FOUND (closed form with non-linear fees; half-up; binary64) |
-| T-03 | Hard Quantity Dominance | PROVED (monotone constraints); COUNTEREXAMPLE FOUND (non-monotone constraints) |
-| T-04 | No-Trade Under Missing Authority | PROVED BY CONSTRUCTION; registry completeness NOT YET PROVEN |
-| T-05 | Drawdown-Throttle / Wealth Monotonicity | PROVED (candidate forms) |
-| T-06 | Maximum-Drawdown Shutdown | (a) PROVED; (b) "MDD ≤ $d^{\max}$" DISPROVED; (c) REQUIRES ADDITIONAL ASSUMPTION — PROVED under it (restated per epoch, R1) |
-| T-07 | Liquidity Monotonicity | REQUIRES ADDITIONAL ASSUMPTION (monotone cost model; no $\Lambda$ credit in open risk) — PROVED under it; COUNTEREXAMPLE FOUND for the v0.1 form (R1) |
-| T-08 | Transaction-Cost Monotonicity | PROVED (hard layer; own-cost perturbations of $\Delta J$); NOT YET PROVEN (market-wide cost perturbations of $\Delta J$ under concave $u$) |
-| T-09 | Uncertainty Monotonicity | PROVED (feasibility-defined caps); COUNTEREXAMPLE FOUND (argmax-defined sizing) |
-| T-10 | Capital-Floor Preservation | REQUIRES ADDITIONAL ASSUMPTION (tier assumptions, strengthened in R1) — PROVED under them; COUNTEREXAMPLE FOUND for the v0.1 hypotheses and without each hypothesis |
-| T-11 | Risk-Reservation Conservation | PROVED (ledger model, atomicity, limit entry); COUNTEREXAMPLE FOUND (mid-based reservation, market orders, races, non-monotone fees) |
-| T-12 | No-Trade Under Insufficient Robust Advantage | PROVED BY CONSTRUCTION; certificate validity UNDEFINED; P-12a PROVED + COUNTEREXAMPLE; P-12b PROVED; P-12c NOT YET PROVEN |
-| T-13 | Safe-Action Membership | PROVED BY CONSTRUCTION (specification); implementation NOT YET PROVEN |
-| T-14 | Replay Determinism | PROVED BY CONSTRUCTION (Art. 8); implementation NOT YET PROVEN |
-| T-15 | Economic Cost Accounting Identity | PROVED (05 §2–§3) |
-| T-16 | Expected-value sizing is cap sizing | PROVED |
-| T-17 | Stop-Risk Insufficiency | PROVED (constructive; restated in R1 — bounded, though possibly $\gg W$, under an exit-cost floor) |
-| T-18 | Comonotone (dependence-free) aggregation | PROVED |
-| T-19 | Log-growth domain | PROVED ($W^{\min}$ corrected in R1) |
-| T-20 | Floor invariance under hold | PROVED (static floor); DISPROVED (ratcheting floor, incl. daily/weekly calendar reset — R1) |
-| T-21 | Cushion necessity and sufficiency | PROVED (under attainability of bounds) |
-| T-22 | Binary64 floor safety condition | PROVED (condition); COUNTEREXAMPLE FOUND (outside it, observed) |
-| T-23 | Sequential allocation order-dependence | PROVED (by example) |
-| T-24 | Rounding Conservatism | PROVED |
-| T-25 | Floor-breach decomposition | PROVED (missing premise added in R1) |
-| T-26 | VaR non-subadditivity | PROVED (counterexample; classical) |
-| OPEN-1 | Multi-step viability kernel equals tier invariant sets | NOT YET PROVEN |
-| OPEN-2 | Certified-advantage lower bound validity | UNDEFINED (needs $J$, $\mathcal P$) |
+| ID | Name | Status | Formulas |
+|---|---|---|---|
+| T-01 | Hard risk dominance | PROVED | F047, F049, F074 |
+| T-01N | Naive min / clamp compositions | DISPROVED | F049 |
+| T-02 | Integer sizing safety | PROVED | F094, F095 |
+| T-02N | Naive closed forms and rounding | DISPROVED | F095 |
+| T-03 | Hard quantity dominance | PROVED | F096, F097, F126, F127 |
+| T-03N | Min-of-caps with non-monotone constraints | DISPROVED | F096 |
+| T-04 | No-trade under missing authority | PROVED | F045, F046 |
+| T-05 | Wealth monotonicity of budgets and caps | PROVED | F073, F098 |
+| T-06a | Maximum-drawdown gate | PROVED | F038, F040, F092 |
+| T-06b | "MDD ≤ $d^{\max}$" from the gate alone | DISPROVED | F039 |
+| T-06c | Per-epoch drawdown bound under trailing | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F139 |
+| T-07 | Liquidity monotonicity | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F064, F111 |
+| T-08 | Transaction-cost monotonicity | PROVED | F061–F063 |
+| T-09 | Uncertainty monotonicity of feasibility-defined caps | PROVED | F125 |
+| T-09N | Argmax sizing monotone in ambiguity | DISPROVED | F017 |
+| T-10 | Capital-floor preservation (one period, tiered) | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F072, F120–F122 |
+| T-10N | Floor preservation without the v0.2 hypotheses | DISPROVED | F120 |
+| T-11 | Risk-reservation conservation | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F108, F119 |
+| T-11N | Naive reservation schemes | DISPROVED | F108 |
+| T-12 | No-trade under insufficient certified advantage | PROVED | F027 |
+| T-12a | Infimum of a difference | PROVED | F117 |
+| T-12N | Difference of infima as a certificate | DISPROVED | F117 |
+| T-12b | Additive error allowance | PROVED | F118 |
+| T-12c | Tighter bound for correlated estimation errors | NOT YET PROVEN | F118 |
+| T-13 | Safe-action membership | PROVED | F024, F126 |
+| T-14 | Replay determinism | PROVED | F006 |
+| T-15 | Economic cost accounting identity | PROVED | F055–F058 |
+| T-16 | Expected-value sizing is cap sizing | PROVED | F130 |
+| T-17a | Naive stop-risk envelope admits unbounded notional | PROVED | F110, F128 |
+| T-17b | Stop-risk budget with an exit-cost floor | PROVED | F111, F128 |
+| T-18 | Comonotone aggregation | PROVED | F134 |
+| T-19 | Log-growth domain | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F019, F070 |
+| T-20a | Cushion invariance under hold, static floor | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F124 |
+| T-20b | Cushion invariance under a ratcheting floor | DISPROVED | F040–F042 |
+| T-21 | Cushion necessity and sufficiency | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F120 |
+| T-22 | Binary64 floor safety condition | PROVED | F115, F116 |
+| T-22N | Binary64 floor without the condition | DISPROVED | F116 |
+| T-23 | Sequential allocation order-dependence | PROVED | F096 |
+| T-24 | Rounding conservatism | PROVED | F129 |
+| T-24N | Rounding in other directions | DISPROVED | F129 |
+| T-25 | Floor-breach decomposition | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F123 |
+| T-26 | VaR non-subadditivity | PROVED | F009 |
+| OPEN-1 | Multi-step viability kernel | NOT YET PROVEN | F120, F122 |
+| OPEN-2 | Certified-advantage validity | UNDEFINED | F027 |
+| OPEN-3 | Required-input registry completeness | NOT YET PROVEN | F046 |
+| OPEN-4 | Market-wide cost perturbations of $\Delta J$ | NOT YET PROVEN | F025 |
 
-**Revision R1 (v0.1 → v0.1.1).** An independent adversarial review of this register found 4 blockers, 9 major and 11 minor defects; the four
-blocker counterexamples were re-verified in exact arithmetic before fixing. Blockers: T-10 failed for add-ons to held positions (super-additive exit
-costs) → one exposure per instrument (G11); T-07 was false because open risk credited $\Lambda$ → credit removed (DC-5, OC-1); tier U under-charged
-pending orders' fees → $Z^{\mathrm{res}}$ at full $L^{\mathrm{abs}}$; T-25 lacked its cushion premise. Major: triggered-but-unfilled stops and stop liveness (A-TRIG
-broadened, A-STOPLIVE), per-execution fees (A-EXE-04), tier-G bound weaker than tier S (min form), withdrawals vs $F^{\mathrm{abs}}$ ($X=0$), T-21 hypotheses,
-T-06(c) vacuity, T-17 over-statement, $W^{\min}$ with future terms and no flows, missing corporate-action term (05 §1). Minor items fixed in place.
+Counts: PROVED 22 · PROOF REQUIRES ADDITIONAL ASSUMPTIONS 8 · DISPROVED 11 · NOT YET PROVEN 4 · UNDEFINED 1 · total 46.
 
-Common standing assumptions (unless a theorem says otherwise): exact arithmetic in $\mathbb Q$; v0 scope (long-only, cash account,
-$d=+1$); $g_k(\cdot,0)=0$; $\bar N<\infty$; lattice $\mathbb L=\delta_q\mathbb Z$.
+**Revision R1 (v0.1 → v0.1.1).** An independent adversarial review found 4 blockers, 9 major and 11 minor defects (registered as
+REV-001 … REV-024 in `docs/review/phase0/`). Blockers: T-10 failed for add-ons (→ G11); T-07 was false because open risk credited $\Lambda$ (→ OC-1);
+tier U under-charged pending orders' fees (→ $Z^{\mathrm{res}}$ at full $L^{\mathrm{abs}}$); T-25 lacked its cushion premise.
+
+**Revision R2 (v0.1.1 → v0.2, Phase-0 independent mathematical review).** T-10 was still false for a stop partially executed at the cut
+(per-order minimum fee counted twice; AUD-001) → A-TRIG restated as the position-level exit-value bound F072, proof reduced to one case,
+split envelope F140 for non-super-additive fees; T-20a needs "every stop triggered in the period fully executed by the cut" (A-EXE-06, AUD-014, REV-026); A-EXE-04 on
+cumulative filled quantity (AUD-015); the "only if" of T-21 was false under OC-1 whenever $\Lambda_t>0$ (AUD-032, found during correction) →
+restated with $E_t-F_t$; canonical eight-field format, split IDs, assumption IDs per entry (AUD-013, AUD-016, AUD-017). A second
+independent review of the correction draft (REV-025 … REV-036) led to: reservations charged at the $\tau_t$ inputs (F144; a stale reservation
+breached the floor by 40, REV-028); F140 over $N^{\mathrm{ex}}+1$ fee-bearing parts (REV-029); A-EXE-06 widened to triggered-but-unexecuted stops
+(REV-026); $q^{\mathrm{exp}}$ for a partially filled order (REV-027); T-21's necessity restricted (REV-025); F070 with the envelope (REV-034).
 
 ---
 
 ### T-01 Hard Risk Dominance
 
-**ASSUMPTIONS.** $R^{\mathrm{hard}}=(\min_{k\in\mathcal K_R}b_k)^{+}$ over the stop-risk budget family, computed exactly;
-$\mathfrak s$ as in S-120; $R^{\mathrm{allow}}=\min(R^{\mathrm{hard}},\mathfrak s(R^{\mathrm{mod}}))$ where $\min$ is exact comparison on validated values.
+**THEOREM ID.** T-01
 
-**STATEMENT.** For every input (including $R^{\mathrm{mod}}$ = NaN, $\pm\infty$, negative, missing, wrong type):
-$0\le R^{\mathrm{allow}}\le R^{\mathrm{hard}}$; and $R^{\mathrm{allow}}=0$ whenever a REQUIRED model output is invalid.
+**STATEMENT.** For every input — including $R^{\mathrm{mod}}$ = NaN, $\pm\infty$, negative, missing, wrong type — $0\le R^{\mathrm{allow}}_t\le R^{\mathrm{hard}}_t$ with
+$R^{\mathrm{allow}}_t=\min(R^{\mathrm{hard}}_t,\mathfrak s(R^{\mathrm{mod}}_t))$ (F049) and $R^{\mathrm{hard}}_t$ from F074; and $R^{\mathrm{allow}}_t=0$ whenever a REQUIRED model output is
+invalid. The same holds for every $b^{\mathrm{allow}}_k$.
+
+**ASSUMPTIONS.** A-MATH-01; $\mathfrak s$ as in F047; $\min$ is exact comparison of validated values; every hard input is validated as finite
+(01 §9).
+
+**PROOF STATUS.** PROVED
 
 **PROOF.** $R^{\mathrm{hard}}\ge0$ by $(\cdot)^+$ and finite since each $b_k$ is finite. $\mathfrak s$ maps into $[0,\infty]$, and to $0$ for invalid
-REQUIRED outputs. The minimum of a finite element of $[0,\infty)$ and an element of $[0,\infty]$ lies in $[0,R^{\mathrm{hard}}]$. ∎
+REQUIRED outputs. The minimum of an element of $[0,\infty)$ and an element of $[0,\infty]$ lies in $[0,R^{\mathrm{hard}}]$. ∎
 
-**COUNTEREXAMPLE (naive forms).** (i) Python float `min(R_hard, nan)` → `R_hard`, `min(nan, R_hard)` → `nan` (observed): result depends
-on argument order; NaN then reaches $\lfloor\cdot\rfloor$. (ii) `R_hard.min(Decimal('NaN'))` → `R_hard` (observed): numerically inside the
-envelope, but a REQUIRED model's failure silently becomes "no model limit" (violates Art. 4). (iii) Without $(\cdot)^+$: exhausted
-budgets give $R^{\mathrm{hard}}<0$ and $\lfloor R/\ell\rfloor<0$ — a negative quantity readable as a sell/short.
+**COUNTEREXAMPLE ATTEMPT.** All invalid classes (NaN, sNaN, $\pm\infty$, None, non-numeric, negative, $>\bar M$) under the specified
+composition: none. The naive compositions fail: T-01N.
 
-**NUMERICAL IMPLICATION.** Sanitise at the boundary; exact types; explicit clamp; never IEEE minNum/maxNum semantics.
+**NUMERICAL EDGE CASES.** $R^{\mathrm{mod}}=-0$ (normalised to $0$, 01 §9 item 13); $R^{\mathrm{mod}}=R^{\mathrm{hard}}$ exactly; exhausted $R^{\mathrm{hard}}=0$;
+$R^{\mathrm{mod}}>\bar M$ (invalid).
 
-**TESTABLE INVARIANT.** ∀ generated snapshots: `0 ≤ R_allow ≤ R_hard`. Oracle (corrected after review): invalid `R_mod` (NaN, sNaN, ±Inf, None,
-non-numeric, $>\bar M$) ⇒ `R_allow == 0` if REQUIRED, `== R_hard` if OPTIONAL; finite negative ⇒ `0` in both cases; finite in $[0,\bar M]$ ⇒
-`min(R_hard, R_mod)`. Property-based + fuzz.
+**MACHINE-TESTABLE INVARIANT.** ∀ generated snapshots `0 ≤ R_allow ≤ R_hard`. Oracle: invalid `R_mod` ⇒ `R_allow == 0` if REQUIRED,
+`== R_hard` if OPTIONAL; finite negative ⇒ `0`; finite in $[0,\bar M]$ ⇒ `min(R_hard, R_mod)`. Metamorphic (AUD-002): replacing every
+estimator input of F111 by an arbitrarily optimistic value never increases $Q^{\mathrm{hard}}$. Property-based and fuzz.
+
+---
+
+### T-01N Naive min / clamp compositions
+
+**THEOREM ID.** T-01N
+
+**STATEMENT.** "Composing $R^{\mathrm{allow}}$ with (i) Python float `min`, (ii) `Decimal.min`/`Decimal.max`, or (iii) without the clamp $(\cdot)^+$ satisfies T-01."
+
+**ASSUMPTIONS.** The documented semantics of the operations (IEEE-754 minNum/maxNum; Python built-ins).
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** (i) `min(R_hard, nan)` → `R_hard`, `min(nan, R_hard)` → `nan` (observed): argument-order dependent; NaN then reaches
+$\lfloor\cdot\rfloor$. (ii) `R_hard.min(Decimal('NaN'))` → `R_hard` (observed): a REQUIRED model's failure silently becomes "no model limit"
+(Art. 4). (iii) Exhausted budgets give $R^{\mathrm{hard}}<0$ and a negative lattice count, readable as a sell (review B05: `floor(-0.01/1) = -1`). ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** `max(0.0, -0.0)` = `0.0` but `min(-0.0, 0.0)` = `-0.0` (review Z01–Z02).
+
+**MACHINE-TESTABLE INVARIANT.** Lint: no float `min`/`max` and no `Decimal.min`/`max` on the authority path; each counterexample is a
+regression test that must fail against the naive form.
 
 ---
 
 ### T-02 Integer Sizing Safety
 
-**ASSUMPTIONS.** $g:\mathbb L_{\ge0}\to\mathbb Q$ non-decreasing, $g(0)=0$; $b\in\mathbb Q$; exact arithmetic;
-$Q:=\max(\{0\}\cup\{n\in\mathbb L_{>0}:n\le\bar N,\ g(n)\le b\})$.
+**THEOREM ID.** T-02
 
-**STATEMENT.** (a) $Q\in\mathbb L_{\ge0}$. (b) $Q>0\Rightarrow g(Q)\le b$. (c) *Downward closure (Lemma L-1):* $0<n\le Q,\ n\in\mathbb L\Rightarrow g(n)\le b$.
-(d) Maximality: $Q+\delta_q\le\bar N\Rightarrow g(Q+\delta_q)>b$. (e) Linear case $g(n)=n\ell$, $\ell>0$, $b\ge0$:
-$Q=\min(\bar N,\ \delta_q\lfloor b/(\delta_q\ell)\rfloor)$.
+**STATEMENT.** Let $g:\mathbb L_{\ge0}\to\mathbb Q$ be non-decreasing with $g(0)=0$, $b\in\mathbb Q$ and
+$Q:=\max(\{0\}\cup\{n\in\mathbb L_{>0}:n\le\bar N,\ g(n)\le b\})$ [F094]. Then (a) $Q\in\mathbb L_{\ge0}$; (b) $Q>0\Rightarrow g(Q)\le b$; (c) downward
+closure: $0<n\le Q$, $n\in\mathbb L\Rightarrow g(n)\le b$; (d) maximality: $Q+\delta_q\le\bar N\Rightarrow g(Q+\delta_q)>b$; (e) linear case $g(n)=n\ell$,
+$\ell>0$, $b\ge0$: $Q=\min(\bar N,\delta_q\lfloor b/(\delta_q\ell)\rfloor)$ (F095).
 
-**PROOF.** (a),(b),(d): the candidate set is finite ($\mathbb L\cap[0,\bar N]$) and contains $0$; $Q$ is its maximum. (c) $g(n)\le g(Q)\le b$ by
-monotonicity. (e) $\delta_qk\,\ell\le b\iff k\le b/(\delta_q\ell)\iff k\le\lfloor b/(\delta_q\ell)\rfloor$ for integer $k$. ∎
+**ASSUMPTIONS.** A-MATH-01; the hypotheses on $g$ and $b$ in the statement.
 
-**COUNTEREXAMPLES (observed).**
-- *Closed form with non-linear fees.* $L(n)=0.10\,n+2\max(1.00,\,0.005\,n)$ (minimum commission each side), $b=2.50$. Naive
-  $\lfloor 2.50/(0.10+0.01)\rfloor=22$ gives $L(22)=4.20>2.50$. True $Q=5$ ($L(5)=2.50$).
-- *Half-up rounding.* $b=1000.00$, $\ell=2.90$: $b/\ell=344.83\ldots$; half-up $345$, loss $1000.50>b$; floor $344$, loss $997.60$.
-- *Binary64 division.* $b=172{,}808{,}193.53$, $\ell=65.68583269$: float $\lfloor b/\ell\rfloor=2{,}630{,}829$, exact $2{,}630{,}828$; the float
-  quantity is infeasible (see T-22 for the condition under which this cannot occur).
-- *Zero/negative per-share loss.* $\ell\le0$ ⇒ $g(n)\le0\le b$ for all $n$ ⇒ $Q=\bar N$: unbounded sizing. Gate G7 must reject it.
+**PROOF STATUS.** PROVED
 
-**NUMERICAL IMPLICATION.** Compute $Q$ by exact monotone search, or by the closed form only where linearity is proved. **Floor only**: every
-round-to-nearest mode (half-up, and Python's default half-even) gives $345$ in the example above. Never binary64 on the authority path.
+**PROOF.** (a), (b), (d): the candidate set is finite ($\mathbb L\cap[0,\bar N]$) and contains $0$; $Q$ is its maximum. (c) $g(n)\le g(Q)\le b$ by
+monotonicity. (e) $\delta_qk\ell\le b\iff k\le b/(\delta_q\ell)\iff k\le\lfloor b/(\delta_q\ell)\rfloor$ for integer $k$; the argument of $\lfloor\cdot\rfloor$ is
+dimensionless (03 E-05). ∎ *Application:* for fee-bearing constraints the monotonicity hypothesis is supplied by A-EXE-01 and
+A-EXE-02, so every use of T-02 on H1–H16 inherits them.
 
-**TESTABLE INVARIANT.** `g(Q) ≤ b` and (`Q + δ > N̄` or `g(Q + δ) > b`) — the maximality witness is part of the evidence record;
-`Q ∈ 𝕃, Q ≥ 0`; differential test against brute-force enumeration for small $\bar N$.
+**COUNTEREXAMPLE ATTEMPT.** Differential enumeration for small $\bar N$ with random monotone $g$: none. Leaving the hypotheses: T-02N.
+
+**NUMERICAL EDGE CASES.** $b<0$ ⇒ $Q=0$; $b=g(n)$ exactly (admitted; FM-NUM-3); $\ell\le0$ excluded by G7 (else $Q=\bar N$); fractional
+$\delta_q$; $b$ huge ($Q=\bar N$).
+
+**MACHINE-TESTABLE INVARIANT.** `g(Q) ≤ b` and (`Q + δ_q > N̄` or `g(Q + δ_q) > b`) — the maximality witness is recorded as evidence;
+`Q ∈ 𝕃, Q ≥ 0`; differential test against brute-force enumeration.
+
+---
+
+### T-02N Naive closed forms and rounding
+
+**THEOREM ID.** T-02N
+
+**STATEMENT.** "Each of (i) the closed form with a per-share fee added to $\ell$ under a minimum commission, (ii) round-half-up or
+round-half-even quantisation, (iii) binary64 evaluation, (iv) the closed form with $\ell\le0$, yields $g(Q)\le b$."
+
+**ASSUMPTIONS.** As T-02 except the relaxed element named in each item.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** (i) $g(n)=0.10n+2\max(1.00,0.005n)$, $b=2.50$: naive $\lfloor2.50/0.11\rfloor=22$, $g(22)=4.20>2.50$; true $Q=5$, $g(5)=2.50$ (review B06).
+(ii) $b=1000.00$, $\ell=2.90$: half-up and half-even both give $345$, $g=1000.50>b$; floor $344$, $g=997.60$ (B03, B04). (iii) $b=172{,}808{,}193.53$,
+$\ell=65.68583269$: binary64 gives $2{,}630{,}829$, exact $2{,}630{,}828$ (T-22N). (iv) $\ell\le0$ ⇒ every $n$ feasible ⇒ $Q=\bar N$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** As in the proof.
+
+**MACHINE-TESTABLE INVARIANT.** Each case is a regression test in which the exact search and the naive form must disagree.
 
 ---
 
 ### T-03 Hard Quantity Dominance
 
-**ASSUMPTIONS.** Finite $\mathcal K$; each $g_k$ as in T-02; gates are 0/1; $Q_k$ per T-02 with $b^{\mathrm{allow}}_k$;
-$Q^{\mathrm{hard}}=\min_kQ_k$ if all gates pass, else $0$. Verifier $V$: given any proposal $\tilde n$ (possibly non-numeric), return
-$\max\{n\in\mathbb L_{\ge0}: n\le\min(\tilde n,Q^{\mathrm{hard}})\}$ if $\tilde n$ is a finite number $\ge0$, else $0$.
+**THEOREM ID.** T-03
 
-**STATEMENT.** (a) $\{0\}\cup\{n\in\mathbb L_{>0}:n\le\bar N,\ \forall k,\ g_k(n)\le b_k\}=\mathbb L\cap[0,Q^{\mathrm{hard}}]$ (gates passing). (b) For reals $x_k$,
-$\lfloor\min_kx_k\rfloor_{\mathbb L}=\min_k\lfloor x_k\rfloor_{\mathbb L}$. (c) $0\le V(\tilde n)\le Q^{\mathrm{hard}}$ and $V(\tilde n)$ satisfies every hard constraint.
+**STATEMENT.** With finite $\mathcal K$, every $g_k$ as in T-02, 0/1 gates, $Q_k$ by F094 and $Q^{\mathrm{hard}}$ by F096: (a) if all gates pass,
+$\{0\}\cup\{n\in\mathbb L_{>0}:n\le\bar N,\ \forall k\ g_k(n)\le b_k\}=\mathbb L\cap[0,Q^{\mathrm{hard}}]$; (b) $\lfloor\min_ky_k\rfloor_{\mathbb L}=\min_k\lfloor y_k\rfloor_{\mathbb L}$ (F097);
+(c) for every proposal $\tilde n$ (non-numeric, NaN, $\infty$, negative, non-lattice, huge) the verifier F126 returns $0\le V(\tilde n)\le Q^{\mathrm{hard}}$ and
+$V(\tilde n)$ satisfies every hard constraint.
 
-**PROOF.** (a) By L-1 each feasible set is $\mathbb L\cap[0,Q_k]$; the intersection of initial segments is the initial segment to the
-minimum. (b) $\lfloor\cdot\rfloor_{\mathbb L}$ is non-decreasing, so $\lfloor\min x\rfloor\le\lfloor x_k\rfloor\ \forall k$; and $\min_k\lfloor x_k\rfloor$ is a lattice point
-$\le\min_kx_k$, hence $\le\lfloor\min x\rfloor$. (c) By construction and (a). ∎
+**ASSUMPTIONS.** A-MATH-01; the monotonicity hypotheses of T-02 for every $g_k$.
 
-**COUNTEREXAMPLES (non-monotone constraints).**
-- *Minimum order notional* $n\,p\ge\$1000$ with $p=50$: feasible set $\{0\}\cup[20,Q]$ — not an initial segment; "min of caps" is meaningless.
-  Remedy: post-filter (06 §5).
-- *Per-order tiered fee schedule (hypothetical):* $\phi(n)=0.005n$ for $n<1000$, $0.003n$ for $n\ge1000$; $\ell=0.5$; $b=504$.
-  $g(998)=503.99$, $g(999)=504.495$, $g(1000)=503.00$, $g(1001)=503.503$, $g(1002)=504.006$. Feasible: $\{\dots,998,1000,1001\}$, $999$ infeasible.
-  An order sized at $1001$ that **partially fills 999** consumes $504.495>b$ — non-monotone fees break partial-fill safety (also T-11).
+**PROOF STATUS.** PROVED
 
-**NUMERICAL IMPLICATION.** Monotonicity of every $g_k$ (incl. fee schedules) is a *precondition* checked when a schedule version is
-loaded; a non-monotone schedule is replaced by its monotone upper envelope $\bar g(n)=\max_{m\le n}g(m)$ (conservative) or rejected.
+**PROOF.** (a) By T-02(c) each feasible set is $\mathbb L\cap[0,Q_k]$; the intersection of initial segments is the initial segment up to the
+minimum. (b) $\lfloor\cdot\rfloor_{\mathbb L}$ is non-decreasing, so $\lfloor\min y\rfloor\le\lfloor y_k\rfloor$ for all $k$; and $\min_k\lfloor y_k\rfloor$ is a lattice point
+$\le\min_ky_k$, hence $\le\lfloor\min y\rfloor$. (c) By construction and (a). For a non-monotone consumption the monotone upper envelope
+$\bar g(n)=\max_{n'\le n}g_k(n')$ (F127) is non-decreasing and $\ge g_k$, so using $\bar g$ restores the hypothesis conservatively (T-24). ∎
 
-**TESTABLE INVARIANT.** $\forall k:\ g_k(Q^{\mathrm{fin}})\le b_k$ and $Q^{\mathrm{fin}}\le Q_k$; $V$ fuzzed with NaN/∞/negative/huge/float/non-lattice
-proposals; independent slow checker re-evaluates all constraints (differential).
+**COUNTEREXAMPLE ATTEMPT.** Exhaustive search on small lattices with random monotone $g_k$: none. Non-monotone constraints: T-03N.
+
+**NUMERICAL EDGE CASES.** A gate fails ⇒ $0$; one $Q_k=0$; $\tilde n\in\{\text{NaN},\infty,-1,10^{400},2.5\}$ with $\delta_q=1$ sh ⇒ $0,0,0,0,2$ (clipped
+to $Q^{\mathrm{hard}}$); float-typed $\tilde n$ rejected at parse (01 §9 item 14); $\tilde n=-0$ ⇒ $0$.
+
+**MACHINE-TESTABLE INVARIANT.** $\forall k:\ g_k(Q^{\mathrm{fin}})\le b_k$ and $Q^{\mathrm{fin}}\le Q_k$; $V$ fuzzed; an independent slow checker re-evaluates
+every constraint (differential).
+
+---
+
+### T-03N Min-of-caps with non-monotone constraints
+
+**THEOREM ID.** T-03N
+
+**STATEMENT.** "T-03(a) holds without monotonicity of the $g_k$."
+
+**ASSUMPTIONS.** As T-03 without monotonicity.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** (i) Minimum order notional $n\,p\ge1000$ USD at $p=50$: the feasible set is $\{0\}\cup\{20,\dots,Q\}$ — not an initial segment.
+(ii) Tiered per-order fee $0.005$ USD/sh below $1000$ sh and $0.003$ USD/sh from $1000$ sh, $\ell=0.5$, budget $504$: consumptions at
+$998,999,1000,1001,1002$ are $503.99,\ 504.495,\ 503.00,\ 503.503,\ 504.006$; $999$ is infeasible between feasible points, and an order sized
+$1001$ that partially fills $999$ consumes $504.495>504$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** Partial fills landing on an infeasible point.
+
+**MACHINE-TESTABLE INVARIANT.** Fee-schedule monotonicity check at load (A-EXE-01); regression tests (i), (ii); minimum size only as the
+post-filter F093.
 
 ---
 
 ### T-04 No-Trade Under Missing Authority
 
-**ASSUMPTIONS.** $\mathcal R^{\mathrm{req}}$ finite; each validator decides presence, type, domain, freshness ($\mathrm{age}\le\mathrm{TTL}$), scope
-($A_{\mathrm{id}}$) and internal consistency; $\alpha=\bigwedge$ validators; $\mathcal D$ evaluates G1 first.
+**THEOREM ID.** T-04
 
-**STATEMENT.** $\alpha(\mathsf S)=0\Rightarrow\mathcal D(\mathsf S,\cdot)=$ NO\_TRADE with $\mathsf{rc}\supseteq\{\text{failed validators}\}\neq\varnothing$.
+**STATEMENT.** $\alpha_t=0\Rightarrow\mathcal D(\mathsf S_t,\cdot)=$ NO\_TRADE with $\mathsf{rc}\supseteq\{\text{failed validators}\}\ne\varnothing$ (F046).
+
+**ASSUMPTIONS.** A-MATH-01; $\mathcal R^{\mathrm{req}}$ finite; each validator decides presence, type, domain, freshness ($\mathrm{age}\le\mathrm{TTL}$, F045),
+account scope and internal consistency; $\alpha_t$ is the conjunction of validators; $\mathcal D$ evaluates G1 first (06 §10).
+
+**PROOF STATUS.** PROVED
 
 **PROOF.** By construction of $\mathcal D$. ∎
 
-**SUBSTANTIVE GAP.** The theorem is only as strong as $\mathcal R^{\mathrm{req}}$ is complete. Completeness criterion (NOT YET PROVEN):
-*read-set* of the computation (every field any $g_k$, $b_k$, gate or derivation reads) $\subseteq\mathcal R^{\mathrm{req}}$.
+**COUNTEREXAMPLE ATTEMPT.** A deserialiser that defaults a missing $R^{\mathrm{res}}$ to $0$ passes presence checks; two strategies then
+double-spend. This violates Art. 4 at schema level rather than the theorem: the theorem is only as strong as $\mathcal R^{\mathrm{req}}$ is complete
+(OPEN-3).
 
-**COUNTEREXAMPLE.** A deserialiser that defaults a missing $R^{\mathrm{res}}$ to $0$ passes presence checks while authority is absent;
-two strategies then double-spend the budget. Hence absence ≠ zero at the schema level (Art. 4).
+**NUMERICAL EDGE CASES.** $\mathrm{age}=\mathrm{TTL}$ exactly (admitted); clock regression (A-TIME-01 ⇒ $\alpha_t=0$).
 
-**NUMERICAL IMPLICATION.** None beyond parse rules.
-
-**TESTABLE INVARIANT.** For every valid snapshot and every single-field mutation {delete, null, stale, wrong scope, wrong type,
-out-of-domain}: NO\_TRADE and the reason names that field. Instrumented read-set $\subseteq\mathcal R^{\mathrm{req}}$ (static + dynamic check).
+**MACHINE-TESTABLE INVARIANT.** For every valid snapshot and every single-field mutation {delete, null, stale, wrong scope, wrong type,
+out-of-domain}: NO\_TRADE and the reason names that field; instrumented read-set $\subseteq\mathcal R^{\mathrm{req}}$.
 
 ---
 
-### T-05 Drawdown-Throttle / Wealth Monotonicity
+### T-05 Wealth Monotonicity of Budgets and Caps
 
-**ASSUMPTIONS.** Two snapshots $x,x'$ identical except for a *consistent* cash reduction $\Delta\ge0$
-($C'=C-\Delta$, $BP'=BP-\Delta$, $C^{\mathrm{avail}\prime}=C^{\mathrm{avail}}-\Delta$), so $W'=W-\Delta$; $H_t=\max(H_{t-1},\nu_t)$;
-$B$ is one of B1–B4 (06 §4); floor parameters $d^{\max},\ell^{\mathrm{day}},\ell^{\mathrm{wk}}\in(0,1)$, $\eta^{\mathrm{lock}}\in[0,1)$.
+**THEOREM ID.** T-05
 
-**STATEMENT.** $K$, $B$, every $b_k$, and $Q^{\mathrm{hard}}$ are non-decreasing in $W$ (hence non-increasing in $DD$ below the prior HWM; above it
-$DD\equiv0$ while $K$ still varies). The induced throttle $\vartheta_K$ (06 §7) is continuous and non-increasing on $[0,d^{\max}]$ and defined as $0$ beyond.
+**STATEMENT.** For two snapshots identical except for a consistent cash reduction $\Delta\ge0$ ($C'=C-\Delta$, $\mathrm{BP}'=\mathrm{BP}-\Delta$,
+$C^{\mathrm{avail}\prime}=C^{\mathrm{avail}}-\Delta$, so $W'=W-\Delta$): $K$, $B$, every $b_k$ and $Q^{\mathrm{hard}}$ are not larger in the reduced snapshot, hence
+non-increasing in $\mathrm{DD}$ below the prior high-water mark. $\vartheta_K$ (F098) is continuous and non-increasing on $[0,d^{\max}]$ and $0$ beyond.
 
-**PROOF.** $F^{\mathrm{abs}}$ does not depend on $W$; $F^{\mathrm{day}}$, $F^{\mathrm{wk}}$ do not, except at the first epoch of a day/week, where they have slope
-$1-\ell^{\mathrm{day}}$ / $1-\ell^{\mathrm{wk}}\in(0,1)$; $\nu^{\mathrm{ref}}$ is assumed independent of $W$; the rule $H_t=\max(H_{t-1},\nu_t)$ presumes the current epoch
-is HWM-eligible (RQ-03 — if not, $F^{\mathrm{dd}}$ has slope $0$ and the conclusion is unchanged). $F^{\mathrm{dd}}=(1-d^{\max})U\max(H_{t-1},\nu)$ has slope $0$
-below the prior HWM and $1-d^{\max}$ above it; $F^{\mathrm{lock}}$ has slope $0$ or $\eta^{\mathrm{lock}}$. Hence $K=W-\max(\cdots)$ has slope in
-$\{1,d^{\max},1-\eta^{\mathrm{lock}},\ell^{\mathrm{day}},\ell^{\mathrm{wk}}\}\subset[0,1]$ piecewise: non-decreasing. B1–B4 are non-decreasing. Each $b_k$ is a non-decreasing
-function of $(B,K,BP^{\mathrm{avail}})$ minus terms independent of $W$; $\min$, $(\cdot)^+$ and $Q_k$ (as a function of $b_k$) preserve
-monotonicity; gates G3 ($K>0$) and G4 ($DD<d^{\max}$) are monotone. Derivative of $\vartheta_K$: 06 §7. ∎
+**ASSUMPTIONS.** A-MATH-01; $H_t=\max(H_{t-1},\nu_t)$ with the current epoch HWM-eligible (RQ-03); $B$ one of F073; $\theta$ in the box F109;
+$\nu^{\mathrm{ref}}$ independent of $W$.
 
-**COUNTEREXAMPLE (rejected families).** "Recovery boost" rules (raise risk after losses) violate the statement; limits on realised
-P&L only violate it when unrealised losses grow (DC-4); multiplicative per-loss rules are not functions of $(W,H)$.
+**PROOF STATUS.** PROVED
 
-**NUMERICAL IMPLICATION.** Directed rounding preserves monotonicity (floor and ceiling are monotone).
+**PROOF.** $F^{\mathrm{abs}}$ does not depend on $W$; $F^{\mathrm{day}},F^{\mathrm{wk}}$ do not, except at the first epoch of a day/week, where they have slope
+$1-\ell^{\mathrm{day}}$ / $1-\ell^{\mathrm{wk}}\in(0,1)$. $F^{\mathrm{dd}}=(1-d^{\max})U\max(H_{t-1},\nu)$ has slope $0$ below the prior HWM and $1-d^{\max}$ above;
+$F^{\mathrm{lock}}$ has slope $0$ or $\eta^{\mathrm{lock}}$. Hence $K=W-F$ has slope in $\{1,d^{\max},1-\eta^{\mathrm{lock}},\ell^{\mathrm{day}},\ell^{\mathrm{wk}}\}\subset[0,1]$: non-decreasing.
+B1–B4 are non-decreasing. Each $b_k$ is a non-decreasing function of $(B,K,\mathrm{BP}^{\mathrm{avail}})$ minus terms independent of $W$; $\min$, $(\cdot)^+$
+and $Q_k$ (as a function of $b_k$) preserve order; G3 and G4 are monotone. Derivative of $\vartheta_K$: F099. ∎
 
-**TESTABLE INVARIANT.** Metamorphic: consistent cash reduction ⇒ each $b_k$ and $Q^{\mathrm{hard}}$ do not increase. (Inconsistent
-perturbations, e.g. $C$ changed but $BP$ not, are invalid test inputs.)
+**COUNTEREXAMPLE ATTEMPT.** "Recovery boost" rules violate the statement (excluded by design); limits on realised P&L only (DC-4);
+multiplicative per-loss rules are not functions of $(W,H)$. Inconsistent perturbations ($C$ changed, $\mathrm{BP}$ not) are outside the hypothesis.
+None found within.
+
+**NUMERICAL EDGE CASES.** $\mathrm{DD}=d^{\max}$ exactly ($\vartheta_K=0$, G4 fails); $\mathrm{DD}>1$ (formula positive again; defined $0$);
+$\mu^{K}=f^{\mathrm{trd}}$ (F100 denominator $0$: division guard, 01 §9 item 16); directed rounding is monotone.
+
+**MACHINE-TESTABLE INVARIANT.** Metamorphic: consistent cash reduction ⇒ no $b_k$ and not $Q^{\mathrm{hard}}$ increases.
 
 ---
 
-### T-06 Maximum-Drawdown Shutdown
+### T-06a Maximum-Drawdown Gate
 
-**ASSUMPTIONS.** Gate G4; $F^{\mathrm{dd}}$ included in $F$.
+**THEOREM ID.** T-06a
 
-**STATEMENT.** (a) $DD_t\ge d^{\max}\Rightarrow Q^{\mathrm{hard}}=0$. (b) "$MDD_t\le d^{\max}$ for all paths." (c) *(restated after review)* Suppose that at
-every epoch $t$, after any adjustments made **before** the cut $\mathsf S_t$ by an external risk-reducing authority (stop modifications and/or
-risk-reducing sales), $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t\le K_t$ holds, and that every period satisfies the tier-S hypotheses of T-10. Then
-$DD_t\le d^{\max}$ at every epoch.
+**STATEMENT.** $\mathrm{DD}_t\ge d^{\max}\Rightarrow Q^{\mathrm{hard}}=0$.
 
-**PROOF.** (a) G4 fails; independently $K\le W-F^{\mathrm{dd}}=UH(d^{\max}-DD)\le0$ (defence in depth). (c) T-10 with $n=0$ gives
-$W_{t+1}\ge F_t\ge(1-d^{\max})H_tU$. If $\nu_{t+1}\le H_t$ then $H_{t+1}=H_t$ and $DD_{t+1}\le d^{\max}$; otherwise $DD_{t+1}=0$. ∎ The bound holds at
-epochs only; intra-period drawdown is not covered. Trailing by stop modification alone can be infeasible (if $K_t/q_i<\kappa^{\mathrm{out}}$ the required stop
-is above the mark), so the external authority must be able to sell.
-(b) **DISPROVED**:
+**ASSUMPTIONS.** A-MATH-01; G4 in the gate set (F092); $F^{\mathrm{dd}}$ included in $F$ (F043).
 
-**COUNTEREXAMPLES to (b).** *Gap:* $d^{\max}=10\%$, $W=H=100{,}000$, one long of $1{,}000$ sh at $100$ with stop $90$ (open risk $\approx K=10{,}000$);
-overnight open at $70$ ⇒ $W=70{,}000$, $DD=30\%$. *Ratchet without gap:* $d^{\max}=10\%$, $W=H=100$, cash $50$, one share at $50$ with stop
-$40.5$ ($r=9.5\le K=10$). Price rises to $90$: $W=H=140$, $K=14$, $r=49.5>K$. Price falls to $40.5$, stop fills exactly: $W=90.5$,
-$DD=1-90.5/140=35.4\%$ — no new trade, A-STOP held exactly. *Halt:* exit impossible during a halt; same effect as a gap.
+**PROOF STATUS.** PROVED
 
-**NUMERICAL IMPLICATION.** None specific.
+**PROOF.** G4 fails. Independently (defence in depth) $K\le W-F^{\mathrm{dd}}=U_tH_t(d^{\max}-\mathrm{DD}_t)\le0$ by F038, F040, F044, so H4's budget is $\le0$. ∎
 
-**TESTABLE INVARIANT.** (a) property test; (c) Monte Carlo on paths satisfying the tier-S hypotheses with the pre-cut adjustment rule applied ⇒
-$DD\le d^{\max}$ at epochs; paths violating them are reported as assumption violations, not as failures of (c).
+**COUNTEREXAMPLE ATTEMPT.** None.
+
+**NUMERICAL EDGE CASES.** $\mathrm{DD}_t=d^{\max}$ exactly (strict gate fails ⇒ $0$); $\mathrm{DD}$ for the gate rounded up, never down.
+
+**MACHINE-TESTABLE INVARIANT.** Property test: $\mathrm{DD}_t\ge d^{\max}$ ⇒ `Q_hard == 0`.
+
+---
+
+### T-06b "MDD ≤ d^max" from the gate alone
+
+**THEOREM ID.** T-06b
+
+**STATEMENT.** "$\mathrm{MDD}_t\le d^{\max}$ on every path when G4 is enforced."
+
+**ASSUMPTIONS.** G4 only.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** *Gap:* $d^{\max}=10\%$, $W=H=100{,}000$, $1{,}000$ sh at $100$ with stop $90$; overnight open at $70$ ⇒ $W=70{,}000$, $\mathrm{DD}=30\%$.
+*Ratchet without gap:* $d^{\max}=10\%$, $W=H=100$, cash $50$, one share at $50$ with stop $40.5$ ($r^{\mathrm{open}}=9.5\le K=10$); price rises to $90$:
+$W=H=140$, $K=14<r^{\mathrm{open}}=49.5$; price falls to $40.5$, stop fills exactly: $W=90.5$, $\mathrm{DD}=1-90.5/140=35.4\%$ — no new trade, stop held
+exactly. *Halt:* exit impossible during a halt; same effect as a gap. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** None specific.
+
+**MACHINE-TESTABLE INVARIANT.** Regression scenarios above report $\mathrm{MDD}>d^{\max}$ (the specification must not claim otherwise).
+
+---
+
+### T-06c Per-Epoch Drawdown Bound Under Trailing
+
+**THEOREM ID.** T-06c
+
+**STATEMENT.** If at every epoch $t$, after adjustments made **before** the cut $\mathsf S_t$ by an external risk-reducing authority (stop
+modifications or sales), $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t\le K_t$ holds, and every period satisfies the tier-S hypotheses of T-10, then
+$\mathrm{DD}_t\le d^{\max}$ at every epoch.
+
+**ASSUMPTIONS.** All tier-S assumptions of T-10 (A-TRIG, A-FLOW-01, A-ACC-07, …) in every period; the pre-cut adjustment rule; $F^{\mathrm{dd}}\in F$.
+
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
+
+**PROOF.** T-10 with $n=0$ gives $W_{t+1}\ge F_t\ge F^{\mathrm{dd}}_t=(1-d^{\max})H_tU_t$; $U$ is constant ($X=0$), so $\nu_{t+1}\ge(1-d^{\max})H_t$ (F139). If
+$\nu_{t+1}\le H_t$ then $H_{t+1}=H_t$ and $\mathrm{DD}_{t+1}\le d^{\max}$; otherwise $\mathrm{DD}_{t+1}=0$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** Trailing by stop modification alone can be infeasible (if $K_t/q_{i,t}<\kappa^{\mathrm{out}}$ the required stop lies above
+the mark), so the authority must be able to sell; intra-period drawdown is not covered; the v0.1 form without the pre-cut rule was vacuous.
+
+**NUMERICAL EDGE CASES.** $W_{t+1}=F_t$ gives $\mathrm{DD}_{t+1}=d^{\max}$ exactly — then T-06a blocks new risk.
+
+**MACHINE-TESTABLE INVARIANT.** Monte Carlo on paths inside the tier-S set with the pre-cut rule ⇒ $\mathrm{DD}\le d^{\max}$ at epochs; paths outside
+are logged as assumption violations.
 
 ---
 
 ### T-07 Liquidity Monotonicity
 
-**ASSUMPTIONS.** $\kappa^{\mathrm{out}}_i$, $\Lambda_i$ non-increasing in $\mathrm{ADV}_i$ and non-decreasing in $\varsigma_i$ (property of the chosen cost
-model — e.g. a square-root form $\propto\hat\sigma\sqrt{n/\mathrm{ADV}}$ is decreasing in ADV); H12–H13 budgets increasing in ADV; G5;
-**open-risk terms carry no $\Lambda$ credit** (DC-5 revised, OC-1).
+**THEOREM ID.** T-07
 
-**STATEMENT.** Holding all else fixed, $Q^{\mathrm{hard}}$ is non-decreasing in the ADV of any instrument and non-increasing in its spread.
+**STATEMENT.** Holding everything else fixed, $Q^{\mathrm{hard}}$ is non-decreasing in the ADV of any instrument and non-increasing in its spread.
 
-**PROOF.** Higher ADV / lower spread lowers $\Lambda$ (raising $W$, hence $B$ and $K$), lowers $\kappa^{\mathrm{out}}$ (lowering every consumption and every
-open-risk term), and raises H12–H13 budgets. Every $b_k$ is non-decreasing and every $g_k$ non-increasing in liquidity; feasible sets are
-nested; $\min$ preserves order; G5 is monotone in $\varsigma$. ∎
+**ASSUMPTIONS.** A-MATH-01; A-EXE-02 ($\hat\kappa^{\mathrm{out}}$, $\kappa^{\mathrm{liq}}$, $\hat\Lambda$ non-increasing in ADV, non-decreasing in spread); A-ACC-06 with the
+floors F111 (monotone in spread); OC-1 (open risk without $\Lambda$ credit, F064); H12–H13 budgets increasing in ADV; G5.
 
-**COUNTEREXAMPLE (the pre-review version, with $\Lambda$ credit in open risk — found by independent review, re-verified exactly).** Hold 1,000 sh at
-$50$, stop $45$, $\kappa^{\mathrm{out}}\equiv0.05$, cash $200{,}000$, $B=W$, $f^{\mathrm{trd}}=f^{\mathrm{port}}=2\%$, new order $L^{\mathrm{stop}}=5.05n$. Low ADV ($\Lambda=500$):
-$W=249{,}500$, $R^{\mathrm{open}}=4{,}550$, H2 budget $440$, $Q=87$. High ADV ($\Lambda=100$): $W=249{,}900$, $R^{\mathrm{open}}=4{,}950$, budget $48$, $Q=9$. The
-credit makes $\partial(f B-R^{\mathrm{open}})/\partial\Lambda=1-f>0$: worse liquidity, larger budget. Other failures: a regression-fitted impact model
-non-monotone in ADV; displayed depth used as a cap (volatile, manipulable — inadmissible in the hard layer).
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
-**NUMERICAL IMPLICATION.** If $\sqrt{\ }$ is used, certified upper bounds only (01 §9.4).
+**PROOF.** Higher ADV or lower spread lowers $\Lambda$ (raising $W$, hence $B$ and $K$), lowers $\kappa^{\mathrm{out}}$ (lowering every consumption and every
+open-risk term), and raises the H12–H13 budgets; the maximum of a constant policy floor and a monotone estimate (F111) is monotone. Every
+$b_k$ is non-decreasing and every $g_k$ non-increasing in liquidity; feasible sets are nested; $\min$ preserves order; G5 is monotone. ∎
 
-**TESTABLE INVARIANT.** Metamorphic: ADV ↑ ⇒ $Q^{\mathrm{hard}}$ not ↓; spread ↑ ⇒ $Q^{\mathrm{hard}}$ not ↑ — for the opportunity's instrument **and for held
-instruments**; cost-model monotonicity verified on a grid when a model version is loaded.
+**COUNTEREXAMPLE ATTEMPT.** The v0.1 form with $\Lambda$ credit in open risk (review, re-verified exactly): hold $1{,}000$ sh at $50$, stop $45$,
+$\kappa^{\mathrm{out}}=0.05$, cash $200{,}000$, $B=W$, $f^{\mathrm{trd}}=f^{\mathrm{port}}=2\%$, new order consumption $5.05n$. Low ADV ($\Lambda=500$): $W=249{,}500$,
+credited open risk $4{,}550$, H2 budget $440$, $Q=87$. High ADV ($\Lambda=100$): $W=249{,}900$, credited open risk $4{,}950$, budget $48$, $Q=9$. Worse
+liquidity, larger cap. Under OC-1 both budgets are $\le0$ and $Q=0$ (monotone). Other failures: fitted impact models non-monotone in ADV;
+displayed depth used as a cap (inadmissible).
+
+**NUMERICAL EDGE CASES.** $\mathrm{ADV}\to0$ (A-MKT-06 ⇒ $\alpha_t=0$); $\sqrt{\ }$ in impact models only with certified upper bounds (01 §9 item 4).
+
+**MACHINE-TESTABLE INVARIANT.** Metamorphic: ADV ↑ ⇒ $Q^{\mathrm{hard}}$ not ↓; spread ↑ ⇒ $Q^{\mathrm{hard}}$ not ↑ — for the opportunity's instrument and for held
+instruments; cost-model monotonicity checked on a grid at model load.
 
 ---
 
 ### T-08 Transaction-Cost Monotonicity
 
-**ASSUMPTIONS.** Pointwise cost increase: $\phi'\ge\phi$, $\kappa^{\mathrm{out}\prime}\ge\kappa^{\mathrm{out}}$; for part (b), $J(a)=\mathbb E[u(W_{t+1}(a))]$
-with $u$ non-decreasing and the perturbation affecting only the fills generated by $a$.
+**THEOREM ID.** T-08
 
-**STATEMENT.** (a) $Q^{\mathrm{hard}\prime}\le Q^{\mathrm{hard}}$. (b) $\Delta J'(a)\le\Delta J(a)$.
+**STATEMENT.** (a) If $\phi'\ge\phi$ and $\kappa^{\mathrm{out}\prime}\ge\kappa^{\mathrm{out}}$ pointwise, then $Q^{\mathrm{hard}\prime}\le Q^{\mathrm{hard}}$. (b) If moreover
+$J(a)=\mathbb E[\mathcal U(W_{t+1}(a))]$ with $\mathcal U$ non-decreasing and the perturbation affects only the fills generated by $a$, then $\Delta J'(a)\le\Delta J(a)$.
 
-**PROOF.** (a) $L^{\mathrm{stop}},L^{\mathrm{gap}},L^{\mathrm{abs}}$ and H14 consumption increase pointwise; feasible sets shrink. (b) $W_{t+1}(a^{\varnothing})$ is
-unchanged and $W_{t+1}(a)$ decreases pointwise (costs enter $G$ negatively); $u$ non-decreasing. ∎
+**ASSUMPTIONS.** A-MATH-01; the hypotheses in the statement.
 
-**OPEN.** Market-wide perturbations (a spread widening that also raises exit costs of existing positions) change $J(a^{\varnothing})$ too;
-for concave $u$ the sign of the change in $\Delta J$ is NOT YET PROVEN.
+**PROOF STATUS.** PROVED
 
-**TESTABLE INVARIANT.** Metamorphic on fee schedule and $\kappa^{\mathrm{out}}$ scaling.
+**PROOF.** (a) $L^{\mathrm{stop}},L^{\mathrm{gap}},L^{\mathrm{abs}}$ (F061–F063) and the H14 consumption increase pointwise; feasible sets shrink. (b) $W_{t+1}(a^{\varnothing})$ is
+unchanged and $W_{t+1}(a)$ decreases pointwise (costs enter F055 negatively); $\mathcal U$ is non-decreasing. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** None within the hypotheses. Market-wide perturbations (which also change $J(a^{\varnothing})$) are OPEN-4.
+
+**NUMERICAL EDGE CASES.** Fee quantisation upward (01 §9 item 15) preserves (a).
+
+**MACHINE-TESTABLE INVARIANT.** Metamorphic on the fee schedule and on a scaling of $\kappa^{\mathrm{out}}$.
 
 ---
 
-### T-09 Uncertainty Monotonicity
+### T-09 Uncertainty Monotonicity of Feasibility-Defined Caps
 
-**ASSUMPTIONS.** Model-layer budget defined by robust feasibility:
-$b^{\mathrm{mod}}_k(\mathcal P)=\sup\{b:\ \forall\mathbb Q\in\mathcal P,\ c_{\mathbb Q}(b)\ \text{holds}\}$; nested sets $\mathcal P\subseteq\mathcal P'$.
+**THEOREM ID.** T-09
 
-**STATEMENT.** $b^{\mathrm{mod}}_k(\mathcal P')\le b^{\mathrm{mod}}_k(\mathcal P)$, hence $Q^{\mathrm{fin}}(\mathcal P')\le Q^{\mathrm{fin}}(\mathcal P)$; also
-$\inf_{\mathcal P'}J\le\inf_{\mathcal P}J$.
+**STATEMENT.** For model budgets defined by robust feasibility, $b^{\mathrm{mod}}_k(\mathcal P)$ as in F125, and nested sets $\mathcal P\subseteq\mathcal P'$:
+$b^{\mathrm{mod}}_k(\mathcal P')\le b^{\mathrm{mod}}_k(\mathcal P)$, hence $Q^{\mathrm{fin}}(\mathcal P')\le Q^{\mathrm{fin}}(\mathcal P)$; also $\inf_{\mathcal P'}J\le\inf_{\mathcal P}J$.
 
-**PROOF.** A constraint required for all $\mathbb Q\in\mathcal P'$ is required for all $\mathbb Q\in\mathcal P$; the feasible set of $b$ shrinks. ∎
+**ASSUMPTIONS.** A-MATH-01; F125.
 
-**COUNTEREXAMPLE (argmax sizing is not monotone).** Actions $n\in\{0,1,2\}$. $\mathbb Q_1$: $J=(0,5,4)$, argmax $1$. Add $\mathbb Q_2$: $J=(0,1,3)$.
-Robust $\min_{\mathbb Q}J=(0,1,3)$, argmax $2$. Enlarging the ambiguity set **increased** the chosen size.
+**PROOF STATUS.** PROVED
 
-**NUMERICAL IMPLICATION.** Safety-relevant model outputs MUST be feasibility-defined caps; argmax outputs are proposals inside caps.
+**PROOF.** A constraint required for every $\mathbb Q\in\mathcal P'$ is required for every $\mathbb Q\in\mathcal P$; the feasible set of budgets shrinks,
+so its supremum does not increase; F049 and T-03 transmit the order. The infimum over a larger set is not larger. ∎
 
-**TESTABLE INVARIANT.** Nested radii $\varepsilon'>\varepsilon$ ⇒ $b^{\mathrm{mod}}(\varepsilon')\le b^{\mathrm{mod}}(\varepsilon)$.
+**COUNTEREXAMPLE ATTEMPT.** None for feasibility-defined caps. Argmax-defined sizing: T-09N.
+
+**NUMERICAL EDGE CASES.** Empty ambiguity set (supremum $+\infty$): must be an invalid model output ⇒ $\mathfrak s$ (F047); unbounded supremum ⇒ no
+model constraint (OPTIONAL) or $0$ (REQUIRED).
+
+**MACHINE-TESTABLE INVARIANT.** Nested radii $\varepsilon^{W\prime}>\varepsilon^{W}$ ⇒ $b^{\mathrm{mod}}_k(\varepsilon^{W\prime})\le b^{\mathrm{mod}}_k(\varepsilon^{W})$.
+
+---
+
+### T-09N Argmax Sizing Monotone in Ambiguity
+
+**THEOREM ID.** T-09N
+
+**STATEMENT.** "The maximiser of the robust objective is non-increasing in the ambiguity set."
+
+**ASSUMPTIONS.** Robust objective $\min_{\mathbb Q\in\mathcal P}J_{\mathbb Q}$, sizing by its argmax (F017).
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** Sizes $n\in\{0,1,2\}$ sh. $\mathbb Q_1$: $J=(0,5,4)$, argmax $1$. Adding $\mathbb Q_2$ with $J=(0,1,3)$: robust $\min_{\mathbb Q}J=(0,1,3)$, argmax $2$. A
+larger ambiguity set increased the chosen size. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexample is the proof.
+
+**NUMERICAL EDGE CASES.** Ties in the argmax (tie-break rule required for determinism, T-14).
+
+**MACHINE-TESTABLE INVARIANT.** Regression: safety-relevant model outputs are feasibility caps; argmax outputs are proposals verified by F126.
 
 ---
 
 ### T-10 Capital-Floor Preservation (one period, tiered)
 
-**ASSUMPTIONS (tier S; revised after review).** Long-only; **one exposure per instrument** (A-SCOPE-05, gate G11); $X_{t+1}=0$ (unitisation does *not*
-protect $F^{\mathrm{abs}}$); $\mathrm{Fin}=0$; $\mathrm{Accr}=0$; $\mathrm{Inc}\ge0$; A-ACC-04 ($\Lambda=\sum_i\Lambda_i$); A-MKT-05 (entry fills $\le p^{\mathrm{lim}}$, quantity $\le$
-reserved); **A-STOPLIVE** (each entry fill is protected by its stop from the instant of the fill); **A-STOP** (a triggered stop exits at
-$\ge p^{\mathrm{stop}}-\kappa^{\mathrm{out}}$); **A-TRIG** (every quantity still held at $\tau_{t+1}$ — untriggered, or triggered but not fully filled — has liquidation
-value $\ge q\,(p^{\mathrm{stop}}-\kappa^{\mathrm{out}}(q))-\phi^{\mathrm{sell}}(q)$); **A-EXE-04** (fees over all fills of one order of total quantity $n$ are
-$\le\phi(n)$); no other orders; open risk per DC-5 (no $\Lambda$ credit) with no anomaly.
+**THEOREM ID.** T-10
 
-**STATEMENT.** $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t\ \Rightarrow\ W_{t+1}\ge F_t$. Tier G: same with $g^{\mathrm{open}},G^{\mathrm{res}},L^{\mathrm{gap}}$
-under A-GAP (exit bound $p^{\mathrm{gx}}$, 05 §5). Tier U: same with $Z^{\mathrm{open}}=\sum u^{\mathrm{open}}$, $Z^{\mathrm{res}}$ (pending orders at full
-$L^{\mathrm{abs}}$), $L^{\mathrm{abs}}$, under A-MKT-01 and A-ACC-05 ($\Lambda_i\le q_im_i+\phi^{\mathrm{sell}}_{i,0}(q_i)$).
+**STATEMENT.** Tier S: $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t\ \Rightarrow\ W_{t+1}\ge F_t$ (F120). Tier G: $G^{\mathrm{open}}_t+G^{\mathrm{res}}_t+L^{\mathrm{gap}}(n)\le K_t\Rightarrow W_{t+1}\ge F_t$
+(F121). Tier U: $Z^{\mathrm{open}}_t+Z^{\mathrm{res}}_t+L^{\mathrm{abs}}(n)\le K_t\Rightarrow W_{t+1}\ge F_t$ (F122).
 
-**PROOF (tier S).** Decompose $W_{t+1}-W_t$ by instrument (05 §2; A-ACC-04 makes $\Lambda$ additive across instruments and G11 makes each instrument
-a single exposure). Held $i$, fully exited: change $=q(f-m_t)-\phi^{\mathrm{sell}}+\Lambda_{i,t}\ge-[q(m_t-p^{\mathrm{stop}}+\kappa^{\mathrm{out}})+\phi^{\mathrm{sell}}]=-r^{\mathrm{open}}_i$
-(using $\Lambda_{i,t}\ge0$). Held $i$, not fully exited: change $=(qm_{t+1}-\Lambda_{i,t+1})-(qm_t-\Lambda_{i,t})\ge-r^{\mathrm{open}}_i$ by A-TRIG and
-$\Lambda_{i,t}\ge0$ (a partial exit splits into the two cases with fees bounded by A-EXE-04). New or pending order on a fresh instrument filled
-$e\le n$ at $f^{\mathrm{in}}\le p^{\mathrm{lim}}$ and protected from the fill (A-STOPLIVE): change $\ge-L^{\mathrm{stop}}(e)\ge-L^{\mathrm{stop}}(n)$ by the same two
-cases and monotonicity; unfilled: $0$. Summing and adding $\mathrm{Inc}\ge0$: $W_{t+1}\ge W_t-(R^{\mathrm{open}}+R^{\mathrm{res}}+L^{\mathrm{stop}}(n))\ge F_t$.
-Tiers G, U: identical with the corresponding exit bounds. ∎
+**ASSUMPTIONS.** Tier S: A-MATH-01; A-SCOPE-03; A-SCOPE-05 with G11; A-FLOW-01 ($X_{t+1}=0$); A-ACC-01, A-ACC-02, A-ACC-03 (transition F055);
+A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$); A-ACC-04; A-ACC-06 ($\Lambda\ge0$); A-MKT-05 (every entry fill $\le p^{\mathrm{lim}}$); A-EXE-01, A-EXE-02;
+A-EXE-03 (cumulative fill $\le$ order quantity); A-EXE-04 (fees on cumulative filled quantity); A-EXE-05 (no other orders); A-AUTH-02, A-AUTH-04
+(complete ledger, one cut); A-AUTH-05 (every reservation held at its full $L^{\mathrm{stop}}$ until the order is terminal; AUD-033); reservations charged
+by F144 (re-evaluated at the $\tau_t$ inputs, REV-028); **A-TRIG** (position-level exit-value bound F072 at the $\tau_t$ inputs); open risk by F064;
+hard-layer inputs by F111, with F140 in place of $\phi^{\mathrm{sell}}$ when the fee schedule is not super-additive.
+Tier G: A-GAP (tier-G form of F072) instead of A-TRIG. Tier U: A-MKT-01 and A-ACC-05 (tier-U form of F072) instead of A-TRIG.
 
-**COUNTEREXAMPLES (each hypothesis removed; the first five found by independent review and re-verified exactly).**
-- *Add-on (no G11):* hold $100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.001n$, $\Lambda(n)=0.001n^2$ ($r=110$); add $100$ at $50$ ($L=110$);
-  $K=220$; untriggered close at $49.01$ ⇒ $\Delta W=-228$, floor breached by $8$ (by $18$ under the pre-review $\Lambda$ credit), while A-TRIG holds for the combined holding ($9{,}762\ge9{,}760$).
-- *Pending order at notional (tier U):* pending 100 @ 5 charged $500$; new 100 @ 5.94 with \$1 minimum commissions, $L^{\mathrm{abs}}=596$; $K=1{,}096$;
-  both fill, price → 0, both sold: $W_{t+1}=F_t-2$.
-- *Triggered but unfilled at $\tau_{t+1}$ (old A-TRIG):* hold $100$ at $50$, stop $49$, $\kappa=0.1$ ($r=110$); trigger just before $\tau_{t+1}$, mark $45$: $W$ falls $500$.
-- *Per-execution fees (no A-EXE-04):* $\phi=\max(1,0.005k)$ per execution; a 100-share exit filled 34/33/33 pays $3>\phi(100)=1$.
-- *Withdrawal (no $X=0$):* $F=F^{\mathrm{abs}}=90$, $W=100$, $r=10=K$, $X=-5$, stop fills at its bound: $W_{t+1}=85<90$.
-- *Gap* (A-STOP fails): T-06 gap example. *Race* (reservation not atomic): two decisions from one snapshot each sized to $L=K$ ⇒ loss $2K$.
-  *Missing stop treated as zero risk* (violates D-06): unbounded breach. *Non-monotone fees:* T-03 example.
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
-**NUMERICAL IMPLICATION.** Sums rounded up, $K$ rounded down (T-24).
+**PROOF (tier S; one case since v0.2).** By A-ACC-04 and G11, $W_{t+1}-W_t=\sum_i\Delta_i+\mathrm{Inc}_{t+1}$, where $\Delta_i$ is the change of cash plus
+liquidation value attributable to exposure $i$ (F055 with $X=\mathrm{Fin}=\mathrm{Accr}=0$).
+(1) *Held exposure* ($q^{\mathrm{exp}}_i=q_{i,t}$): it contributed $q_{i,t}m_{i,t}-\Lambda_{i,t}$ before the period and contributes $\mathrm{XV}_{i,t+1}$ after it
+(exit proceeds net of all exit fees plus liquidation value of any remainder). By A-TRIG,
+$\Delta_i\ge q_{i,t}\big(p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(q_{i,t})\big)-\phi^{\mathrm{sell}}_i(q_{i,t})-q_{i,t}m_{i,t}+\Lambda_{i,t}=-r^{\mathrm{open}}_i+\Lambda_{i,t}\ge-r^{\mathrm{open}}_i$ (F064, A-ACC-06).
+(2) *New or pending order on a fresh instrument* (G11), cumulative fill $e\le n$ (A-EXE-03) at prices $\le p^{\mathrm{lim}}$ (A-MKT-05) with entry fees
+$\le\phi^{\mathrm{buy}}(e)$ (A-EXE-04): cash paid $\le e\,p^{\mathrm{lim}}+\phi^{\mathrm{buy}}(e)$ and, by A-TRIG with $q^{\mathrm{exp}}_i=e$,
+$\mathrm{XV}_{i,t+1}\ge e(p^{\mathrm{stop}}_o-\kappa^{\mathrm{out}}(e))-\phi^{\mathrm{sell}}(e)$; hence $\Delta_i\ge-L^{\mathrm{stop}}(e)\ge-L^{\mathrm{stop}}(n)$ (F061; monotone by A-EXE-01,
+A-EXE-02 and $p^{\mathrm{lim}}>p^{\mathrm{stop}}_o$ from G7). A pending order $o$ is bounded in the same way by $L^{\mathrm{stop}}$ of its quantity with its limit, its
+current stop and the $\tau_t$ inputs — the same inputs A-TRIG uses — and F144 charges at least that value, so the pending orders together
+are bounded by $R^{\mathrm{res}}_t$. (A ledger value computed with older inputs is not enough: REV-028.) Unfilled orders give $\Delta_i=0$.
+(2′) *Order partially filled before $\tau_t$* (added v0.2, AUD-033): held $q_{i,t}>0$ and a pending remainder of the same order of total
+quantity $n'$ at limit $p'^{\mathrm{lim}}$ — one exposure (G11), charged $r^{\mathrm{open}}_i$ in $R^{\mathrm{open}}_t$ and, by A-AUTH-05 and F144, at least the full
+$L^{\mathrm{stop}}(n')$ at the $\tau_t$ inputs in $R^{\mathrm{res}}_t$ (OC-4).
+With $e$ filled in the period, $q^{\mathrm{exp}}_i=q_{i,t}+e\le n'$, entry fees in the period $\le\phi^{\mathrm{buy}}(n')$ and A-TRIG:
+$\Delta_i\ge-\big[q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i)+n'(p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+\phi^{\mathrm{sell}}_i(n')+\phi^{\mathrm{buy}}(n')\big]+\Lambda_{i,t}\ge-\big(r^{\mathrm{open}}_i+L^{\mathrm{stop}}(n')\big)+\Lambda_{i,t}$,
+using $e\le n'$, $q^{\mathrm{exp}}_i\le n'$, monotonicity and $p'^{\mathrm{lim}}>p^{\mathrm{stop}}_i$. Charging only the unfilled remainder would not suffice: with
+$\kappa^{\mathrm{out}}(n)=0.001n$, no fees, $n'=200$, $q_{i,t}=100$ marked at $52$, limit $50$, stop $49$, the worst case loses $440$ while
+$r^{\mathrm{open}}_i+L^{\mathrm{stop}}(100)=420$ (full reservation: $550$).
+(3) Summing with $\mathrm{Inc}\ge0$: $W_{t+1}\ge W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))\ge W_t-K_t=F_t$.
+Tiers G and U: identical with the tier's form of F072. ∎
 
-**TESTABLE INVARIANT.** Simulator with adversarial paths drawn *inside* the tier's disturbance set (including the comonotone all-stops scenario,
-triggered-unfilled states and split fills) ⇒ $W_{t+1}\ge F_t$ always; each counterexample above is a regression test that must *fail* when its
-hypothesis is removed; paths outside are labelled assumption violations and their breach magnitude logged.
+**COUNTEREXAMPLE ATTEMPT.** (i) AUD-001 fill pattern on a new order (stop partially filled at the cut, per-order minimum fee, 05 §5):
+$\mathrm{XV}=4{,}888<4{,}889$ violates A-TRIG, so it is outside the hypotheses; with F140 the charge is $113$ and the scenario satisfies both A-TRIG
+and the conclusion ($W_{t+1}=F_t$). (ii) Several exit orders (one child stop per entry fill): with the two-part envelope A-TRIG fails
+($4{,}887<4{,}888$); with $N^{\mathrm{ex}}=3$ in F140 it holds (REV-029). (iii) Inputs changed after reservation: F144 re-evaluates (REV-028).
+(iv) The second independent review's randomised exact search inside the hypotheses (20,000 trials per case, tiers S, G, U): no violation.
+(v) Removing any hypothesis: T-10N.
+
+**NUMERICAL EDGE CASES.** Equality in the premise (floor attained, not breached); aggregates rounded up and $K_t$ rounded down (T-24); fees
+quantised up (01 §9 item 15); $e=0$; $-0$ normalised.
+
+**MACHINE-TESTABLE INVARIANT.** Simulator with adversarial paths drawn inside the tier's disturbance set (comonotone all-stops scenario,
+triggered-unfilled states, split fills, partial exits at the cut) ⇒ $W_{t+1}\ge F_t$; F072 checked per exposure ex post; each T-10N
+counterexample is a regression test that must fail when its hypothesis is removed; paths outside are logged as assumption violations with
+breach magnitude.
+
+---
+
+### T-10N Floor Preservation Without the v0.2 Hypotheses
+
+**THEOREM ID.** T-10N
+
+**STATEMENT.** "T-10's conclusion holds under the v0.1 hypotheses, under the v0.1.1 hypotheses, or with any one of G11, A-TRIG, A-EXE-04,
+A-FLOW-01, A-AUTH-02, F144 or D-06 removed."
+
+**ASSUMPTIONS.** T-10's assumptions with the named element replaced or removed.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF (exact counterexamples).**
+- *v0.1.1 per-case A-TRIG (AUD-001; v0.1.1 accounting, where $\Lambda_t=0$ was admissible):* $q=100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}=0.1$, fee
+  $\max(1,0.005k)$ per order, $\Lambda_t=0$, $r^{\mathrm{open}}=111=K_t$; the stop fills $50$ sh at $48.9$ paying $1$; the remaining $50$ sh are valued at their own
+  per-case bound $2{,}444$; change $2{,}445-1+2{,}444-5{,}000=-112$ ⇒ $W_{t+1}=F_t-1$. Under v0.2 accounting ($\Lambda_t\ge1$) the held case gives $W_{t+1}=F_t$;
+  the same fill pattern on a new order with $L^{\mathrm{stop}}=112=K_t$ gives $W_{t+1}=F_t-1$ (REV-030).
+- *Add-on (no G11):* hold $100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.001n$, $\Lambda(n)=0.001n^2$ ($r^{\mathrm{open}}=110$); add $100$ at $50$ ($L^{\mathrm{stop}}=110$);
+  $K_t=220$; untriggered close at $49.01$ ⇒ change $-228$, floor breached by $8$, although A-TRIG holds for the combined holding ($9{,}762\ge9{,}760$).
+- *Pending order at notional (v0.1 tier U):* pending $100$ @ $5$ charged $500$; new $100$ @ $5.94$ with \$1 minimum commissions, $L^{\mathrm{abs}}=596$;
+  $K_t=1{,}096$; both fill, price → 0, both sold: $W_{t+1}=F_t-2$.
+- *Triggered but unfilled at the cut (v0.1 A-TRIG):* hold $100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}=0.1$ ($r^{\mathrm{open}}=110$); trigger just before $\tau_{t+1}$,
+  mark $45$: $W$ falls $500$.
+- *Per-execution fees (no A-EXE-04):* $\max(1,0.005k)$ per execution; a $100$-share exit filled $34/33/33$ pays $3>\phi(100)=1$.
+- *Withdrawal (no A-FLOW-01):* $F=F^{\mathrm{abs}}=90$, $W=100$, $r^{\mathrm{open}}=10=K$, $X=-5$, stop fills at its bound: $W_{t+1}=85<90$.
+- *Race (no A-AUTH-02 for the second decision; prevented by the integration rule A-AUTH-03):* two decisions from one snapshot each sized to
+  $L^{\mathrm{stop}}=K_t$; each decision's ledger omits the other order ⇒ loss $2K_t$.
+- *Stale reservation (ledger value instead of F144, REV-028):* pending $100$ at limit $50$, stop $49$, reserved with $\kappa^{\mathrm{out}}=0.1$: $R^{\mathrm{res}}=110=K_t$;
+  at $\tau_t$ the F111 input is $\kappa^{\mathrm{out}}=0.5$; the order fills and exits at the A-TRIG bound $48.5$ ⇒ change $-150$, $W_{t+1}=F_t-40$.
+- *Gap (A-TRIG fails):* T-06b gap example. *Missing stop charged zero (violates D-06):* unbounded breach. *Non-monotone fees:* T-03N. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** Per-order minimum fees; partial fills at the cut.
+
+**MACHINE-TESTABLE INVARIANT.** Each item is a regression scenario.
 
 ---
 
 ### T-11 Risk-Reservation Conservation
 
-**ASSUMPTIONS.** Ledger per budget family with local variables available $Av$, reserved $Rs$, open $Op$ and total $T$; transitions
-RESERVE($x$) [requires $x\le Av$, atomically with the version read], FILL, CANCEL/EXPIRE/REJECT, CLOSE; reservations computed at
-$p^{\mathrm{lim}}$ with the order's stop; full reservation held until the order is terminal; $g$ monotone (T-03).
+**THEOREM ID.** T-11
 
-**STATEMENT.** (a) $Av+Rs+Op=T$ after every transition (for fixed $T$). (b) $Av\ge0$ always. (c) *Dominance:* for any fill $e\le n$ at
-$f\le p^{\mathrm{lim}}$, realised open risk $\le$ reserved $L^{\mathrm{stop}}(n)$. (d) On terminal state, release $L^{\mathrm{stop}}(n)-L^{\mathrm{stop}}(e)\ge0$.
+**STATEMENT.** For a ledger of one budget family with components $\mathrm{Av}$ (available), $\mathrm{Rs}$ (reserved), $\mathrm{Op}$ (open) and fixed total
+$\mathrm{Tot}$: (a) $\mathrm{Av}+\mathrm{Rs}+\mathrm{Op}=\mathrm{Tot}$ after every transition (F119); (b) $\mathrm{Av}\ge0$ always; (c) for any fill $e\le n$ at prices $\le p^{\mathrm{lim}}$, the
+realised open risk is $\le$ the reserved $L^{\mathrm{stop}}(n)$; (d) on the terminal state, the release $L^{\mathrm{stop}}(n)-L^{\mathrm{stop}}(e)\ge0$.
 
-**PROOF.** (a) Each transition moves an amount between components. (b) Induction with the atomic guard. (c) Entry at $f\le p^{\mathrm{lim}}$
-and monotonicity: $e(f-p^{\mathrm{stop}}+\kappa^{\mathrm{out}}(e))+\phi^{\mathrm{buy}}(e)+\phi^{\mathrm{sell}}(e)\le L^{\mathrm{stop}}(e)\le L^{\mathrm{stop}}(n)$, with fees per order (A-EXE-04). (d) Monotonicity. ∎
+**ASSUMPTIONS.** A-MATH-01; transitions RESERVE($y$) [requires $y\le\mathrm{Av}$, atomically with the version read — A-AUTH-03], FILL,
+CANCEL/EXPIRE/REJECT, CLOSE; reservation vector F108 at $p^{\mathrm{lim}}$ with the order's stop (D-05), held until terminal (A-AUTH-05): FILL records the
+fill and moves nothing out of $\mathrm{Rs}$; at the terminal state $L^{\mathrm{stop}}(e)$ moves to $\mathrm{Op}$ and the rest is released. The ledger's $\mathrm{Op}$ is a
+book entry, not the mark-based $R^{\mathrm{open}}_t$ (F050). A-MKT-05; A-EXE-01, A-EXE-02, A-EXE-03, A-EXE-04.
 
-**COUNTEREXAMPLES.** *Reservation at mid:* realised risk exceeds reservation by $e(p^{\mathrm{lim}}-m)$. *Market order:* no price bound, (c) fails.
-*Non-atomic check-then-reserve:* $Av=1000$, two concurrent reserves of $1000$ ⇒ $Av=-1000$. *Stop widened after fill:* open risk grows
-beyond reservation unless re-reserved. *Non-monotone fees:* T-03.
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
-**SCOPE NOTE.** The engine is pure; (a),(b),(d) are properties of the external ledger. The engine's obligations: consume $Rs$ as input;
-emit the reservation vector at worst-case entry (06 §8).
+**PROOF.** (a) Each transition moves an amount between components. (b) Induction with the atomic guard. (c) Entry at $p^{\mathrm{in}}\le p^{\mathrm{lim}}$
+(A-MKT-05) and monotonicity: $e(p^{\mathrm{in}}-p^{\mathrm{stop}}+\kappa^{\mathrm{out}}(e))+\phi^{\mathrm{buy}}(e)+\phi^{\mathrm{sell}}(e)\le L^{\mathrm{stop}}(e)\le L^{\mathrm{stop}}(n)$, with fees on cumulative
+filled quantity (A-EXE-04). (d) Monotonicity. ∎
 
-**TESTABLE INVARIANT.** Ledger replay property tests with random interleavings; engine: emitted reservation $\ge L^{\mathrm{stop}}(e)$ for all
-$e\le Q$ and all $f\le p^{\mathrm{lim}}$ (enumerated for small cases).
+**COUNTEREXAMPLE ATTEMPT.** None within the hypotheses; naive schemes: T-11N.
+
+**NUMERICAL EDGE CASES.** $y=\mathrm{Av}$ exactly (admitted); reservations rounded up, releases rounded down (T-24).
+
+**MACHINE-TESTABLE INVARIANT.** Ledger replay property tests with random interleavings; engine: emitted reservation $\ge L^{\mathrm{stop}}(e)$ for all
+$e\le Q$ and all entry prices $\le p^{\mathrm{lim}}$ (enumerated for small cases). The engine is pure: (a), (b), (d) are obligations of the external
+ledger; the engine's obligation is F108.
 
 ---
 
-### T-12 No-Trade Under Insufficient Robust Advantage
+### T-11N Naive Reservation Schemes
 
-**ASSUMPTIONS.** A certificate $\mathrm{LB}_t(a)$ and margin $\varepsilon^{\min}\ge0$; decision rule "trade $a$ only if $\mathrm{LB}_t(a)>\varepsilon^{\min}$".
+**THEOREM ID.** T-11N
 
-**STATEMENT.** $\mathrm{LB}_t(a)\le\varepsilon^{\min}\Rightarrow$ $a$ is not chosen; a TRADE decision implies $\mathrm{LB}_t(a)>\varepsilon^{\min}$.
+**STATEMENT.** "Conservation and dominance hold for (i) reservation at mid, (ii) market orders, (iii) non-atomic check-then-reserve,
+(iv) a stop widened after the fill without re-reservation, (v) non-monotone fees."
 
-**PROOF.** By construction. ∎ Validity of $\mathrm{LB}_t$ ($\mathrm{LB}_t\le\Delta J_t$ with stated confidence) is **UNDEFINED** (OPEN-2).
+**ASSUMPTIONS.** T-11's with the named element replaced.
 
-**P-12a (infimum of difference).** For any family $(A_{\mathbb Q},B_{\mathbb Q})_{\mathbb Q\in\mathcal P}$ with $\inf A$ and $\inf B$ finite:
-$\inf_{\mathbb Q}(A_{\mathbb Q}-B_{\mathbb Q})\le\inf_{\mathbb Q}A_{\mathbb Q}-\inf_{\mathbb Q}B_{\mathbb Q}$.
-*Proof:* for any $\mathbb Q'$, $\inf(A-B)\le A_{\mathbb Q'}-B_{\mathbb Q'}\le A_{\mathbb Q'}-\inf B$; take $\inf$ over $\mathbb Q'$. ∎
-*Counterexample to using the right-hand side ($\mathrm{LB}^{\mathrm{naive}}$):* $\mathbb Q_1$: $J(a)=1$, $J(a^{\varnothing})=0$; $\mathbb Q_2$: $J(a)=2$,
-$J(a^{\varnothing})=3$. $\inf J(a)-\inf J(a^{\varnothing})=1-0=1>0$ ("certified"), but $\inf(J(a)-J(a^{\varnothing}))=\min(1,-1)=-1$: under $\mathbb Q_2$ not
-trading is better.
+**PROOF STATUS.** DISPROVED
 
-**P-12b (additive error bounds).** If $\lvert\hat J(a)-J(a)\rvert\le e_a$ and $\lvert\hat J(a^{\varnothing})-J(a^{\varnothing})\rvert\le e_0$ surely, then
-$\hat J(a)-\hat J(a^{\varnothing})-e_a-e_0\le\Delta J(a)$. If each bound holds with probability $\ge1-\delta_a$, $\ge1-\delta_0$, the conclusion holds with
-probability $\ge1-\delta_a-\delta_0$ (union bound). Over $m$ decisions the family-wise error is up to $m(\delta_a+\delta_0)$. *Proof:* triangle
-inequality; union bound. ∎
+**PROOF.** (i) Realised risk exceeds the reservation by $e(p^{\mathrm{lim}}-m)$. (ii) No price bound: (c) fails. (iii) Available budget $1000$, two concurrent
+reserves of $1000$ ⇒ available budget $-1000$. (iv) Open risk grows beyond the reservation. (v) T-03N example. ∎
 
-**P-12c (correlated errors).** When the same parameter error drives $\hat J(a)$ and $\hat J(a^{\varnothing})$, bounding them separately is
-conservative; bounding $\hat J(a)-\hat J(a^{\varnothing})$ directly can be tighter. (Remark; quantification NOT YET PROVEN.)
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
 
-**NUMERICAL IMPLICATION.** $\varepsilon^{\mathrm{num}}$ from certified evaluation at the *returned* action; solver tolerances are not part of the certificate.
+**NUMERICAL EDGE CASES.** None specific.
 
-**TESTABLE INVARIANT.** Decision TRADE ⇒ recorded $\mathrm{LB}>\varepsilon^{\min}$; unit test reproducing the P-12a counterexample.
+**MACHINE-TESTABLE INVARIANT.** Each item is a regression scenario of the ledger model.
+
+---
+
+### T-12 No-Trade Under Insufficient Certified Advantage
+
+**THEOREM ID.** T-12
+
+**STATEMENT.** Under the rule "trade $a$ only if $\mathrm{LB}_t(a)>\varepsilon^{\min}$" (F027): $\mathrm{LB}_t(a)\le\varepsilon^{\min}\Rightarrow a$ is not chosen; a TRADE
+decision implies $\mathrm{LB}_t(a)>\varepsilon^{\min}$.
+
+**ASSUMPTIONS.** A-MATH-01; the decision rule; D-10 set to REQUIRED.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** By construction. ∎ The validity of $\mathrm{LB}_t$ ($\mathrm{LB}_t\le\Delta J_t$ with stated confidence) is OPEN-2.
+
+**COUNTEREXAMPLE ATTEMPT.** None; the rule is vacuous if $\mathrm{LB}_t$ is invalid (OPEN-2).
+
+**NUMERICAL EDGE CASES.** $\mathrm{LB}_t=\varepsilon^{\min}$ exactly (not traded); $\mathrm{LB}_t=-\infty$ (T-19) or NaN ⇒ not traded.
+
+**MACHINE-TESTABLE INVARIANT.** TRADE ⇒ recorded $\mathrm{LB}_t>\varepsilon^{\min}$.
+
+---
+
+### T-12a Infimum of a Difference
+
+**THEOREM ID.** T-12a
+
+**STATEMENT.** For families $J^{(1)}_{\mathbb Q},J^{(2)}_{\mathbb Q}$ indexed by $\mathbb Q\in\mathcal P$ with finite infima:
+$\inf_{\mathbb Q}(J^{(1)}_{\mathbb Q}-J^{(2)}_{\mathbb Q})\le\inf_{\mathbb Q}J^{(1)}_{\mathbb Q}-\inf_{\mathbb Q}J^{(2)}_{\mathbb Q}$ (F117).
+
+**ASSUMPTIONS.** A-MATH-01; finite infima.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** For any $\mathbb Q'$: $\inf(J^{(1)}-J^{(2)})\le J^{(1)}_{\mathbb Q'}-J^{(2)}_{\mathbb Q'}\le J^{(1)}_{\mathbb Q'}-\inf J^{(2)}$; take the infimum over $\mathbb Q'$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The inequality can be strict; using the right-hand side as a certificate fails: T-12N.
+
+**NUMERICAL EDGE CASES.** Infinite infima ($-\infty-(-\infty)$) excluded by hypothesis and must be checked (T-19).
+
+**MACHINE-TESTABLE INVARIANT.** Property test over random finite families.
+
+---
+
+### T-12N Difference of Infima as a Certificate
+
+**THEOREM ID.** T-12N
+
+**STATEMENT.** "$\mathrm{LB}^{\mathrm{naive}}=\inf_{\mathbb Q}J_{\mathbb Q}(a)-\inf_{\mathbb Q}J_{\mathbb Q}(a^{\varnothing})>0$ implies that $a$ is better than $a^{\varnothing}$ under every $\mathbb Q\in\mathcal P$."
+
+**ASSUMPTIONS.** Finite $\mathcal P$.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** $\mathbb Q_1$: $J(a)=1$, $J(a^{\varnothing})=0$; $\mathbb Q_2$: $J(a)=2$, $J(a^{\varnothing})=3$. $\mathrm{LB}^{\mathrm{naive}}=1-0=1>0$, but
+$\inf(J(a)-J(a^{\varnothing}))=\min(1,-1)=-1$: under $\mathbb Q_2$ not trading is better. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexample is the proof.
+
+**NUMERICAL EDGE CASES.** None specific.
+
+**MACHINE-TESTABLE INVARIANT.** Unit test reproducing the example; the certificate uses the infimum of the difference (F027).
+
+---
+
+### T-12b Additive Error Allowance
+
+**THEOREM ID.** T-12b
+
+**STATEMENT.** If $\lvert\hat J(a)-J(a)\rvert\le\varepsilon^{\mathrm{err}}_a$ and $\lvert\hat J(a^{\varnothing})-J(a^{\varnothing})\rvert\le\varepsilon^{\mathrm{err}}_0$ surely, then
+$\hat J(a)-\hat J(a^{\varnothing})-\varepsilon^{\mathrm{err}}_a-\varepsilon^{\mathrm{err}}_0\le\Delta J(a)$ (F118). If each bound holds with probability $\ge1-\delta^{\mathrm{conf}}_a$,
+$\ge1-\delta^{\mathrm{conf}}_0$, the conclusion holds with probability $\ge1-\delta^{\mathrm{conf}}_a-\delta^{\mathrm{conf}}_0$; over $k$ decisions the family-wise error is at
+most $k(\delta^{\mathrm{conf}}_a+\delta^{\mathrm{conf}}_0)$.
+
+**ASSUMPTIONS.** A-MATH-01; the error bounds as hypotheses.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** Triangle inequality; union bound. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** None; whether realistic bounds exist is RQ-14/RQ-15, misspecification is outside the statement.
+
+**NUMERICAL EDGE CASES.** $\varepsilon^{\mathrm{num}}$ certified at the returned action; solver tolerances are not part of the certificate.
+
+**MACHINE-TESTABLE INVARIANT.** Property test with synthetic objectives and injected errors inside the bounds.
+
+---
+
+### T-12c Tighter Bound for Correlated Estimation Errors
+
+**THEOREM ID.** T-12c
+
+**STATEMENT.** For estimators in which a common parameter error drives both $\hat J(a)$ and $\hat J(a^{\varnothing})$, a confidence bound on the
+error of $\hat J(a)-\hat J(a^{\varnothing})$ can be computed that is strictly tighter than the sum of the two separate T-12b bounds.
+
+**ASSUMPTIONS.** A model class for $J$ (RQ-13) and an error model (RQ-14).
+
+**PROOF STATUS.** NOT YET PROVEN
+
+**PROOF.** None. (Elementary facts only: the difference error never exceeds the sum of the separate errors, and identical errors cancel.)
+
+**COUNTEREXAMPLE ATTEMPT.** None found.
+
+**NUMERICAL EDGE CASES.** n/a until the model class is chosen.
+
+**MACHINE-TESTABLE INVARIANT.** n/a (research question RQ-14).
 
 ---
 
 ### T-13 Safe-Action Membership
 
-**STATEMENT.** For every input, the output action is $a^{\varnothing}$ or an element of $\mathcal A^{\mathrm{safe}}(x_t)$, and $\mathcal D$ terminates.
+**THEOREM ID.** T-13
 
-**PROOF.** The last step before emission is $V$ (T-03(c)); every other path emits $a^{\varnothing}$ (Art. 18). Search terminates in
-$\lceil\log_2(\bar N/\delta_q)\rceil+1$ exact evaluations per constraint. ∎ (Specification-level.)
+**STATEMENT.** For every input, the emitted action is $a^{\varnothing}$ or an element of $\mathcal A^{\mathrm{safe}}(x_t)$ (F024), and $\mathcal D$ terminates.
 
-**TESTABLE INVARIANT.** Independent slow oracle re-checks membership of every emitted TRADE (differential testing); fuzzed inputs
-never raise out of $\mathcal D$.
+**ASSUMPTIONS.** A-MATH-01; T-03; Art. 18 (every non-TRADE path emits $a^{\varnothing}$).
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** The last step before emission is $V$ (F126, T-03(c)); every other path emits $a^{\varnothing}$. The search terminates in
+$\lceil\log_2(\bar N/\delta_q)\rceil+1$ exact evaluations per constraint. ∎ (Specification level; implementation conformance is R7b.)
+
+**COUNTEREXAMPLE ATTEMPT.** None at specification level.
+
+**NUMERICAL EDGE CASES.** Very large $\bar N/\delta_q$ (bounded bisection count); exceptions inside $\mathcal D$ ⇒ $a^{\varnothing}$.
+
+**MACHINE-TESTABLE INVARIANT.** An independent slow oracle re-checks membership of every emitted TRADE; fuzzed inputs never raise out of $\mathcal D$.
+
+---
 
 ### T-14 Replay Determinism
 
-**STATEMENT.** $\mathcal D$ applied twice to byte-identical $(\mathsf S_t,o,\theta,\mathsf v)$ yields byte-identical records, across processes, machines
-and restarts. **PROOF.** Art. 8 + 01 §9.11. ∎ **TESTABLE INVARIANT.** Golden-record replay across processes with different hash seeds,
-locales and pre-mutated global decimal contexts.
+**THEOREM ID.** T-14
 
-### T-15 Economic Cost Accounting Identity — see 05 §2–§3 (PROVED). **TESTABLE INVARIANT:** for simulated ledgers, both sides agree exactly.
+**STATEMENT.** $\mathcal D$ applied twice to byte-identical $(\mathsf S_t,o,\theta,\mathsf v)$ yields byte-identical records, across processes, machines and restarts.
 
-### T-16 Expected-value sizing is cap sizing
+**ASSUMPTIONS.** A-MATH-01; Art. 8; 01 §9 items 11 (canonical serialisation) and 13 ($-0$ normalisation); sorted iteration; local numeric contexts.
 
-**STATEMENT.** If $J(n)=\mathbb E[W_{t+1}(n\mathbf 1_i)-W_t]$ is affine in $n$ on $\mathbb L\cap[0,Q^{\mathrm{hard}}]$ (linear costs, no impact), then
-$\arg\max J\ni 0$ or $Q^{\mathrm{hard}}$. **PROOF.** An affine function on an interval attains its maximum at an endpoint. ∎
-**IMPLICATION.** Under expected-value objectives the caps *are* the sizing rule; risk preferences must come from the caps or from
-a concave objective.
+**PROOF STATUS.** PROVED
 
-### T-17 Stop-Risk Insufficiency (restated after review)
+**PROOF.** $\mathcal D$ is a function of its inputs (F006) and the serialisation is canonical. ∎
 
-**STATEMENT.** (a) For the naive envelope $Q=\lfloor f^{\mathrm{trd}}W/\ell^{\mathrm{stop}}\rfloor$ with $\ell^{\mathrm{stop}}$ the stop distance only, admissible notional is
-unbounded as $\ell^{\mathrm{stop}}\to0$ and a gap of fraction $\Gamma$ can lose more than $W$. (b) For H1 with a per-share exit-cost floor
-$\kappa^{\mathrm{out}}\ge\kappa_0>0$ (or a per-share fee), notional is bounded by $f^{\mathrm{trd}}Wp/\kappa_0$ — bounded, but possibly $\gg W$; a gap loss $>W$
-remains possible iff $\ell^{\mathrm{stop}}+\kappa_0<f^{\mathrm{trd}}\Gamma p$ (approximately).
-**PROOF.** (a) Let entry $p$, stop $p-\ell^{\mathrm{stop}}$, $Q=f^{\mathrm{trd}}W/\ell^{\mathrm{stop}}$ (take it integral). A gap exit at $(1-\Gamma)(p-\ell^{\mathrm{stop}})$ loses
-$\Gamma p+(1-\Gamma)\ell^{\mathrm{stop}}\ge\Gamma p$ per share, total $\ge f^{\mathrm{trd}}W\Gamma p/\ell^{\mathrm{stop}}>W$ whenever $\ell^{\mathrm{stop}}<f^{\mathrm{trd}}\Gamma p$.
-Numeric: $W=100{,}000$, $f^{\mathrm{trd}}=1\%$, $\ell^{\mathrm{stop}}=0.01$, $p=50$ ⇒ $Q=100{,}000$ sh, notional $5{,}000{,}000$; with $\Gamma=5\%$ the loss is
-$250{,}950\approx2.5W$. (b) $n(\ell^{\mathrm{stop}}+\kappa_0)\le f^{\mathrm{trd}}W$. Example of (b) with no breach: $f^{\mathrm{trd}}=0.1\%$, $p=10$, $\kappa_0=0.01$ ⇒
-notional $\le W$ for every stop distance. ∎
-**IMPLICATION.** Stop-risk budgets alone do not bound notional usefully; H5–H11 are necessary.
+**COUNTEREXAMPLE ATTEMPT.** Implementation-level threats (hash-seed iteration order FM-NUM-11, mutated global decimal context FM-NUM-10,
+`-0.00` serialisation FM-NUM-14, float representation) are excluded by the listed rules; none at specification level.
 
-### T-18 Comonotone (dependence-free) aggregation
+**NUMERICAL EDGE CASES.** $-0$ versus $0$ (review Z03–Z06); locale-dependent formatting.
+
+**MACHINE-TESTABLE INVARIANT.** Golden-record replay across processes with different hash seeds, locales and pre-mutated global decimal contexts.
+
+---
+
+### T-15 Economic Cost Accounting Identity
+
+**THEOREM ID.** T-15
+
+**STATEMENT.** For the transitions F051–F055 and the reference-price chains F057, the identity F058 holds exactly and every primitive cash or
+price event appears once on its right-hand side (05 §3).
+
+**ASSUMPTIONS.** A-MATH-01; definitions F033–F035, F051–F057; a corporate action splits the period (F054).
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** 05 §2 (F055) and §3 (telescoping of F057). ∎ *Scope:* the identity is about the transition model; that the real ledger
+follows the model is A-ACC-03, which is outside the statement.
+
+**COUNTEREXAMPLE ATTEMPT.** A corporate action inside a period without the split books a 2:1 split as a loss (05 §1) — excluded by F054.
+
+**NUMERICAL EDGE CASES.** Exact arithmetic; fees quantised before booking so both sides use the booked value.
+
+**MACHINE-TESTABLE INVARIANT.** For simulated ledgers both sides agree exactly.
+
+---
+
+### T-16 Expected-Value Sizing Is Cap Sizing
+
+**THEOREM ID.** T-16
+
+**STATEMENT.** If $J(n)=\mathbb E[W_{t+1}(n\mathbf 1_i)-W_t]$ is affine in $n$ on $\mathbb L\cap[0,Q^{\mathrm{hard}}]$, then $\arg\max J$ contains $0$ or $Q^{\mathrm{hard}}$ (F130).
+
+**ASSUMPTIONS.** A-MATH-01; affinity (linear costs, no impact) as hypothesis.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** An affine function on a finite ordered set attains its maximum at an endpoint. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** None within the hypothesis.
+
+**NUMERICAL EDGE CASES.** Constant $J$ (every size maximises): a deterministic tie-break rule is required (T-14) and is **UNDEFINED**.
+
+**MACHINE-TESTABLE INVARIANT.** Property test with affine objectives.
+
+---
+
+### T-17a Naive Stop-Risk Envelope Admits Unbounded Notional
+
+**THEOREM ID.** T-17a
+
+**STATEMENT.** For the naive envelope $Q=\delta_q\lfloor f^{\mathrm{trd}}W/(\delta_q\ell^{\mathrm{stop}})\rfloor$ with $\ell^{\mathrm{stop}}$ the stop distance only (F110), admissible
+notional is unbounded as $\ell^{\mathrm{stop}}\to0$, and one gap of fraction $\Gamma_i$ loses more than $W$ whenever $\ell^{\mathrm{stop}}<f^{\mathrm{trd}}\Gamma_ip$ (up to lattice
+rounding; F128).
+
+**ASSUMPTIONS.** A-MATH-01.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** Entry $p$, stop $p-\ell^{\mathrm{stop}}$, $Q=f^{\mathrm{trd}}W/\ell^{\mathrm{stop}}$ (take it on the lattice). A gap exit at $(1-\Gamma_i)(p-\ell^{\mathrm{stop}})$ loses
+$\Gamma_ip+(1-\Gamma_i)\ell^{\mathrm{stop}}\ge\Gamma_ip$ per share, in total $\ge f^{\mathrm{trd}}W\Gamma_ip/\ell^{\mathrm{stop}}>W$ when $\ell^{\mathrm{stop}}<f^{\mathrm{trd}}\Gamma_ip$. Numeric:
+$W=100{,}000$, $f^{\mathrm{trd}}=1\%$, $\ell^{\mathrm{stop}}=0.01$, $p=50$ ⇒ $Q=100{,}000$ sh, notional $5{,}000{,}000$; $\Gamma_i=5\%$ ⇒ loss $250{,}950\approx2.5W$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** n/a (existence statement).
+
+**NUMERICAL EDGE CASES.** $\ell^{\mathrm{stop}}\to0$ is a division hazard; G7 rejects per-share loss below $\ell^{\min}p^{\mathrm{lim}}$.
+
+**MACHINE-TESTABLE INVARIANT.** Regression scenario.
+
+---
+
+### T-17b Stop-Risk Budget With an Exit-Cost Floor
+
+**THEOREM ID.** T-17b
+
+**STATEMENT.** If $\kappa^{\mathrm{out}}\ge\kappa^{\min}p^{\mathrm{stop}}$ with $\kappa^{\min}>0$ (F111) and $B\le W$ (B1–B3), every $n$ admitted by H1 satisfies
+$n\,p^{\mathrm{lim}}\le f^{\mathrm{trd}}Wp^{\mathrm{lim}}/(\kappa^{\min}p^{\mathrm{stop}})$ (F128). The bound exceeds $W$ iff $f^{\mathrm{trd}}p^{\mathrm{lim}}>\kappa^{\min}p^{\mathrm{stop}}$.
+
+**ASSUMPTIONS.** A-MATH-01; F111; $B\le W$.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** $L^{\mathrm{stop}}(n)\ge n\kappa^{\mathrm{out}}\ge n\kappa^{\min}p^{\mathrm{stop}}$ (the other terms of F061 are $\ge0$ by G7) and H1 gives $L^{\mathrm{stop}}(n)\le f^{\mathrm{trd}}B\le f^{\mathrm{trd}}W$.
+Examples: $f^{\mathrm{trd}}=0.1\%$, $p^{\mathrm{lim}}=10$, $\kappa^{\min}p^{\mathrm{stop}}=0.01$ ⇒ notional $\le W$; $f^{\mathrm{trd}}=1\%$, $p^{\mathrm{lim}}=50$, $\kappa^{\min}p^{\mathrm{stop}}=0.01$ ⇒
+notional $\le50W$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** $\kappa^{\min}=0$ returns to T-17a (no bound).
+
+**NUMERICAL EDGE CASES.** $\kappa^{\min}p^{\mathrm{stop}}$ tiny ⇒ bound huge; notional caps H7–H11 are therefore necessary.
+
+**MACHINE-TESTABLE INVARIANT.** For random admissible inputs, the H1-only cap never exceeds the bound.
+
+---
+
+### T-18 Comonotone Aggregation
+
+**THEOREM ID.** T-18
 
 **STATEMENT.** If $\mathcal L_i\le b_i$ surely for each $i$, then $\sum_i\mathcal L_i\le\sum_ib_i$ for every joint law; and if each bound is attainable
-with no dependence restriction, $\sup\big(\sum_i\mathcal L_i\big)=\sum_ib_i$. **PROOF.** Summation; the joint scenario where every
-bound is attained is admissible. ∎ **IMPLICATION.** The hard layer aggregates by sum; any diversification credit requires a
-dependence assumption and belongs to the model layer, where it can only *tighten* (Art. 5) — so it can never be granted.
+with no dependence restriction, the supremum of $\sum_i\mathcal L_i$ is $\sum_ib_i$ (F134).
 
-### T-19 Log-growth domain (revised after review)
+**ASSUMPTIONS.** A-MATH-01.
 
-**STATEMENT.** Long-only, prices $\ge0$, $X_{t+1}=0$, $\mathrm{Fin}_{t+1}=0$, A-ACC-05: $W_{t+1}(a)\ge W^{\min}_{t+1}(a)$ surely, with $W^{\min}$ as in 05 §7 (all
-terms $\mathcal F_t$-measurable). If $W^{\min}_{t+1}(a)>0$ then $\log(W_{t+1}/W_t)\ge\log(W^{\min}_{t+1}/W_t)>-\infty$ under every law supported on prices $\ge0$
-(including every ambiguity set whose support is so restricted). If some admissible law charges $\{W_{t+1}\le0\}$, the (robust) log objective is
-$-\infty$; a Wasserstein ball with unrestricted support contains such a law for any position with positive exposure.
-**PROOF.** Tier-U bound (every position worthless, exit fees paid); monotonicity of $\log$; the ball contains
-$(1-\epsilon)\hat{\mathbb P}+\epsilon\delta_{\xi_0}$ for small $\epsilon$ at finite transport cost. ∎
-**COUNTEREXAMPLE (pre-review form).** A withdrawal: $W_t=100$ cash only, $X=-100$ ⇒ $W_{t+1}=0$ although the old $W^{\min}$ (no flow term) was $100$.
-**NUMERICAL IMPLICATION.** Domain check before evaluation; `Decimal(0).ln()` is `-Infinity` without a signal (observed).
+**PROOF STATUS.** PROVED
 
-### T-20 Floor invariance under hold
+**PROOF.** Summation; the joint scenario in which every bound is attained is admissible. ∎
 
-**ASSUMPTIONS.** Long-only; every position has a stop; no fills except stop exits; A-STOP, A-TRIG; per-share cost terms and $\Lambda$
-constant over the period; $\mathrm{Inc}\ge0$; $X=\mathrm{Fin}=\mathrm{Accr}=0$.
-**STATEMENT.** (a) Static floor ($F_{t+1}=F_t$ — no HWM ratchet, no profit-lock ratchet, **no daily/weekly calendar reset** in between):
-$R^{\mathrm{open}}_t\le K_t\Rightarrow R^{\mathrm{open}}_{t+1}\le K_{t+1}$. (b) Ratcheting floor ($F^{\mathrm{dd}}$ or $F^{\mathrm{lock}}$ at a new high, or a calendar reset
-of $F^{\mathrm{day}}/F^{\mathrm{wk}}$ after a gain): the implication is **false**.
-**PROOF (a).** Untriggered: $\Delta r_i=q_i\Delta m_i$ and $\Delta W=\sum q_i\Delta m_i+\mathrm{Inc}\ge\Delta R^{\mathrm{open}}$, $\Delta K=\Delta W$. Triggered $i$: $R^{\mathrm{open}}$
-falls by $r_i$, $W$ falls by at most $r_i$ (A-STOP). ∎ **COUNTEREXAMPLES (b).** T-06 ratchet example ($r=49.5>K=14$ after a gain); calendar reset
-(06 §7: $K=2.1<r=6$ the day after a gain day, found in review).
-**IMPLICATION.** Ratcheting floors create an exit obligation the engine cannot discharge (Art. 17): RECOVERY output.
+**COUNTEREXAMPLE ATTEMPT.** None; any diversification credit needs a dependence assumption and belongs to the model layer, where it can
+only tighten (Art. 5).
 
-### T-21 Cushion necessity and sufficiency
+**NUMERICAL EDGE CASES.** Sums rounded up.
 
-**STATEMENT.** Let $\mathcal W_S$ be all period outcomes consistent with **all tier-S hypotheses of T-10** (incl. $X=\mathrm{Fin}=\mathrm{Accr}=0$, G11,
-A-STOPLIVE, A-EXE-04, no other orders), with the bounds attainable (every
-order may fill fully at $p^{\mathrm{lim}}$; every stop may fill exactly at $p^{\mathrm{stop}}-\kappa^{\mathrm{out}}$; no dependence restriction). Then
-$W_{t+1}\ge F_t$ for all outcomes in $\mathcal W_S$ **iff** $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t$.
-**PROOF.** (⇐) T-10. (⇒) The comonotone outcome in which every bound is attained yields $W_{t+1}=W_t-(R^{\mathrm{open}}+R^{\mathrm{res}}+L^{\mathrm{stop}}(n))$. ∎
-**IMPLICATION.** $m_K\le1$ is necessary for robust floor safety; the cushion line is the unique maximal floor-safe throttle (06 §7).
+**MACHINE-TESTABLE INVARIANT.** The simulator's all-bounds-attained scenario equals $\sum_ib_i$ exactly.
 
-### T-22 Binary64 floor safety condition
+---
 
-**ASSUMPTIONS.** $R=r/d_R$, $\ell=L/d_\ell$ with positive integers; IEEE-754 binary64, round-to-nearest, no overflow/underflow; unit roundoff
-$u=2^{-53}$; computation $q_f=\mathrm{RN}(\mathrm{RN}(R)/\mathrm{RN}(\ell))$.
-**STATEMENT.** If $r\,d_\ell<1/(4u)=2^{51}\approx2.25\times10^{15}$, then $\lfloor q_f\rfloor\le\lfloor R/\ell\rfloor$.
-**PROOF.** $q_f=q^*(1+e_1)(1+e_3)/(1+e_2)$, $\lvert e_i\rvert\le u$, so $q_f-q^*\le4u\,q^*$ with $q^*=R/\ell=r d_\ell/(L d_R)\le r d_\ell$. If $q^*\in\mathbb Z$,
-overshoot needs $4uq^*\ge1$, contradicting $q^*<2^{51}$. Otherwise $\lceil q^*\rceil-q^*\ge1/(Ld_R)$ and overshoot needs
-$4u\,r d_\ell/(Ld_R)\ge1/(Ld_R)$, i.e. $r d_\ell\ge1/(4u)$. ∎
-**COUNTEREXAMPLE (observed, outside the condition).** $R=172{,}808{,}193.53$ ($r d_\ell\approx1.7\times10^{18}$), $\ell=65.68583269$. A random search of
-$2\times10^6$ realistic cent/basis-point inputs found none — consistent with the condition.
-**IMPLICATION.** Float is safe for *one* division of *exact-decimal* inputs of bounded resolution; authority chains, derived
-quantities and non-rational cost terms violate the hypothesis. Art. 7 stands.
+### T-19 Log-Growth Domain
 
-### T-23 Sequential allocation order-dependence
+**THEOREM ID.** T-19
 
-**STATEMENT.** Greedy sequential sizing of several opportunities against one shared budget is order-dependent.
-**PROOF (example).** $R=1000$, $\ell_A=3$, $\ell_B=7$. Order A,B: $Q_A=333$, $Q_B=0$. Order B,A: $Q_B=142$, $Q_A=2$. ∎
-**IMPLICATION.** An authoritative ordering key belongs in the snapshot; batch semantics must be specified (RQ-27).
+**STATEMENT.** $W_{t+1}(a)\ge W^{\min}_{t+1}(a)$ surely (F070, all terms $\mathcal F_t$-measurable). If $W^{\min}_{t+1}(a)>0$ then
+$\log(W_{t+1}/W_t)\ge\log(W^{\min}_{t+1}/W_t)>-\infty$ under every law supported on prices $\ge0$. If some admissible law charges $\{W_{t+1}\le0\}$ the
+(robust) log objective is $-\infty$; a Wasserstein ball with unrestricted support contains such a law for any position with positive exposure.
+
+**ASSUMPTIONS.** A-MATH-01; A-SCOPE-03; A-MKT-01; A-FLOW-01; A-ACC-07 ($\mathrm{Fin}=0$, $\mathrm{Inc}\ge0$); $\mathrm{Accr}_{t+1}\le\bar A_{t+1}$ (S-185);
+A-ACC-05 (with $\phi^{\mathrm{split}}$ for $\phi^{\mathrm{sell}}_{\cdot,0}$ in F070 when fees are not super-additive, F140); $W_t>0$.
+
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
+
+**PROOF.** Tier-U bound: every position worthless, exit fees paid (A-ACC-05), pending and new orders filled at their limits; monotonicity of
+$\log$. The ball contains the mixture of $\hat{\mathbb P}$ (weight $1-\epsilon^{\mathrm{mix}}$) with a point mass at a scenario $\xi_0$ in which every price is
+$0$, at finite transport cost for small $\epsilon^{\mathrm{mix}}$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The pre-review $W^{\min}$ without a flow term: $W_t=100$ cash only, $X=-100$ ⇒ $W_{t+1}=0$ while the old bound was $100$
+(REV-012). With per-order minimum fees and a holding sold in part at price $0$ (fee $1$) while the remainder is valued with its own fee
+($\Lambda=1$), $W_{t+1}=W^{\min}_{t+1}-1$ unless F070 uses $\phi^{\mathrm{split}}$ (REV-034).
+
+**NUMERICAL EDGE CASES.** `Decimal(0).ln()` returns `-Infinity` without a signal (observed): the domain check precedes evaluation;
+$W^{\min}=0$ exactly is excluded (strict inequality).
+
+**MACHINE-TESTABLE INVARIANT.** For random admissible actions, $W_{t+1}\ge W^{\min}_{t+1}$ with equality in the all-prices-zero scenario;
+evaluation refuses $\log$ when $W^{\min}_{t+1}\le0$.
+
+---
+
+### T-20a Cushion Invariance Under Hold, Static Floor
+
+**THEOREM ID.** T-20a
+
+**STATEMENT.** If the floor is static ($F_{t+1}=F_t$: no HWM or profit-lock ratchet, no daily/weekly reset in between), then
+$R^{\mathrm{open}}_t\le K_t\Rightarrow R^{\mathrm{open}}_{t+1}\le K_{t+1}$ (F124).
+
+**ASSUMPTIONS.** A-MATH-01; A-SCOPE-03; every position has a live stop; A-EXE-05 with no fills other than stop exits (no new or pending
+orders); A-TRIG; **A-EXE-06** (every stop triggered in the period is fully executed by the cut; added v0.2, AUD-014, widened after REV-026);
+$\kappa^{\mathrm{out}}$, $\phi^{\mathrm{sell}}$ and $\Lambda$ of untriggered positions constant over the period; A-ACC-06; A-ACC-07; A-FLOW-01.
+
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
+
+**PROOF.** Untriggered $i$: $\Delta r^{\mathrm{open}}_i=q_i\Delta m_i$ and the change of its value is $q_i\Delta m_i$ ($\Lambda$ constant). Triggered $i$: by A-EXE-06 fully
+executed by the cut, so $r^{\mathrm{open}}_{i,t+1}=0$, and by A-TRIG (with $q^{\mathrm{rem}}=0$) and $\Lambda_{i,t}\ge0$ the value lost on $i$ is at most $r^{\mathrm{open}}_{i,t}$. Hence
+$\Delta W\ge\Delta R^{\mathrm{open}}$ (using $\mathrm{Inc}\ge0$) and $\Delta K=\Delta W$ (static floor), so $K_{t+1}-R^{\mathrm{open}}_{t+1}\ge K_t-R^{\mathrm{open}}_t\ge0$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** Stop triggered but not executed at the cut (REV-026, exact): $q=100$, stop $49$, $\kappa^{\mathrm{out}}=0.1$, no fees; at $\tau_t$
+bid $49.99$, ask $50.01$ ($\Lambda_t=1$), $K_t=R^{\mathrm{open}}_t=110$, static floor; at $\tau_{t+1}$ the stop has triggered, nothing is executed, bid $48.9$, ask $49.0$
+($\Lambda_{t+1}=5$): A-TRIG holds ($\mathrm{XV}=4{,}890\ge4{,}890$) but $K_{t+1}=1<r^{\mathrm{open}}_{t+1}=5$. A stop partially executed at the cut breaks the
+invariant in the same way (AUD-014). Both violate A-EXE-06, which shows the hypothesis is needed.
+
+**NUMERICAL EDGE CASES.** Equality $R^{\mathrm{open}}_t=K_t$ is preserved as equality when nothing triggers.
+
+**MACHINE-TESTABLE INVARIANT.** Simulator under a static floor; snapshots with a triggered or partially executed stop are flagged RECOVERY.
+
+---
+
+### T-20b Cushion Invariance Under a Ratcheting Floor
+
+**THEOREM ID.** T-20b
+
+**STATEMENT.** "T-20a's implication holds when the floor ratchets ($F^{\mathrm{dd}}$ or $F^{\mathrm{lock}}$ at a new high, or a daily/weekly reset after a gain)."
+
+**ASSUMPTIONS.** T-20a's, with a ratcheting floor (F040–F042).
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** T-06b ratchet example: $r^{\mathrm{open}}=49.5>K=14$ after the gain. Calendar reset (06 §7): $\ell^{\mathrm{day}}=2\%$, $W=100$ (cash $50$ + one share at $50$,
+stop $49$): $K=2\ge r^{\mathrm{open}}=1$; the share closes at $55$: $K=7$, $r^{\mathrm{open}}=6$; next day $F^{\mathrm{day}}=102.9$, $K=2.1<6$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** None specific.
+
+**MACHINE-TESTABLE INVARIANT.** Regression scenarios; the engine emits RECOVERY with the required reduction $R^{\mathrm{open}}-K$ (RQ-09).
+
+---
+
+### T-21 Cushion Necessity and Sufficiency
+
+**THEOREM ID.** T-21
+
+**STATEMENT (restated in v0.2, AUD-032, REV-025; F143).** Let $\mathcal W^{\mathrm{S}}$ be all period outcomes consistent with the tier-S hypotheses of T-10,
+with the bounds attainable (every order may fill fully at $p^{\mathrm{lim}}$; every exposure may realise its A-TRIG bound F072 with equality; no
+dependence restriction). Suppose no order is partially filled at $\tau_t$ and F144 charges every pending order exactly its re-evaluated
+$L^{\mathrm{stop}}$. Then $W_{t+1}\ge F_t$ for every outcome in $\mathcal W^{\mathrm{S}}$ **iff** $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t+\Lambda_t\ (=E_t-F_t)$.
+In general the hard-layer condition F120 (with $K_t$) is sufficient and conservative by $\Lambda_t$ (OC-1), plus the OC-4 over-charge of any
+partially filled order and any excess of a ledger reservation over its re-evaluated value (F144); it is necessary when all three are $0$
+(e.g. a flat book).
+
+**ASSUMPTIONS.** Those of T-10 plus attainability; for (⇒) no partially filled order at $\tau_t$ and no ledger excess in F144.
+
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
+
+**PROOF.** (⇐) Step (3) of T-10 gives $W_{t+1}\ge W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))$. (⇒) In the attainable comonotone outcome every held
+exposure realises $\Delta_i=-r^{\mathrm{open}}_i+\Lambda_{i,t}$ and every order fills fully at $p^{\mathrm{lim}}$ and exits at its bound, so
+$W_{t+1}=W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))$ with $\mathrm{Inc}=0$; if the condition fails this is $<F_t$. $K_t+\Lambda_t=E_t-F_t$ by F034, F044. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The v0.1.1 form ("iff $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t$") is false in the "only if" direction whenever
+$\Lambda_t>0$: $q=100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}=0.1$, no fees, $\Lambda_t=5$, $K_t=106<r^{\mathrm{open}}=110$, yet the worst attainable outcome leaves
+$W_{t+1}=F_t+1$ (AUD-032, reproduced exactly). Without the restriction on partially filled orders the v0.2 draft's "only if" also fails
+(REV-025): the OC-4 example with $\Lambda_t=1$, $K_t=439$ violates the condition ($550>440$) yet the worst outcome is $W_{t+1}=F_t$. The safety
+direction was never affected.
+
+**NUMERICAL EDGE CASES.** At the boundary the attained outcome gives $W_{t+1}=F_t$ exactly.
+
+**MACHINE-TESTABLE INVARIANT.** Simulator: at $R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)=K_t$ the attained comonotone outcome gives $W_{t+1}=F_t$; one lattice
+step more gives a breach.
+
+---
+
+### T-22 Binary64 Floor Safety Condition
+
+**THEOREM ID.** T-22
+
+**STATEMENT.** Let $R$ (in USD) $=A_R/D_R$ and $\delta_q\ell$ (in USD) $=A_\ell/D_\ell$ with positive integers, $q^{*}=R/(\delta_q\ell)$ (dimensionless) and
+$q^{\mathrm{fl}}=\mathrm{RN}(\mathrm{RN}(R)/\mathrm{RN}(\delta_q\ell))$ in IEEE-754 binary64 with round-to-nearest, positive normal operands and no overflow or
+underflow. If $A_RD_\ell<2^{51}\approx2.25\times10^{15}$ then $\lfloor q^{\mathrm{fl}}\rfloor\le\lfloor q^{*}\rfloor$ (F116).
+
+**ASSUMPTIONS.** A-MATH-01; the conditions of A-NUM-03, written into the statement.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** $q^{\mathrm{fl}}=q^{*}(1+\varepsilon^{\mathrm{rd}}_1)(1+\varepsilon^{\mathrm{rd}}_3)/(1+\varepsilon^{\mathrm{rd}}_2)$ with $\lvert\varepsilon^{\mathrm{rd}}_k\rvert\le\epsilon^{\mathrm{mach}}=2^{-53}$, so
+$q^{\mathrm{fl}}-q^{*}\le4\epsilon^{\mathrm{mach}}q^{*}$ (F115; $(1+u)^2/(1-u)-1\le4u$ for $0\le u\le1/5$), and $q^{*}=A_RD_\ell/(A_\ell D_R)\le A_RD_\ell$. If $q^{*}\in\mathbb Z$,
+an overshoot needs $4\epsilon^{\mathrm{mach}}q^{*}\ge1$, i.e. $q^{*}\ge2^{51}$ — impossible. Otherwise $\lceil q^{*}\rceil-q^{*}\ge1/(A_\ell D_R)$, and an overshoot needs
+$4\epsilon^{\mathrm{mach}}A_RD_\ell/(A_\ell D_R)\ge1/(A_\ell D_R)$, i.e. $A_RD_\ell\ge2^{51}$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** Random search over $2\times10^6$ realistic cent/basis-point inputs inside the condition: none (observed).
+Outside the condition: T-22N.
+
+**NUMERICAL EDGE CASES.** Exact quotient an integer (e.g. $0.3/0.1$: binary64 floor $2$ versus exact $3$ — under-sizing, safe, but a float
+oracle disagrees with the exact implementation, review B01); subnormal or huge operands excluded.
+
+**MACHINE-TESTABLE INVARIANT.** On inputs satisfying the condition, the binary64 floor never exceeds the exact floor (property test).
+
+---
+
+### T-22N Binary64 Floor Without the Condition
+
+**THEOREM ID.** T-22N
+
+**STATEMENT.** "The binary64 evaluation of the floor of $R/(\delta_q\ell)$ never exceeds the exact floor, for all positive decimal inputs."
+
+**ASSUMPTIONS.** IEEE-754 binary64 semantics only.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** $R=172{,}808{,}193.53$, $\ell=65.68583269$, $\delta_q=1$ sh: binary64 gives $2{,}630{,}829$, exact $2{,}630{,}828$ (observed); the product of numerator
+and denominator in the T-22 condition is $\approx1.7\times10^{18}>2^{51}$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexample is the proof.
+
+**NUMERICAL EDGE CASES.** High-resolution prices; large budgets.
+
+**MACHINE-TESTABLE INVARIANT.** Regression; binary64 is never used on the authority path (Art. 7).
+
+---
+
+### T-23 Sequential Allocation Order-Dependence
+
+**THEOREM ID.** T-23
+
+**STATEMENT.** Greedy sequential sizing of several opportunities against one shared budget is not order-independent.
+
+**ASSUMPTIONS.** A-MATH-01.
+
+**PROOF STATUS.** PROVED
+
+**PROOF (example).** Shared budget $R=1000$; opportunity $o_1$ with $\ell=3$, opportunity $o_2$ with $\ell=7$. Order $o_1,o_2$ gives $Q=333$ then $Q=0$;
+order $o_2,o_1$ gives $Q=142$ then $Q=2$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** n/a (existence statement).
+
+**NUMERICAL EDGE CASES.** Ties in the ordering key.
+
+**MACHINE-TESTABLE INVARIANT.** Replays with the authoritative ordering key (RQ-27) are identical; permuted inputs without it may differ.
+
+---
 
 ### T-24 Rounding Conservatism
 
-**STATEMENT.** If $\hat g_k(n)\ge g_k(n)$ for all $n$ and $\hat b_k\le b_k$, then $\{n:\hat g_k(n)\le\hat b_k\}\subseteq\{n:g_k(n)\le b_k\}$ and $\hat Q_k\le Q_k$.
-**PROOF.** $g_k(n)\le\hat g_k(n)\le\hat b_k\le b_k$. ∎ **COUNTEREXAMPLE (other directions).** Half-up (T-02).
+**THEOREM ID.** T-24
 
-### T-25 Floor-breach decomposition (premise added after review)
+**STATEMENT.** If $\hat g_k(n)\ge g_k(n)$ for all $n$ and $\hat b_k\le b_k$, then $\{n:\hat g_k(n)\le\hat b_k\}\subseteq\{n:g_k(n)\le b_k\}$ and $\hat Q_k\le Q_k$ (F129).
 
-**STATEMENT.** Under the tier-S hypotheses of T-10 except A-STOP/A-TRIG, **and** $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t$:
-$\{W_{t+1}<F_t\}\subseteq\bigcup_i\{\text{A-STOP}_i\text{ or A-TRIG}_i\text{ fails}\}$; hence $PB_t\le\sum_i\mathbb P(\text{fail}_i)$.
-**PROOF.** Contrapositive of T-10; union bound. ∎ **COUNTEREXAMPLE (without the premise).** $W_t=F_t-1$, no positions, no trade: breach with no stop to fail.
-**IMPLICATION.** Probability-of-ruin research reduces to stop-failure research (gaps, halts), 01 §5 — for states inside the cushion.
+**ASSUMPTIONS.** A-MATH-01.
 
-### T-26 VaR non-subadditivity (classical)
+**PROOF STATUS.** PROVED
 
-**STATEMENT.** $\mathrm{VaR}_\beta$ is not subadditive. **PROOF (counterexample).** Two independent positions each lose $100$ with probability
-$0.04$, else $0$. $\mathrm{VaR}_{0.95}$ of each is $0$; the sum loses $\ge100$ with probability $1-0.96^2=0.0784>0.05$, so $\mathrm{VaR}_{0.95}(\text{sum})=100>0$. ∎
-**IMPLICATION.** VaR is not used as an aggregatable budget.
+**PROOF.** $g_k(n)\le\hat g_k(n)\le\hat b_k\le b_k$. ∎
 
-### OPEN-1 Multi-step viability
+**COUNTEREXAMPLE ATTEMPT.** Other rounding directions: T-24N.
 
-Conjecture: under tier-S disturbances with an available trailing/de-risking control, the robust viability kernel of
-$\{W\ge F\}$ equals $\{R^{\mathrm{open}}\le K\}$; under the maximal disturbance set with exits impossible, it equals
-$\{\sum u^{\mathrm{open}}\le K\}$. **NOT YET PROVEN.**
+**NUMERICAL EDGE CASES.** Fees and limit prices rounded up, budgets down (01 §9 item 15; review HC01–HC04).
 
-### OPEN-2 Certificate validity
+**MACHINE-TESTABLE INVARIANT.** Every rounding site is checked against the direction table (01 §9); property test.
 
-Requires $J$ (RQ-13), $\mathcal P_{t,\delta}$ (RQ-12), and an error model (RQ-14). **UNDEFINED.**
+---
+
+### T-24N Rounding in Other Directions
+
+**THEOREM ID.** T-24N
+
+**STATEMENT.** "Round-to-nearest (half-up or half-even) of quantities, consumptions or budgets is conservative."
+
+**ASSUMPTIONS.** T-24's with nearest rounding.
+
+**PROOF STATUS.** DISPROVED
+
+**PROOF.** $b=1000.00$, $\ell=2.90$: half-up and half-even give $345$ sh, consumption $1000.50>b$ (review B03, B04); a fee of $0.005$ rounded half-even to
+cents becomes $0.00$ (HC03). ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The counterexamples are the proof.
+
+**NUMERICAL EDGE CASES.** Exact half-cent values.
+
+**MACHINE-TESTABLE INVARIANT.** Regression tests.
+
+---
+
+### T-25 Floor-Breach Decomposition
+
+**THEOREM ID.** T-25
+
+**STATEMENT.** Under the tier-S hypotheses of T-10 except A-TRIG, and the premise $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t$:
+$\{W_{t+1}<F_t\}\subseteq\bigcup_i\{\text{A-TRIG fails for exposure }i\}$, hence $\mathrm{PB}_t\le\sum_i\mathbb P(\text{A-TRIG fails for }i)$ (F123).
+
+**ASSUMPTIONS.** T-10's except A-TRIG; the premise.
+
+**PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
+
+**PROOF.** If A-TRIG holds for every exposure, T-10 gives $W_{t+1}\ge F_t$ (contrapositive); union bound. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** Without the premise: $W_t=F_t-1$, no positions, no trade — a breach with no exposure (REV-004).
+
+**NUMERICAL EDGE CASES.** None specific.
+
+**MACHINE-TESTABLE INVARIANT.** In simulation every breach is attributed to at least one exposure whose $\mathrm{XV}$ violated F072.
+
+---
+
+### T-26 VaR Non-Subadditivity
+
+**THEOREM ID.** T-26
+
+**STATEMENT.** $\mathrm{VaR}_\beta$ (F009) is not subadditive.
+
+**ASSUMPTIONS.** A-MATH-01.
+
+**PROOF STATUS.** PROVED
+
+**PROOF (counterexample).** Two independent positions each lose $100$ with probability $0.04$, else $0$. $\mathrm{VaR}_{0.95}$ of each is $0$; the sum loses
+$\ge100$ with probability $1-0.96^2=0.0784>0.05$, so $\mathrm{VaR}_{0.95}$ of the sum is $100>0$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** n/a (existence statement).
+
+**NUMERICAL EDGE CASES.** None.
+
+**MACHINE-TESTABLE INVARIANT.** VaR is never used as an aggregatable budget.
+
+---
+
+### OPEN-1 Multi-Step Viability Kernel
+
+**THEOREM ID.** OPEN-1
+
+**STATEMENT.** Under tier-S disturbances with an available trailing/de-risking control, the robust viability kernel of $\{W\ge F\}$ equals
+$\{R^{\mathrm{open}}\le E-F\}$ on states without pending orders (cf. T-21); under the maximal disturbance set with exits impossible it equals $\{Z^{\mathrm{open}}\le E-F\}$ (F122).
+
+**ASSUMPTIONS.** Tier-S (resp. tier-U) hypotheses in every period; control set of the external authority.
+
+**PROOF STATUS.** NOT YET PROVEN
+
+**PROOF.** None.
+
+**COUNTEREXAMPLE ATTEMPT.** None found.
+
+**NUMERICAL EDGE CASES.** n/a.
+
+**MACHINE-TESTABLE INVARIANT.** Kernel computation on small discretised models (AA-10) compared with the conjectured sets.
+
+---
+
+### OPEN-2 Certified-Advantage Validity
+
+**THEOREM ID.** OPEN-2
+
+**STATEMENT.** $\mathrm{LB}_t(a)\le\Delta J_t(a)$ with probability $\ge1-\delta^{\mathrm{conf}}$ (F027).
+
+**ASSUMPTIONS.** $J$ (RQ-13), $\mathcal P^{\mathrm{conf}}_t$ (RQ-12), an error model (RQ-14).
+
+**PROOF STATUS.** UNDEFINED
+
+**PROOF.** None: the objects are undefined.
+
+**COUNTEREXAMPLE ATTEMPT.** n/a.
+
+**NUMERICAL EDGE CASES.** n/a.
+
+**MACHINE-TESTABLE INVARIANT.** n/a until defined (D-10 advisory meanwhile).
+
+---
+
+### OPEN-3 Required-Input Registry Completeness
+
+**THEOREM ID.** OPEN-3
+
+**STATEMENT.** The read-set of $\mathcal D$ (every field any $g_k$, $b_k$, gate or derivation reads) is contained in $\mathcal R^{\mathrm{req}}$ (F046).
+
+**ASSUMPTIONS.** A specification of $\mathcal D$ at field level (R6).
+
+**PROOF STATUS.** NOT YET PROVEN
+
+**PROOF.** None (method RQ-18).
+
+**COUNTEREXAMPLE ATTEMPT.** The defaulted-field example of T-04 shows what a gap causes; no gap is known in the current specification.
+
+**NUMERICAL EDGE CASES.** n/a.
+
+**MACHINE-TESTABLE INVARIANT.** Static and dynamic read-set instrumentation (R6).
+
+---
+
+### OPEN-4 Market-Wide Cost Perturbations of ΔJ
+
+**THEOREM ID.** OPEN-4
+
+**STATEMENT.** For concave non-decreasing $\mathcal U$, a market-wide cost increase (which also changes $J(a^{\varnothing})$) does not increase $\Delta J(a)$ (F025).
+
+**ASSUMPTIONS.** T-08(b) without the restriction to the fills of $a$.
+
+**PROOF STATUS.** NOT YET PROVEN
+
+**PROOF.** None.
+
+**COUNTEREXAMPLE ATTEMPT.** None found.
+
+**NUMERICAL EDGE CASES.** n/a.
+
+**MACHINE-TESTABLE INVARIANT.** Metamorphic test once $J$ is chosen (RQ-13).

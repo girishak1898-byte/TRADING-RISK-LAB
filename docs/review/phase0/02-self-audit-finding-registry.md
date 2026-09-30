@@ -328,14 +328,63 @@ brief's Phase-0 acceptance criteria, and with the mechanical checker `tools/docc
 | Status | **CONFIRMED** |
 | Required correction | Update index. |
 
+### AUD-031
+
+*Found during correction (after the findings commit), while building the machine-checked dimension table; recorded here so that the
+chain findings → corrections stays auditable.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 06 §3 (naive form), 08 T-17, 09 F-04/F-28, 10 AA-2 (at `8198877`) |
+| Formula / proposition | $\lfloor R/\ell\rfloor$ and the volatility-targeted size "risk fraction × $W/\hat\sigma$" |
+| Finding | (i) $\lfloor\cdot\rfloor$ is applied to $R/\ell$, which has dimension [sh]; the expression is meaningful only for $\delta_q=1$ sh, where the unit is silently dropped — the one-share special case hides the inconsistency. (ii) risk fraction × $W/\hat\sigma$ has dimension [USD·day$^{1/2}$], not a notional. |
+| Independent reproduction | Dimension evaluator (`dim_eval` in the checker): `floor(R/ell)` raises "floor of a dimensioned quantity {sh: 1} … (floor must act on a dimensionless count)"; `f_trd*W/sigma_hat` evaluates to USD·day^(1/2). With $\delta_q=0.1$ sh, $R=1$ USD, $\ell=0.3$ USD/sh the naive form returns $3$ (read as 3 sh) while the lattice-correct $\delta_q\lfloor R/(\delta_q\ell)\rfloor=3.3$ sh. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | Formulas silently depend on the choice $\delta_q=1$ sh; the volatility-target formula has no numeric meaning. |
+| Required correction | $\delta_q\lfloor R/(\delta_q\ell)\rfloor$ everywhere (F095, F110); notional $=W\sigma^{\mathrm{target}}/\hat\sigma$ (F133); register as 03 E-18, E-19 and FM-DIM-1, FM-DIM-2. |
+| Test / proof obligation | DIMENSIONAL_CONFLICTS = 0 with the floor rule enforced. |
+
+### AUD-032
+
+*Found during correction, while rewriting 08 in canonical form.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 08 T-21 (at `8198877`); 06 §7 "why the cushion line"; 10 AA-1 |
+| Formula / proposition | "$W_{t+1}\ge F_t$ on all tier-S outcomes **iff** $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t$" |
+| Finding | R1 removed the $\Lambda$ credit from open risk (OC-1) but left T-21's necessity proof unchanged. The attainable worst case is $W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))$, so the "only if" direction is false whenever $\Lambda_t>0$. |
+| Independent reproduction | Exact: $q=100$ at $50$, stop $49$, $\kappa^{\mathrm{out}}=0.1$, no fees, $\Lambda_t=5$, $K_t=106<r^{\mathrm{open}}=110$; the worst attainable outcome (stop filled at $48.9$) gives $W_{t+1}=F_t+1$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | A false theorem in the register (necessity direction); the safety direction (sufficiency) is unaffected, so no hard-layer decision was unsafe. Claims that the cushion line is *the* maximal floor-safe policy hold exactly only on a flat book. |
+| Required correction | Restate T-21 with $K_t+\Lambda_t=E_t-F_t$ (F143); state that F120 is sufficient and conservative by exactly $\Lambda_t$ (OC-1); qualify 06 §7, 10 AA-1, 01 §7 and OPEN-1. |
+| Test / proof obligation | Simulator: at the exact boundary the attained comonotone outcome gives $W_{t+1}=F_t$; one lattice step more breaches. |
+
+### AUD-033
+
+*Found during correction, while re-deriving the T-10 proof in canonical form.*
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT |
+| Document / section | 08 T-10 proof (at `8198877`: cases "held", "new or pending order on a fresh instrument"); 04/06 hypotheses |
+| Formula / proposition | Tier-S floor preservation when an order is partially filled at $\tau_t$ |
+| Finding | An order partially filled before the cut is a held quantity *and* a pending remainder on the same instrument; the proof covered neither case for it. The conclusion holds only because the full reservation $L^{\mathrm{stop}}(n')$ is held until the order is terminal (T-11), a hypothesis T-10 did not state. Releasing the filled part early is unsafe under super-additive exit costs. |
+| Independent reproduction | Exact: $\kappa^{\mathrm{out}}(n)=0.001n$, no fees, order $n'=200$ at limit $50$, stop $49$; $100$ filled and marked at $52$; the remaining $100$ fill at $50$ and the whole exposure exits at its A-TRIG bound: loss $440$. Charge with remainder-only reservation: $r^{\mathrm{open}}(100)+L^{\mathrm{stop}}(100)=310+110=420<440$; with the full reservation: $310+240=550\ge440$. |
+| Status | **CONFIRMED** |
+| Mathematical consequence | The v0.1.1 proof of T-10 was incomplete; the theorem needs the full-reservation hypothesis, which also creates a registered conservative duplicate. |
+| Required correction | Add case (2′) and the hypothesis to T-10; register OC-4 in 05 §4a; state in the cost conservation table that reservations are released only at terminal state. |
+| Test / proof obligation | Regression scenario above: remainder-only reservation must breach; full reservation must not. |
+
 ## Summary
 
 | Severity | Count | IDs |
 |---|---|---|
 | CRITICAL | 2 | AUD-001, AUD-002 |
-| IMPORTANT | 17 | AUD-003, 004, 006, 007, 008, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 028, 029 |
+| IMPORTANT | 20 | AUD-003, 004, 006, 007, 008, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 028, 029, 031, 032, 033 |
 | MINOR | 11 | AUD-005, 009, 020, 021, 022, 023, 024, 025, 026, 027, 030 |
 
-All 30 are CONFIRMED. None is REJECTED. All are addressed in the correction commit except where the correction is itself a research
-obligation (AUD-019 independent bibliography re-verification; AUD-028 definition of SL), which remain explicitly UNRESOLVED with a
-fail-closed rule or owner.
+All 33 are CONFIRMED (AUD-031, AUD-032 and AUD-033 were found during correction and are marked as such). None is REJECTED. All are addressed in
+the correction commit except where the correction is itself a research obligation (AUD-019 independent bibliography re-verification;
+AUD-028 definition of SL), which remain explicitly UNRESOLVED with a fail-closed rule or owner.
