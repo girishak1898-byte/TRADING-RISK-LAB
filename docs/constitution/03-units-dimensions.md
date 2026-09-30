@@ -1,4 +1,4 @@
-# 03 — Units / Dimensions Matrix (v0.1-draft)
+# 03 — Units / Dimensions Matrix (v0.1.1-draft)
 
 Status: DRAFT. Every equation in 05, 06 and 08 has been checked against this matrix (§3). A dimension error is a correctness
 defect, not a style issue.
@@ -18,17 +18,18 @@ defect, not a style issue.
 
 | Quantity | Dimension | Range / note |
 |---|---|---|
-| $C_t,E_t,W_t,Y_t,X,\mathrm{Inc},\mathrm{Fin},\Lambda,K_t,F_t,B_t,BP_t$ | $[\$]$ | — |
-| $R^{\mathrm{open}},R^{\mathrm{res}},G^{\mathrm{open}},G^{\mathrm{res}},N^{\mathrm{open}},N^{\mathrm{res}},C^{\mathrm{res}},R^{\mathrm{hard}},G^{\mathrm{hard}},R^{\mathrm{allow}}$ | $[\$]$ | $\ge0$ |
+| $C_t,E_t,W_t,Y_t,X,\mathrm{Inc},\mathrm{Fin},\mathrm{Accr},\mathrm{Pay},\bar A,\Lambda,K_t,F_t,B_t,BP_t,W^{\min}$ | $[\$]$ | — |
+| $R^{\mathrm{open}},R^{\mathrm{res}},G^{\mathrm{open}},G^{\mathrm{res}},Z^{\mathrm{open}},Z^{\mathrm{res}},N^{\mathrm{open}},N^{\mathrm{res}},C^{\mathrm{res}},R^{\mathrm{hard}},G^{\mathrm{hard}},R^{\mathrm{allow}}$ | $[\$]$ | $\ge0$ |
 | $L^{\mathrm{stop}}(n),L^{\mathrm{gap}}(n),L^{\mathrm{abs}}(n),\phi(n),\mathcal L_{t+1}$ | $[\$]$ | $\phi:[\mathrm{sh}_i]\to[\$]$ |
 | $q_{i,t},n,e,Q_k,Q^{\mathrm{hard}},Q^{\mathrm{fin}},Q^{\mathrm{res}}_{i,t},\delta_q,\bar N$ | $[\mathrm{sh}_i]$ | lattice-valued |
-| $p^{\mathrm{bid}},p^{\mathrm{ask}},m,\varsigma,p^{\mathrm{lim}},p^{\mathrm{stop}},p^{\mathrm{tgt}},f_j,\pi^{\mathrm{ref}},\kappa^{\mathrm{out}},\kappa^{\mathrm{liq}},\iota,\ell^{\mathrm{stop}},\gamma_j$ | $[\$/\mathrm{sh}_i]$ | — |
+| $p^{\mathrm{bid}},p^{\mathrm{ask}},m,\varsigma,p^{\mathrm{lim}},p^{\mathrm{stop}},p^{\mathrm{tgt}},f_j,\pi^{\mathrm{ref}},\kappa^{\mathrm{out}},\kappa^{\mathrm{liq}},\iota,\ell^{\mathrm{stop}},\ell_k,p^{\mathrm{gx}},\gamma_j$ | $[\$/\mathrm{sh}_i]$ | — |
 | $\mathrm{ADV}_i$ | $[\mathrm{sh}_i/\mathrm{day}]$ | — |
 | $h^{\mathrm{ex}}$, $w^{\mathrm{in}}$, holding horizon $h$ | $[\mathrm{day}]$ (or $[\mathrm T]$ — must be declared) | — |
 | $\hat\sigma_i$ | $[\mathrm{day}^{-1/2}]$ | std. dev. of log-return per $\sqrt{\text{trading day}}$ |
 | $\hat\Sigma$ | $[\mathrm{day}^{-1}]$ | — |
 | $\hat\rho_{ij}$, $r_{i,t+1}$, $DD$, $MDD$, $\vartheta$, all $f^{\cdot}$, $\lambda^{\mathrm{gross}}$, $\rho^{\mathrm{in}},\rho^{\mathrm{ex}}$, $\Gamma_i$, $\ell^{\mathrm{day}},\ell^{\mathrm{wk}},d^{\max},\eta^{\mathrm{lock}},m_K,m_G,\chi,\varsigma^{\max}$, $\beta,\delta,\epsilon^{\mathrm{ruin}}$, probabilities | $[1]$ | bounded as in 06 §9 |
 | $U_t$ | $[\mathrm{unit}]$ | $>0$ |
+| $\psi$ (split ratio) | $[1]$ | $>0$ |
 | $\nu_t,H_t,\nu^{\mathrm{day}}_0,\nu^{\mathrm{wk}}_0,\nu^{\mathrm{ref}}$ | $[\$/\mathrm{unit}]$ | — |
 | $\tau_t,t^{\mathrm{know}},\mathrm{age},\mathrm{TTL}$ | $[\mathrm T]$ | — |
 | $J,\Delta J,\mathrm{LB},\varepsilon^{\mathrm{num}},\varepsilon^{\mathrm{stat}},\varepsilon^{\min}$ | same as $J$ — $[\$]$ for arithmetic $J$, $[1]$ for log-growth $J$ | must be declared with $J$ (RQ-13) |

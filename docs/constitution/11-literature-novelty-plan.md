@@ -1,4 +1,4 @@
-# 11 — Literature and Novelty Research Plan (v0.1-draft)
+# 11 — Literature and Novelty Research Plan (v0.1.1-draft)
 
 ## 0. Verification status of this bibliography
 

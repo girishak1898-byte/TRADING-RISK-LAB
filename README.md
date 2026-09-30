@@ -10,7 +10,7 @@ A later layer never overrides an earlier one.
 
 ## Status
 
-**Phase 0 — Mathematical Constitution v0.1 (DRAFT, awaiting human review).** No code exists. No formula has been adopted. No
+**Phase 0 — Mathematical Constitution v0.1.1 (DRAFT, awaiting human review; revised once after an independent adversarial review — see the revision note in 08).** No code exists. No formula has been adopted. No
 parameters have been chosen.
 
 ## Hard prohibitions (this phase)

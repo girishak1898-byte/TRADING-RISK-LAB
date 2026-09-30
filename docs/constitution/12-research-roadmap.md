@@ -1,4 +1,4 @@
-# 12 — Dependency-Ordered Research Roadmap (v0.1-draft)
+# 12 — Dependency-Ordered Research Roadmap (v0.1.1-draft)
 
 Each stage has an **entry gate** (what must be true to start) and an **exit gate** (evidence required to finish). A stage's output is
 never "done" because a document or code exists (OUTPUT ≠ COMPLETION). No stage involves a broker, credentials, network access at

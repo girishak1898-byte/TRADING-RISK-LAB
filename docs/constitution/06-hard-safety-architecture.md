@@ -1,4 +1,4 @@
-# 06 — Candidate Deterministic Hard-Safety Architecture (v0.1-draft)
+# 06 — Candidate Deterministic Hard-Safety Architecture (v0.1.1-draft)
 
 Status: DRAFT. Structure is PROVISIONAL; all parameter **values** are **UNDEFINED — REQUIRES RESOLUTION** (human policy).
 Scope assumed: v0 long-only, cash account, US-listed equities/ETFs, limit-price entries (decisions D-01..D-05 in 04 — not yet
@@ -26,21 +26,21 @@ A decision record MUST state, for the chosen quantity, which tiers' constraints 
 
 ## 3. Why $R_{\mathrm{hard}}=\text{Equity}\times f$ is not sufficient (derivation)
 
-Take $R=E_t\,f$ and size $Q=\lfloor R/\ell\rfloor$ with $\ell$ the stop distance. Each item below is a counterexample or a missing term;
+Take $R=E_t\,f^{\mathrm{trd}}$ and size $Q=\lfloor R/\ell^{\mathrm{stop}}\rfloor$ with $\ell^{\mathrm{stop}}$ the stop distance only. Each item below is a counterexample or a missing term;
 together they determine the structure of §4–§6.
 
 | # | Defect | Counterexample | Consequence for the design |
 |---|---|---|---|
 | 1 | Uses mark-to-mid equity $E$, not liquidation wealth $W$ | Illiquid holding: $E$ overstates exitable wealth by $\Lambda$ | base budgets on $W$ |
 | 2 | Ignores open risk and reservations | Two opportunities evaluated from the same snapshot each receive the full $R$; aggregate $2R$ | aggregate budgets with $R^{\mathrm{open}}+R^{\mathrm{res}}$ (H2–H4) and snapshot-bound decisions (T-11) |
-| 3 | Ignores capital floors | $k$ consecutive full stop-outs: $E_k=E_0(1-f)^k$ crosses any floor $F>0$ for $k>\log(F/E_0)/\log(1-f)$ | cushion constraint H4 |
-| 4 | Stop distance is not a loss bound | $E=100{,}000$, $f=1\%$, stop $0.01$ below $50$: $Q=100{,}000$ sh $=5{,}000{,}000$ notional; a $5\%$ gap loses $\approx250{,}000\approx2.5E$ | gap budget H5–H6 and notional caps H7–H11 (T-17) |
+| 3 | Ignores capital floors | $k$ consecutive full stop-outs: $E_k=E_0(1-f^{\mathrm{trd}})^k$ crosses any floor $F>0$ for $k>\log(F/E_0)/\log(1-f^{\mathrm{trd}})$ | cushion constraint H4 |
+| 4 | Stop distance is not a loss bound | $E=100{,}000$, $f^{\mathrm{trd}}=1\%$, stop $0.01$ below $50$: $Q=100{,}000$ sh $=5{,}000{,}000$ notional; a $5\%$ gap loses $\approx250{,}000\approx2.5E$ | gap budget H5–H6 and notional caps H7–H11 (T-17) |
 | 5 | No liquidity bound | Same example: order may exceed daily volume of the instrument | H12–H13 |
 | 6 | No cash bound | Notional can exceed buying power | H15 |
 | 7 | Sign | $E\le0$ ⇒ $R\le0$ ⇒ $\lfloor R/\ell\rfloor<0$, readable as a sell / short | clamp $(\cdot)^+$ (T-01) |
 | 8 | Non-linear fees | Minimum commission: naive $\lfloor R/(\ell+\text{fee rate})\rfloor$ can exceed $R$ (08 T-02: $22$ sh, loss $4.20>2.50$) | define $Q_k$ by exact monotone search (T-02) |
 | 9 | Rounding / float | Half-up and binary64 overshoots (observed, 01 §9) | directed rounding, exact arithmetic (T-22, T-24) |
-| 10 | Entry reference | $\ell$ from mid while fill is at limit: realised risk exceeds budget by $n(p^{\mathrm{lim}}-m)$ | use $p^{\mathrm{lim}}$ as worst-case entry (DC-1, T-11(c)) |
+| 10 | Entry reference | $\ell^{\mathrm{stop}}$ from mid while fill is at limit: realised risk exceeds budget by $n(p^{\mathrm{lim}}-m)$ | use $p^{\mathrm{lim}}$ as worst-case entry (DC-1, T-11(c)) |
 
 Conclusion: the single-scalar form $0\le R^{\mathrm{allow}}\le R^{\mathrm{hard}}$ is **necessary but not sufficient**. The invariant
 must be vector-valued over every constraint family (Art. 5).
@@ -59,7 +59,7 @@ must be vector-valued over every constraint family (Art. 5).
 **Hard stop-risk budget** (all $R$-family constraints have the form $L^{\mathrm{stop}}(n)\le b$, so they collapse to one scalar):
 
 $$
-R^{\mathrm{hard}}_t=\Big(\min\big\{\,f^{\mathrm{trd}}B_t,\ \ f^{\mathrm{port}}B_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t,\ \ f^{\mathrm{strat}}_sB_t-R^{\mathrm{open}}_{s,t}-R^{\mathrm{res}}_{s,t},\ \ f^{\mathrm{clr}}B_t-R^{\mathrm{open}}_{c,t}-R^{\mathrm{res}}_{c,t},\ \ m_KK_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t\,\big\}\Big)^{+}
+R^{\mathrm{hard}}_t=\Big(\min\big\{\,f^{\mathrm{trd}}B_t,\ \ f^{\mathrm{port}}B_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t,\ \ f^{\mathrm{strat}}_sB_t-R^{\mathrm{open}}_{s,t}-R^{\mathrm{res}}_{s,t}-\mathrm{SL}_{s,t},\ \ f^{\mathrm{clr}}B_t-R^{\mathrm{open}}_{c,t}-R^{\mathrm{res}}_{c,t},\ \ m_KK_t-R^{\mathrm{open}}_t-R^{\mathrm{res}}_t\,\big\}\Big)^{+}
 $$
 
 with $s$ the opportunity's strategy and $c=\mathrm{cl}(i)$.
@@ -82,7 +82,7 @@ REQUIRES RESOLUTION** (RQ-32); it is the conservative reading.
 ## 5. Constraint catalogue (single long opportunity on instrument $i$, candidate size $n$)
 
 All consumptions $g_k(n)$ satisfy $g_k(0)=0$ and are non-decreasing in $n$ under A-EXE-01/02 — this is what makes T-02/T-03 apply.
-Existing exposure terms use the current mark; the new order uses $p^{\mathrm{lim}}$.
+Existing exposure terms use the current mark; the new order uses $p^{\mathrm{lim}}$. Open-risk terms carry no $\Lambda$ credit (DC-5, OC-1).
 
 | ID | Brief's cap | Constraint $g_k(n)\le b_k$ | Tier | Required inputs |
 |---|---|---|---|---|
@@ -101,12 +101,13 @@ Existing exposure terms use the current mark; the new order uses $p^{\mathrm{lim
 | H13 | liquidity (exit) | $q_{i,t}+Q^{\mathrm{res}}_{i,t}+n\le\rho^{\mathrm{ex}}\,h^{\mathrm{ex}}\,\mathrm{ADV}_{i,t}$ | L | ADV |
 | H14 | buying power | $n\,p^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n)\le BP^{\mathrm{avail}}_t$ | U | $BP_t$, $C^{\mathrm{avail}}_t$, $C^{\mathrm{res}}_t$ |
 | H15 | margin | **UNDEFINED — REQUIRES RESOLUTION**; excluded by D-02 (cash account ⇒ H14 suffices) | — | $IM,MM$ |
-| H16 | unconditional floor (optional) | $\sum_j u^{\mathrm{open}}_j+N^{\mathrm{res}}_t+L^{\mathrm{abs}}(n)\le K_t$ | U | — ; adoption **UNDEFINED — REQUIRES RESOLUTION** (D-08) |
+| H16 | unconditional floor (optional) | $Z^{\mathrm{open}}_t+Z^{\mathrm{res}}_t+L^{\mathrm{abs}}(n)\le K_t$ — pending orders charged their full $L^{\mathrm{abs}}$ incl. fees, not their notional (review fix: charging $N^{\mathrm{res}}$ left the floor breached by the pending order's fees) | U | — ; adoption **UNDEFINED — REQUIRES RESOLUTION** (D-08) |
 
 Zero–one **gates** (independent of $n$): G1 $\alpha_t=1$; G2 $\mathrm{st}_i=\text{TRADING}$; G3 $K_t>0$; G4 $DD_t<d^{\max}$;
 G5 $\varsigma_i/m_i\le\varsigma^{\max}$; G6 event policy on $\mathrm{ev}_i$ (**UNDEFINED — REQUIRES RESOLUTION**); G7 opportunity validity
 ($0<p^{\mathrm{stop}}_o<m^{\mathrm{arr}}$, $p^{\mathrm{stop}}_o<p^{\mathrm{lim}}\le p^{\mathrm{ask}}(1+\chi)$, per-share stop loss $\ge\ell^{\min}$);
-G8 no anomalies in held positions; G9 $d=+1$ (D-01); G10 $i\in\mathbb I_t$ and instrument admissible.
+G8 no anomalies in held positions; G9 $d=+1$ (D-01); G10 $i\in\mathbb I_t$ and instrument admissible; **G11** $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=0$
+(one exposure per instrument, A-SCOPE-05 — per-lot risk is not additive under super-additive exit costs, 05 §5).
 
 **Post-filter (non-monotone, never a cap):** minimum order size $n^{\min}$: $Q^{\mathrm{fin}}=Q$ if $Q\ge n^{\min}$ else $0$ (T-03 counterexample
 explains why it cannot be folded into the min-of-caps).
@@ -162,7 +163,8 @@ $$
 \frac{d}{dDD}\,\frac{d^{\max}-DD}{1-DD}=-\frac{1-d^{\max}}{(1-DD)^2}<0 .
 $$
 
-$\vartheta_K$ is continuous, non-increasing, equal to $1$ up to $DD^{*}=\frac{m_Kd^{\max}-f^{\mathrm{trd}}}{m_K-f^{\mathrm{trd}}}$ (when
+(defined as $\vartheta_K:=0$ for $DD\ge d^{\max}$; the formula alone turns positive again for $DD>1$). This is the per-trade budget when H1 is the
+binding stop-risk term (e.g. $f^{\mathrm{trd}}\le f^{\mathrm{strat}}_s$ and $f^{\mathrm{trd}}\le f^{\mathrm{clr}}$). $\vartheta_K$ is continuous, non-increasing, equal to $1$ up to $DD^{*}=\frac{m_Kd^{\max}-f^{\mathrm{trd}}}{m_K-f^{\mathrm{trd}}}$ (when
 $m_Kd^{\max}>f^{\mathrm{trd}}$), and exactly $0$ at $DD=d^{\max}$. The **aggregate** capacity $m_KH_t(d^{\max}-DD_t)$ is linear in $DD$.
 
 **Why the cushion line, not a chosen shape.** T-21: under the disturbance set of tier S, a policy guarantees $W_{t+1}\ge F_t$ for
@@ -193,14 +195,15 @@ fraction $d^{\max}$. **The invariant $R^{\mathrm{open}}\le K$ is not preserved b
 counterexample: $W$ 100→140, $DD$ ends at $35.4\%$ with $d^{\max}=10\%$, no new trade, no gap). Maintaining it requires a
 stop-trailing or de-risking obligation executed by an authority outside the engine; the engine emits RECOVERY with the
 required reduction $R^{\mathrm{open}}-K$. Profit-lock floors ($F^{\mathrm{lock}}$, slope $\eta^{\mathrm{lock}}$) have the same structure with
-$d^{\max}$ replaced by $1-\eta^{\mathrm{lock}}$.
+$d^{\max}$ replaced by $1-\eta^{\mathrm{lock}}$. **Calendar resets ratchet too** (found in review): $\ell^{\mathrm{day}}=2\%$, $W=100$ (cash $50$ + one share at $50$,
+stop $49$): $F^{\mathrm{day}}=98$, $K=2\ge r=1$; the share closes at $55$: $K=7$, $r=6$; next day $F^{\mathrm{day}}=102.9$, $K=2.1<r=6$ — no new high, no trade.
 
 **Maximum-drawdown shutdown.** Gate G4 blocks all new risk when $DD_t\ge d^{\max}$ (T-06(a), PROVED). The *bound* $MDD\le d^{\max}$
 is **DISPROVED** in general and PROVED only under A-STOP plus the external trailing obligation (T-06(b,c)).
 
 ## 8. Reservation vector emitted with a TRADE decision
 
-For the chosen $Q=Q^{\mathrm{fin}}$: $\big(L^{\mathrm{stop}}(Q),\ L^{\mathrm{gap}}(Q),\ Q\,p^{\mathrm{lim}},\ Q\,p^{\mathrm{lim}}+\phi^{\mathrm{buy}}(Q),\ Q\big)$, tagged with
+For the chosen $Q=Q^{\mathrm{fin}}$: $\big(L^{\mathrm{stop}}(Q),\ L^{\mathrm{gap}}(Q),\ L^{\mathrm{abs}}(Q),\ Q\,p^{\mathrm{lim}},\ Q\,p^{\mathrm{lim}}+\phi^{\mathrm{buy}}(Q),\ Q\big)$, tagged with
 strategy $s$ and cluster $c$, all rounded up. Computed at the worst-case entry $p^{\mathrm{lim}}$, it dominates the realised open risk
 of any fill $e\le Q$ at any price $\le p^{\mathrm{lim}}$ (T-11(c)). The ledger — not the engine — performs the reservation.
 
@@ -231,6 +234,6 @@ permitted but reported.
 
 ## 11. Unresolved objects in this document
 
-$B_t$ (RQ-02); $\mathrm{SL}_{s,t}$ (RQ-11); cluster map (RQ-10); $\kappa^{\mathrm{out}},\Lambda$ (RQ-05); $\Gamma_i$ (RQ-04); ADV estimator (RQ-06);
+$B_t$ (RQ-02); $\mathrm{SL}_{s,t}$ (RQ-11); add-on sizing (RQ-34); fee semantics per order vs per execution (RQ-35); cluster map (RQ-10); $\kappa^{\mathrm{out}},\Lambda$ (RQ-05); $\Gamma_i$ (RQ-04); ADV estimator (RQ-06);
 $C^{\mathrm{avail}}$ (RQ-20); event policy (RQ-04); adoption of H16 (D-08); whether pre-existing open risk is charged to the daily floor (RQ-32);
 all values in $\theta$ — each **UNDEFINED — REQUIRES RESOLUTION**.

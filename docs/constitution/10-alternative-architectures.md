@@ -1,4 +1,4 @@
-# 10 — Alternative Mathematical Architectures Worth Comparing (v0.1-draft)
+# 10 — Alternative Mathematical Architectures Worth Comparing (v0.1.1-draft)
 
 Every alternative below operates **inside** the same deterministic hard envelope (06) — they differ only in the model and
 optimisation layers, except where marked. None is adopted. Comparison protocol: §3. Art. 15 applies: a more complex architecture

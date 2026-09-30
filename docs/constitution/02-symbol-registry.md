@@ -1,4 +1,4 @@
-# 02 — Complete Symbol Registry (v0.1-draft)
+# 02 — Complete Symbol Registry (v0.1.1-draft)
 
 Status: DRAFT — for human review. This registry is the **single authority for notation**. No symbol may appear in any
 other document of this programme unless it is registered here. A symbol whose definition is incomplete is marked
@@ -74,16 +74,18 @@ Throttle is $\vartheta$ (because $\theta$ is the policy-parameter vector).
 | S-032 | $q_{i,t}$ | Position quantity | lattice | $\mathbb T\times\mathbb I$ | $\mathbb L$ | [sh$_i$] | + long / − short | v0: $q\ge 0$ (D-01) | authoritative positions | O |
 | S-033 | $\bar c_{i,t}$ | Cost basis per share (attribution only) | scalar | $\mathbb T\times\mathbb I$ | $\mathbb Q_{\ge0}$ | [USD/sh$_i$] | — | method (FIFO/average) **UNDEFINED — REQUIRES RESOLUTION**; not safety-relevant | ledger | O |
 | S-034 | $p^{\mathrm{stop}}_{i,t}$ | Protective stop trigger price of the open position | scalar | $\mathbb T\times\mathbb I$ | $\mathbb Q_{>0}\cup\{\bot\}$ | [USD/sh$_i$] | — | long: $p^{\mathrm{stop}}<m_{i,t}$ else ANOMALY; $\bot$ = no stop ⇒ treated per D-06 (never as zero risk) | authoritative order state | O |
-| S-035 | $Y_t$ | Accrued liabilities (fees payable, interest, borrow) | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + owed | $\le\bar M$ | ledger | O |
+| S-035 | $Y_t$ | Accrued liabilities (fees payable, interest, borrow); $Y_{t+1}=Y_t+\mathrm{Accr}_{t+1}-\mathrm{Pay}_{t+1}$ | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + owed | $\le\bar M$ | ledger | O |
 | S-036 | $X_{t+1}$ | Net external capital flow during $(\tau_t,\tau_{t+1}]$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + deposit / − withdrawal | — | ledger | R (O once realised) |
 | S-037 | $\mathrm{Inc}_{t+1}$ | Income credited (dividends, interest) | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + | — | ledger | R |
 | S-038 | $\mathrm{Fin}_{t+1}$ | Financing / borrow charges debited | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + cost | v0: $0$ if no margin/short (D-01, D-02) | ledger | R |
 | S-039 | $U_t$ | Fund units outstanding (unitisation for flow-neutral performance) | scalar | $\mathbb T$ | $\mathbb Q_{>0}$ | [unit] | + | changes only on external flows | unitisation ledger | D |
 | S-040 | $E_t$ | Mark-to-market equity $C_t+\sum_i q_{i,t}m_{i,t}-Y_t$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + | any sign | derived | D |
-| S-041 | $\Lambda_{i,t},\ \Lambda_t$ | Modelled cost to liquidate holding $i$ (resp. all) from current mark | scalar | $\mathbb T(\times\mathbb I)$ | $\mathbb Q_{\ge0}$ | [USD] | + cost | model **UNDEFINED — REQUIRES RESOLUTION** (RQ-05) | model | E/M |
+| S-041 | $\Lambda_{i,t},\ \Lambda_t$ | Modelled cost to liquidate holding $i$ from current mark; $\Lambda_t:=\sum_i\Lambda_{i,t}$ (A-ACC-04) | scalar | $\mathbb T(\times\mathbb I)$ | $\mathbb Q_{\ge0}$ | [USD] | + cost | model **UNDEFINED — REQUIRES RESOLUTION** (RQ-05) | model | E/M |
 | S-042 | $W_t$ | Net liquidation wealth $E_t-\Lambda_t$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + | any sign (negative ⇒ all budgets 0) | derived | D (conditional on $\Lambda$) |
 | S-043 | $\nu_t$ | NAV per unit $W_t/U_t$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD/unit] | + | — | derived | D |
 | S-044 | $\Pi^{R}_t,\ \Pi^{U}_t$ | Cumulative realised / unrealised P&L | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + profit | attribution only — **never an input to authority** (DC-4) | derived | D |
+| S-045 | $\mathrm{Accr}_{t+1}$ | Liabilities accrued during the period (not already in $\phi_j$ or $\mathrm{Fin}$) | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + owed | floor theorems assume $0$ | ledger | R |
+| S-046 | $\mathrm{Pay}_{t+1}$ | Cash payments of previously accrued liabilities | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + outflow | $\le Y_t+\mathrm{Accr}_{t+1}$ | ledger | R |
 
 ## D. Market state
 
@@ -132,19 +134,19 @@ Throttle is $\vartheta$ (because $\theta$ is the policy-parameter vector).
 | S-088 | $\Gamma_i$ | Gap-stress fraction: triggered-stop exits fill at $\ge(1-\Gamma_i)\,p^{\mathrm{stop}}$ | scalar | $\mathbb I$ (× horizon class) | $(0,1]$ | [1] | + worse | $\Gamma_i=\max(\Gamma^{\min},\hat\Gamma_i)$ (Art. 6); values **UNDEFINED — REQUIRES RESOLUTION** (RQ-04) | policy floor ∨ estimate | P∨E |
 | S-089 | $\gamma_j$ | Realised gap/slippage beyond stop for stop-exit fill $j$ (long: $p^{\mathrm{stop}}-f_j$) | scalar | stop fills | $\mathbb Q$ | [USD/sh] | + adverse | — | execution | R |
 | S-090 | $L^{\mathrm{stop}}(n)$ | Ex-ante loss bound of new entry if stop executes normally: $n(p^{\mathrm{lim}}-p^{\mathrm{stop}}_o+\kappa^{\mathrm{out}}(n))+\phi^{\mathrm{buy}}(n)+\phi^{\mathrm{sell}}(n)$ | function | $\mathbb L_{\ge0}$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | conditional on A-STOP, A-TRIG, A-MKT-05 | derived | D |
-| S-091 | $L^{\mathrm{gap}}(n)$ | $n(p^{\mathrm{lim}}-(1-\Gamma_i)p^{\mathrm{stop}}_o)+\phi^{\mathrm{buy}}(n)+\phi^{\mathrm{sell}}(n)$ | function | $\mathbb L_{\ge0}$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | conditional on A-GAP | derived | D |
+| S-091 | $L^{\mathrm{gap}}(n)$ | $n(p^{\mathrm{lim}}-p^{\mathrm{gx}}(n))+\phi^{\mathrm{buy}}(n)+\phi^{\mathrm{sell}}(n)$ with $p^{\mathrm{gx}}(n)=\min((1-\Gamma_i)p^{\mathrm{stop}}_o,\ p^{\mathrm{stop}}_o-\kappa^{\mathrm{out}}(n))$ | function | $\mathbb L_{\ge0}$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | conditional on A-GAP | derived | D |
 | S-092 | $L^{\mathrm{abs}}(n)$ | $n\,p^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n)+\phi^{\mathrm{sell}}_{0}(n)$ (price → 0) | function | $\mathbb L_{\ge0}$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | long only; unconditional given A-MKT-01/05 | derived | D |
 | S-093 | $\ell^{\mathrm{stop}}$ | Per-share stop loss when $L^{\mathrm{stop}}$ is linear | scalar | — | $\mathbb Q_{>0}$ | [USD/sh$_i$] | + loss | $\ge\ell^{\min}>0$ else INVALID | derived | D |
-| S-094 | $\mathrm{ER}(n)$ | Execution-assumption risk increment $L^{\mathrm{gap}}(n)-L^{\mathrm{stop}}(n)$ | function | $\mathbb L_{\ge0}$ | $\mathbb Q_{\ge 0}$ (if $\Gamma_i p^{\mathrm{stop}}\ge\kappa^{\mathrm{out}}$) | [USD] | + | — | derived | D |
-| S-095 | $r^{\mathrm{open}}_{i,t},\ g^{\mathrm{open}}_{i,t},\ u^{\mathrm{open}}_{i,t}$ | Open stop / gap / absolute risk of held position $i$, measured as the drop in $W_t$ | scalar | $\mathbb T\times\mathbb I$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | negative raw value ⇒ ANOMALY (not "free budget") | derived | D |
-| S-096 | $R^{\mathrm{open}}_t,\ G^{\mathrm{open}}_t,\ N^{\mathrm{open}}_t$ | Aggregates $\sum_i r^{\mathrm{open}}_i$, $\sum_i g^{\mathrm{open}}_i$, $\sum_i\lvert q_i\rvert m_i$; restrictions to strategy $s$ / cluster $c$ written $R^{\mathrm{open}}_{s,t}$, $R^{\mathrm{open}}_{c,t}$ | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + | — | derived | D |
-| S-097 | $R^{\mathrm{res}}_t,\ G^{\mathrm{res}}_t,\ N^{\mathrm{res}}_t,\ C^{\mathrm{res}}_t,\ Q^{\mathrm{res}}_{i,t}$ | Reserved (pending-order) stop-risk, gap-risk, notional, cash, and share quantity; restrictions to instrument $i$ / strategy $s$ / cluster $c$ written with that subscript (e.g. $N^{\mathrm{res}}_{i,t}$, $R^{\mathrm{res}}_{c,t}$) | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + | computed at worst-case entry ($p^{\mathrm{lim}}$) | authoritative reservation ledger | O |
+| S-094 | $\mathrm{ER}(n)$ | Execution-assumption risk increment $L^{\mathrm{gap}}(n)-L^{\mathrm{stop}}(n)$ | function | $\mathbb L_{\ge0}$ | $\mathbb Q_{\ge 0}$ (always, by the $\min$ in $p^{\mathrm{gx}}$) | [USD] | + | — | derived | D |
+| S-095 | $r^{\mathrm{open}}_{i,t},\ g^{\mathrm{open}}_{i,t},\ u^{\mathrm{open}}_{i,t}$ | Open stop / gap / absolute risk of held position $i$ (05 §5; **no $\Lambda$ credit** — OC-1) | scalar | $\mathbb T\times\mathbb I$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | negative raw value ⇒ ANOMALY (not "free budget") | derived | D |
+| S-096 | $R^{\mathrm{open}}_t,\ G^{\mathrm{open}}_t,\ Z^{\mathrm{open}}_t,\ N^{\mathrm{open}}_t$ | Aggregates $\sum_i r^{\mathrm{open}}_i$, $\sum_i g^{\mathrm{open}}_i$, $\sum_i u^{\mathrm{open}}_i$, $\sum_i\lvert q_i\rvert m_i$; restrictions to strategy $s$ / cluster $c$ written $R^{\mathrm{open}}_{s,t}$, $R^{\mathrm{open}}_{c,t}$ | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + | — | derived | D |
+| S-097 | $R^{\mathrm{res}}_t,\ G^{\mathrm{res}}_t,\ Z^{\mathrm{res}}_t,\ N^{\mathrm{res}}_t,\ C^{\mathrm{res}}_t,\ Q^{\mathrm{res}}_{i,t}$ | Reserved (pending-order) stop-risk, gap-risk, absolute risk ($L^{\mathrm{abs}}$ incl. fees), notional, cash, and share quantity; restrictions to instrument $i$ / strategy $s$ / cluster $c$ written with that subscript (e.g. $N^{\mathrm{res}}_{i,t}$, $R^{\mathrm{res}}_{c,t}$) | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | + | computed at worst-case entry ($p^{\mathrm{lim}}$) | authoritative reservation ledger | O |
 
 ## G. Capital, floors, drawdown, budgets
 
 | ID | Symbol | Meaning | Type | Domain | Codomain | Units | Sign | Valid range | Source | Class |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S-100 | $B_t$ | Risk base multiplying policy fractions | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + | **UNDEFINED — REQUIRES RESOLUTION** (candidates in 06 §3; RQ-02) | derived | D |
+| S-100 | $B_t$ | Risk base multiplying policy fractions | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + | **UNDEFINED — REQUIRES RESOLUTION** (candidates in 06 §4; RQ-02) | derived | D |
 | S-101 | $H_t$ | High-water mark of $\nu$: $\max_{u\in\mathcal H_t}\nu_u$ | scalar | $\mathbb T$ | $\mathbb Q_{>0}$ | [USD/unit] | + | observation set $\mathcal H_t$ (EOD vs intraday) **UNDEFINED — REQUIRES RESOLUTION** (RQ-03) | state carried in $\mathsf S_t$ | D |
 | S-102 | $DD_t$ | Drawdown $1-\nu_t/H_t$ | scalar | $\mathbb T$ | $[0,\infty)$ | [1] | + worse | requires $H_t>0$; $DD_t\ge1\iff\nu_t\le0$ | derived | D |
 | S-103 | $MDD_t$ | Maximum drawdown $\max_{u\le t}DD_u$ | scalar | $\mathbb T$ | $[0,\infty)$ | [1] | + worse | — | derived | D |
@@ -155,7 +157,7 @@ Throttle is $\vartheta$ (because $\theta$ is the policy-parameter vector).
 | S-108 | $F^{\mathrm{lock}}_t$ | Profit-lock floor $U_t\big(\nu^{\mathrm{ref}}+\eta^{\mathrm{lock}}(H_t-\nu^{\mathrm{ref}})^+\big)$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | — | $\nu^{\mathrm{ref}}$ **UNDEFINED — REQUIRES RESOLUTION** | derived | D |
 | S-109 | $F_t$ | Effective floor $\max(F^{\mathrm{abs}},F^{\mathrm{dd}}_t,F^{\mathrm{day}}_t,F^{\mathrm{wk}}_t,F^{\mathrm{lock}}_t)$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | — | — | derived | D |
 | S-110 | $K_t$ | Cushion $W_t-F_t$ | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + room | $K_t\le0$ ⇒ no risk increase | derived | D |
-| S-111 | $\vartheta$ | Throttle function (multiplier on a base budget) | function | states | $[0,1]$ | [1] | — | induced form in 06 §6; separate throttle **UNDEFINED** | derived/policy | D/P |
+| S-111 | $\vartheta$ | Throttle function (multiplier on a base budget) | function | states | $[0,1]$ | [1] | — | induced form in 06 §7; separate throttle **UNDEFINED** | derived/policy | D/P |
 | S-112 | $\theta$ | Policy-parameter vector: $f^{\mathrm{trd}},f^{\mathrm{port}},f^{\mathrm{strat}}_s,f^{\mathrm{gap}},f^{\mathrm{ord}},f^{\mathrm{conc}},f^{\mathrm{clu}},f^{\mathrm{clr}},\lambda^{\mathrm{gross}},\rho^{\mathrm{in}},w^{\mathrm{in}},\rho^{\mathrm{ex}},h^{\mathrm{ex}},\varsigma^{\max},\ell^{\mathrm{day}},\ell^{\mathrm{wk}},d^{\max},\eta^{\mathrm{lock}},m_K,m_G,n^{\min},\chi,\Gamma^{\min},\ell^{\min}$ | vector | — | admissible box (06 §9) | mixed | + | **all values UNDEFINED — REQUIRES RESOLUTION** (human policy; never fitted on test data) | policy | P |
 | S-113 | $g_k(x,n),\ b_k(x)$ | Consumption and remaining budget of hard constraint $k$ | function, scalar | states × $\mathbb L_{\ge0}$ | $\mathbb Q$ | per constraint | + | $g_k(x,0)=0$, $g_k$ non-decreasing in $n$ (required) | derived | D |
 | S-114 | $Q_k$ | Cap from constraint $k$: $\max(\{0\}\cup\{n\in\mathbb L_{>0},n\le\bar N:g_k(n)\le b_k\})$ | lattice | constraints | $\mathbb L_{\ge0}$ | [sh$_i$] | + | — | derived | D |
@@ -209,7 +211,7 @@ Throttle is $\vartheta$ (because $\theta$ is the policy-parameter vector).
 | S-160 | $\mathbf 1_i$ | Unit vector of instrument $i$ in $\mathbb L^{N_t}$ (so a single-opportunity action is $d\,n\,\mathbf 1_i$) | 01, 06 | D |
 | S-161 | $\mathcal A_\ell$, $\ell=0..5$ | Action set admitted by authority layers $0..\ell$ (Art. 1) | 01 | D |
 | S-162 | $\mathcal K$ | Index set of hard constraints H1–H16 | 01, 06, 08 | P |
-| S-163 | $\mathrm{Gates}$ | Set of zero–one gates G1–G10 | 01, 06 | P |
+| S-163 | $\mathrm{Gates}$ | Set of zero–one gates G1–G11 | 01, 06 | P |
 | S-164 | $b^{\mathrm{hard}}_k,\ b^{\mathrm{mod}}_k,\ b^{\mathrm{allow}}_k$ | Hard, model-proposed, and allowed budget of constraint $k$; $b^{\mathrm{allow}}_k=\min(b^{\mathrm{hard}}_k,\mathfrak s(b^{\mathrm{mod}}_k))$ | 06, 08 | D/E/D |
 | S-165 | $\mathrm{SL}_{s,t}$ | Strategy realised-loss term charged against the strategy budget — **UNDEFINED — REQUIRES RESOLUTION** (RQ-11) | 06 | D |
 | S-166 | $C^{\mathrm{avail}}_t$ | Cash available for new purchases under settlement rules — **UNDEFINED — REQUIRES RESOLUTION** (RQ-20) | 02, 06 | D |
@@ -220,7 +222,7 @@ Throttle is $\vartheta$ (because $\theta$ is the policy-parameter vector).
 | S-171 | $r_{j,k}$ | $k$-th reference price in the cost-decomposition chain of fill $j$ ($r_{j,0}=\pi^{\mathrm{ref}}_j$, $r_{j,K}=f_j$) | 05 | D |
 | S-172 | $p_{\mathrm{last}}$ | Last tradable price before a jump (A-GAP derivation) | 05 | R |
 | S-173 | $\nu^{\star}$ | NAV per unit at the instant of an external flow | 05 | D |
-| S-174 | $W^{\min}_{t+1}(a)$ | Worst-case next-period wealth under tier U bounds | 05, 08 | D |
+| S-174 | $W^{\min}_{t+1}(a)$ | Worst-case next-period wealth under tier U bounds, built only from $\mathcal F_t$-measurable terms (05 §7) | 05, 08 | D |
 | S-175 | $\Delta$ (prefix) | First difference: $\Delta Z_{t+1}=Z_{t+1}-Z_t$; $(\cdot)^{+}=\max(\cdot,0)$ | all | — |
 | S-176 | $\hat e,\ \Phi$ | Generic estimate in $\mathsf S_t$ and the estimator map producing it (NLA rule) | 01 | E |
 | S-177 | $\mathcal P_{t,\delta}$ | Ambiguity set constructed to contain the true law with probability $\ge1-\delta$ | 01, 08 | E |
@@ -230,6 +232,11 @@ Throttle is $\vartheta$ (because $\theta$ is the policy-parameter vector).
 | S-181 | $\mathrm{LB}^{\mathrm{naive}}$ | Difference-of-infima advantage (shown inadmissible, P-12a) | 08 | D |
 | S-182 | $\mathcal W_S,\ \mathcal W_G,\ \mathcal W_U$ | Disturbance sets: all period outcomes consistent with the tier-S, tier-G, tier-U assumptions respectively (attainable bounds, no dependence restriction) | 08 (T-21), 01 §7 | M |
 | S-183 | $\mathbb E_{\mathbb Q}[\cdot],\ \mathbb P(\cdot)$ | Expectation under law $\mathbb Q$ (default $\mathbb P$); probability | all | M |
+| S-184 | $p^{\mathrm{gx}}(n)$ | Tier-G exit-price bound $\min((1-\Gamma_i)p^{\mathrm{stop}},\ p^{\mathrm{stop}}-\kappa^{\mathrm{out}}(n))$ | 05, 06 | D |
+| S-185 | $\bar A_{t+1}$ | $\mathcal F_t$-measurable upper bound on $\mathrm{Accr}_{t+1}$ | 05 §7 | D |
+| S-186 | $\ell_k$ | Per-share consumption of constraint $k$ when $g_k$ is linear ($g_k(n)=n\ell_k$); $\ell^{\mathrm{stop}}$ is the H1 instance | 06 §6, 08 | D |
+| S-187 | $\tau^{\mathrm{CA}},\ \psi$ | Instant of a corporate action; split ratio of the value-neutral restatement | 05 §1 | O |
+| S-188 | OC-$k$ | Register of deliberate conservative over-charges in hard bounds (OC-1: no $\Lambda$ credit in open risk) | 05 §4 | P |
 
 **Scoping rule.** Symbols introduced inside a theorem's ASSUMPTIONS block in 08 (e.g. $A_{\mathbb Q}$, $B_{\mathbb Q}$ in P-12a) are local to that
 theorem and do not collide with registry symbols.

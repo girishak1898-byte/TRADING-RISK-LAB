@@ -1,4 +1,4 @@
-# 01 — Mathematical Constitution (v0.1-draft)
+# 01 — Mathematical Constitution (v0.1.1-draft)
 
 Status: DRAFT for human review. Normative text uses **MUST / MUST NOT**. Candidate constructions are marked
 **PROVISIONAL**. Unresolved objects are marked **UNDEFINED — REQUIRES RESOLUTION**. Symbols are defined only in
@@ -74,7 +74,8 @@ consumptions), and MUST record both operands as evidence.
 **Art. 11 — Budget conservation.** For each budget family, every unit is in exactly one of {available, reserved, open,
 consumed} (T-11). The engine is pure; conservation is enforced by the external ledger, whose state is an input.
 
-**Art. 12 — Economic cost identity.** Every cost and loss appears exactly once in the wealth transition (05 §3, ECAI).
+**Art. 12 — Economic cost identity.** Every cost and loss appears exactly once in the wealth transition (05 §3, ECAI). Hard-layer *bounds* may
+over-charge a cost only through a registered conservative over-charge (OC-$k$, 05 §4) with a stated reason; they may never under-charge.
 
 **Art. 13 — Separation of safety and optimisation.** The optimiser receives the safe set as read-only data, returns a *proposal*,
 and the proposal is re-verified exactly (T-03(c)). The optimiser can neither create, relax, nor evaluate the hard envelope's

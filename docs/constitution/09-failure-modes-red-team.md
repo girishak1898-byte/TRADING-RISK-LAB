@@ -1,4 +1,4 @@
-# 09 — Known Mathematical Failure Modes and Red-Team Classification (v0.1-draft)
+# 09 — Known Mathematical Failure Modes and Red-Team Classification (v0.1.1-draft)
 
 Classification vocabulary (per brief): **PROVED · DISPROVED · COUNTEREXAMPLE FOUND · REQUIRES ADDITIONAL ASSUMPTION · UNDEFINED ·
 NOT YET PROVEN.** "Observed" = reproduced numerically in this session.
@@ -41,6 +41,8 @@ NOT YET PROVEN.** "Observed" = reproduced numerically in this session.
 | F-32 | Floor invariance under hold with ratcheting floor | **DISPROVED** | T-20(b) |
 | F-33 | Binary64 floor of $R/\ell$ | **PROVED** safe under $r\,d_\ell<2^{51}$; **COUNTEREXAMPLE FOUND** outside (observed) | T-22 |
 | F-34 | Greedy sequential allocation | **PROVED** order-dependent | T-23 |
+| F-35 | Open risk with $\Lambda$ credit (v0.1 DC-5) | **COUNTEREXAMPLE FOUND** (budgets rise as liquidity worsens) — replaced by OC-1 | T-07 |
+| F-36 | Per-lot risk for add-ons, $r^{\mathrm{open}}(q)+L^{\mathrm{stop}}(n)$ | **COUNTEREXAMPLE FOUND** (super-additive exit costs) — G11 | T-10 |
 
 ## Part B — Failure-mode catalogue
 
@@ -66,7 +68,9 @@ NOT YET PROVEN.** "Observed" = reproduced numerically in this session.
 | ID | Failure | Effect | Rule |
 |---|---|---|---|
 | FM-DC-1 | Entry spread added on top of a limit/fill price that already contains it | overstated risk (conservative but inconsistent) or, in the reverse error, understated risk when using mid | DC-1 |
-| FM-DC-2 | Exit cost charged in $W$ (via $\Lambda$) and again in open risk | budget understated (conservative); inconsistent evidence | DC-5 |
+| FM-DC-2 | Exit cost charged in $W$ (via $\Lambda$) and again in open risk | budget understated (conservative) — **now deliberate** (OC-1) because the credit breaks liquidity monotonicity (F-35) | DC-5 revised |
+| FM-DC-7 | Add-on risk summed per lot | combined exit cost $(q+n)\kappa(q+n)$ exceeds $q\kappa(q)+n\kappa(n)$; floor breach (F-36) | G11; RQ-34 |
+| FM-DC-8 | Pending orders charged at notional in tier U | their fees are omitted; floor breach by the fees | $Z^{\mathrm{res}}$ at full $L^{\mathrm{abs}}$ |
 | FM-DC-3 | Gap loss inside stop risk and again as gap risk in one budget | double charge | DC-3 |
 | FM-DC-4 | Realised + unrealised + $\Delta W$ summed | double count | DC-4 |
 | FM-DC-5 | Open risk measured from entry price rather than current mark | untrailed winners' give-back ignored; understated risk relative to $W$ | DC-5 (open risk from current mark) |
@@ -82,6 +86,8 @@ NOT YET PROVEN.** "Observed" = reproduced numerically in this session.
 | FM-DD-4 | Throttle chattering at step thresholds | budget flips with tiny P&L moves | continuous cushion throttle |
 | FM-DD-5 | "Recovery boost" (raise risk after losses) | non-monotone; ruin-seeking | forbidden by T-05 |
 | FM-DD-6 | Negative wealth | $B\le0$ ⇒ negative budgets without clamp | $(\cdot)^+$; RECOVERY |
+| FM-DD-7 | Daily/weekly floor reset after a gain day | cushion invariant breaks without a new high (06 §7) | RECOVERY + trailing obligation |
+| FM-DD-8 | Withdrawal inside a period with an absolute floor | $F^{\mathrm{abs}}$ breached although every stop held | flows only at epoch boundaries |
 
 ### Tail and gap (FM-TAIL)
 
@@ -132,6 +138,9 @@ NOT YET PROVEN.** "Observed" = reproduced numerically in this session.
 | FM-OPS-3 | Held position with $m<p^{\mathrm{stop}}$ and no trigger | negative "risk" frees budget | ANOMALY ⇒ $\alpha=0$ |
 | FM-OPS-4 | DST / half-day / holiday boundaries | wrong daily floor reset | versioned exchange calendar (RQ-31) |
 | FM-OPS-5 | Sequential allocation order | non-replayable allocations (T-23) | authoritative ordering key |
+| FM-OPS-6 | Stop triggered but not filled at the cut; stop not live on early partial fills | loss beyond $r^{\mathrm{open}}$ with A-STOP technically intact | A-TRIG broadened; A-STOPLIVE |
+| FM-OPS-7 | Per-execution minimum fees on split fills | fees exceed $\phi(n)$ | A-EXE-04; RQ-35 |
+| FM-OPS-8 | Corporate action inside a period | split booked as a loss (05 §1) | split the period at $\tau^{\mathrm{CA}}$ |
 
 ## Part C — Coverage of the brief's mandatory search list
 
