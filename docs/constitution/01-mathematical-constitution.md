@@ -62,7 +62,9 @@ $\Gamma$) is a *hard-layer component*: its estimator definition is frozen, versi
 enters only through a policy bound in the conservative direction (F111): a floor for a cost ($\kappa^{\mathrm{out}}$, $\Gamma$, $\Lambda$) and a cap for a
 capacity ($\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$; closure, AUD-040); a statistical cluster map may only merge clusters of the human-set
 map (S-006). A missing estimate gives $\alpha_t=0$, never the policy bound (AUD-041). Invariant: every hard cap computed with any estimates is $\le$
-the same cap with every estimated input at its policy bound. Advanced models MUST NOT supply or replace these inputs;
+the same cap with every estimated input at its policy bound — at every epoch: no gate predicate uses an estimate in a way that a larger
+estimate could turn FAIL into PASS (T-27), and no carried reference (high-water mark, day and week references, units) stores an estimate; they
+are valued at $W^{\mathrm{R}}=E-\Lambda^{\mathrm{floor}}$ (F146, T-28; CLOSURE-REV-001, CLOSURE-REV-002). Advanced models MUST NOT supply or replace these inputs;
 their only channel is a proposed budget $b^{\mathrm{mod}}_k$ (Art. 5). Otherwise a model could enlarge hard caps through their inputs.
 
 **Art. 7 — Exact authority arithmetic.** Every quantity on the authority path is computed exactly in $\mathbb Q$ or with rounding

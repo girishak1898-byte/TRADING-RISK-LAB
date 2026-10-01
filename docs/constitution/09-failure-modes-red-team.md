@@ -90,6 +90,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-DC-9 | Full-order reservation kept beside the held part's open risk after a partial fill | fees already paid and the filled quantity's risk charged twice (over-charge $5.24$ incl. the paid fee in the 05 §5 example) | exact exposure charge F145 (closure, AUD-034) |
 | FM-DC-10 | Strategy loss cap on a moving base $B_t$ | realised strategy loss reduces $B_t$ and is subtracted again as $\mathrm{SL}$ | window-start base $B^{\mathrm{win}}_s$ (F078; closure, AUD-035) |
 | FM-DC-11 | Pending cash subtracted from a broker figure that already nets open orders | pending cash deducted twice | F048: $\min(\mathrm{BP}_t,C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$ (closure, AUD-035) |
+| FM-DC-12 | Entry fee owed but not booked: terminal order, or fee reported but not booked | the fee is in neither $W$ nor any charge ($W_{t+1}=F_t-\tfrac12$; $F_t-4.75$) | $\phi^{\mathrm{paid}}$ = booked; owed fees reserved until booked (F148, T-29; CLOSURE-REV-003) |
 
 ### Drawdown and floors (FM-DD)
 
@@ -104,6 +105,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-DD-7 | Daily/weekly floor reset after a gain day | cushion invariant breaks without a new high (06 §7) | RECOVERY + trailing obligation |
 | FM-DD-8 | Withdrawal inside a period with an absolute floor | $F^{\mathrm{abs}}$ breached although every stop held | flows only at epoch boundaries |
 | FM-DD-9 | Floor reference stored rounded down | $H=W/U$ non-terminating ($W=10^8$, $U=3\cdot10^6$) stored as $33.33$: $K$ enlarged by $9{,}000$ USD | carried references rounded toward $+\infty$, $U$ and $\nu$ exact (01 §9 item 3; closure, AUD-045) |
+| FM-DD-10 | Floor reference or units computed from an estimate-inclusive NAV | a past $\hat\Lambda$ lowers $H$ (cushion $+9{,}000$) or a withdrawal redeems too many units (cushion $45{,}810$ vs $41{,}400$) | references and units at $\nu^{\mathrm{R}}$ (F146, T-28; CLOSURE-REV-002) |
 
 ### Tail and gap (FM-TAIL)
 
@@ -151,7 +153,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-AUTH-3 | Wrong account scope | decision about another account | account-identifier binding in $x^{A}_t$ (UNDEFINED method) |
 | FM-OPS-1 | Crossed/locked market | mid ill-defined | G7/validity: invalid |
 | FM-OPS-2 | Corporate action between decision and fill | $q$/price scale mismatch vs reservation | UNDEFINED handling (05 §9) |
-| FM-OPS-3 | Held position with $m<p^{\mathrm{stop}}$ and no trigger | negative "risk" frees budget | ANOMALY ⇒ $\alpha=0$; also for the held part of a partially filled order (F145; AUD-051) |
+| FM-OPS-3 | Held position with $m<p^{\mathrm{stop}}$ and no trigger | negative "risk" frees budget | G8: $m\le p^{\mathrm{stop}}$ ⇒ $\alpha=0$, tested on the mark, independent of costs and estimates (CLOSURE-REV-001); also for the held part of a partially filled order |
 | FM-OPS-4 | DST / half-day / holiday boundaries | wrong daily floor reset | versioned exchange calendar (RQ-31) |
 | FM-OPS-5 | Sequential allocation order | non-replayable allocations (T-23) | authoritative ordering key |
 | FM-OPS-6 | Stop triggered but not filled at the cut; stop not live on early partial fills | loss beyond $r^{\mathrm{open}}$ with A-STOP technically intact | A-TRIG (position level, F072); A-STOPLIVE |
@@ -160,6 +162,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-OPS-9 | Exit split into several fee-bearing parts under per-order minimum fees (partial fill at the cut; one child stop per entry fill) | fees paid plus the remainder's valuation fee exceed $\phi^{\mathrm{sell}}(q)$; floor breached by 1 for a new order (AUD-001 fill pattern, REV-029) | position-level A-TRIG (F072); split envelope F140 with the declared $N^{\mathrm{ex}}$ |
 | FM-OPS-10 | Reservation computed with inputs older than the epoch's (exit-cost estimate raised, stop widened) | pending order under-charged; floor breached by 40 in the T-10N example | F144: every reservation re-evaluated from the order state at $\tau_t$ |
 | FM-OPS-11 | Stop of a pending or partially filled order trailed to or above its limit after G7 | the unclamped per-share distance is negative: charge $-87$ for a fresh order, floor breached by $29$ for a partially filled one (08 T-10N) | per-share distance clamped at $0$ in F144, F145 (closure, AUD-039) |
+| FM-OPS-12 | A gate predicate that uses an estimate or a fee (G7 on $\kappa^{\mathrm{out}}$; G8 as a sign test of F064) | a larger estimate or fee turns NO\_TRADE into TRADE ($Q=0\to9{,}090$; raw $-3.1\to+12$) | gates estimate-free: G7 on $\kappa^{\min}$, G8 on the mark (T-27; CLOSURE-REV-001) |
 
 ### Dimensional (FM-DIM, added v0.2, AUD-031)
 

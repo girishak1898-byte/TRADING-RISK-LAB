@@ -17,8 +17,10 @@ conservation table — AUD-012, AUD-022; position-level exit-value bound — AUD
 
 ## 1. Primitive transitions over $(\tau_t,\tau_{t+1}]$
 
-Let $\mathcal J_{t+1}$ be all fills in the period (entries from $a_t$, stop exits, any other orders), each with signed quantity
-$n^{\mathrm{fill}}_j$, price $p^{\mathrm{fill}}_j$, fee $\phi_j\ge0$, instrument $i(j)$.
+Let $\mathcal J_{t+1}$ be all fills and fee postings in the period (entries from $a_t$, stop exits, any other orders), each with signed quantity
+$n^{\mathrm{fill}}_j$, price $p^{\mathrm{fill}}_j$, fee $\phi_j\ge0$, instrument $i(j)$. A fee booked after its fill — later in the period, in a later period, or after the
+order is terminal — is a posting with $n^{\mathrm{fill}}_j=0$; a fee recorded by the broker as a payable is the same posting with the liability in $Y$ (it is
+not an accrual $\mathrm{Accr}$ of A-ACC-07). A fee is *booked* when it is in $W$ through $C$ or $Y$ (F148, CLOSURE-REV-003).
 
 $$
 q_{i,t+1}=q_{i,t}+\sum_{j\in\mathcal J_{t+1}:\,i(j)=i}n^{\mathrm{fill}}_j
@@ -131,7 +133,7 @@ over-charges a *future* exit cost, never a realised one, and it is necessary for
 
 | ID | Term charged twice | First charge (state) | Second charge (hard budget) | Size of over-charge | Why kept | Removal condition |
 |---|---|---|---|---|---|---|
-| OC-1 | Liquidation cost of held positions (incl. exit fee, F035) — a future cost, not a realised one | $W_t=E_t-\Lambda_t$ (F034) ⇒ $K_t$ | $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}},r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ carry $\kappa^{\mathrm{out}}$ and the exit fee without $+\Lambda_{i,t}$ credit | exactly $\Lambda_t$ (T-21) | **necessary for T-07**: crediting $\Lambda$ makes the floor room *grow* when liquidity worsens — in budgets of the form $f^{\mathrm{port}}B$ (08 T-07) and in the cushion at a new high, where $F^{\mathrm{dd}}=(1-d^{\max})W$ gives $K+\Lambda=d^{\max}E+(1-d^{\max})\Lambda$ (exact: cash $100{,}000$, $1{,}000$ sh at $50$, stop $45$, $\kappa^{\mathrm{out}}=0.05$, $d^{\max}=10\%$: H4 room $10{,}040$ at $\Lambda=100$ but $10{,}400$ at $\Lambda=500$; without the credit $9{,}940$ and $9{,}900$) | none in v0 |
+| OC-1 | Liquidation cost of held positions (incl. exit fee, F035) — a future cost, not a realised one | $W_t=E_t-\Lambda_t$ (F034) ⇒ $K_t$ | $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}},r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ carry $\kappa^{\mathrm{out}}$ and the exit fee without $+\Lambda_{i,t}$ credit | exactly $\Lambda_t$ (T-21) | **necessary for T-07**: crediting $\Lambda$ makes the floor room *grow* when liquidity worsens — in budgets of the form $f^{\mathrm{port}}B$ (08 T-07) and in the cushion at a new high, where (references by F146) $F^{\mathrm{dd}}=(1-d^{\max})W^{\mathrm{R}}$ gives $K+\Lambda=d^{\max}E+(1-d^{\max})\Lambda^{\mathrm{floor}}$, growing when liquidity worsens through $\Lambda^{\mathrm{floor}}$ (exact, with $\Lambda=\Lambda^{\mathrm{floor}}$: cash $100{,}000$, $1{,}000$ sh at $50$, stop $45$, $\kappa^{\mathrm{out}}=0.05$, $d^{\max}=10\%$: H4 room $10{,}040$ at $\Lambda=100$ but $10{,}400$ at $\Lambda=500$; without the credit $9{,}940$ and $9{,}900$) | none in v0 |
 | OC-2 | Cash committed to pending buy orders | — | — | — | **ELIMINATED at closure (AUD-035):** F048 is now $\min(\mathrm{BP}_t,\ C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$; pending cash is deducted once, from own ledger cash, and the broker figure can only restrict | — |
 | OC-3 | Realised strategy loss | — | — | — | **ELIMINATED at closure (AUD-035):** H3 uses the window-start base $B^{\mathrm{win}}_s$ (F078), so realised strategy loss enters once, through $\mathrm{SL}_{s,t}$ | — |
 | OC-4 | Filled part of a partially filled order | — | — | — | **ELIMINATED at closure (AUD-034):** the instrument is charged the exact exposure charge F145 (held part and remainder together, fees already paid excluded) instead of open risk plus the full-order reservation, which counted the paid entry fee and the filled quantity's risk twice | — |
@@ -148,13 +150,13 @@ summed) or UNRESOLVED with an owner.
 | Market move of held quantity $q_{i,t}\Delta m_i$ | [USD] | F055 holding term | via F055 | $r^{\mathrm{open}}$ distance $m_i-p^{\mathrm{stop}}_i$ (F064) | no | single location |
 | Entry spread, residual slippage, impact ($p^{\mathrm{fill}}_j-\pi^{\mathrm{ref}}_j$) | [USD] | F057 inside $p^{\mathrm{fill}}_j$ (F052) | via F055; model layer adds expected $\iota$ (F112) only when no fill is simulated | bound $p^{\mathrm{in}}\le p^{\mathrm{lim}}$ in $L^{\mathrm{stop}},L^{\mathrm{gap}},L^{\mathrm{abs}}$ (DC-1) | expectation in $J$ and bound in risk | layer separation (DC-6); never summed |
 | Delay ($m^{\mathrm{arr}}\to m_{\tau^{\mathrm{fill}}_j}$) | [USD] | $\mathcal M$ and $\mathcal C_{j,1}$ with opposite signs (F058) | via F055 (net zero) | inside the $p^{\mathrm{lim}}$ bound | appears twice by construction | Perold partition; nets to zero in $W$ (§3) |
-| Fees $\phi_j$ (buy and sell) | [USD] | F052 | via F055 | $\phi^{\mathrm{buy}},\phi^{\mathrm{sell}}$ in $L^{\mathrm{stop}},L^{\mathrm{gap}},L^{\mathrm{abs}}$ (F061–F063); $\phi^{\mathrm{buy}}$ in H14 (F089) | loss budgets and cash budget count the same fee | separate constraint families, one charge per family (not a duplicate within any budget); non-super-additive schedules are charged through $\phi^{\mathrm{split}}$ (F140), which bounds the fees actually paid, not a second charge |
+| Fees $\phi_j$ (buy and sell) | [USD] | F052, at the fill or as a later posting (05 §1) | via F055 | $\phi^{\mathrm{buy}},\phi^{\mathrm{sell}}$ in $L^{\mathrm{stop}},L^{\mathrm{gap}},L^{\mathrm{abs}}$ (F061–F063); $\phi^{\mathrm{buy}}$ in H14 (F089); owed-but-unbooked entry fees $\phi^{\mathrm{owed}}_o$ in F145 or the F144 owed-fee reservation until booked (F148) | loss budgets and cash budget count the same fee | separate constraint families, one charge per family (not a duplicate within any budget); non-super-additive schedules are charged through $\phi^{\mathrm{split}}$ (F140), which bounds the fees actually paid, not a second charge; each entry-fee dollar is booked in $W$ or owed in exactly one charge, never both (T-29) |
 | Stop exit cost $\kappa^{\mathrm{out}}$ ($p^{\mathrm{stop}}\to p^{\mathrm{out}}$) | [USD] | realised in the exit $p^{\mathrm{fill}}_j$ (F057 stop chain) | via F055 | $L^{\mathrm{stop}}$, $r^{\mathrm{open}}$ (F061, F064); floor F111 | no (DC-3) | single location per tier |
 | Gap beyond stop ($p^{\mathrm{stop}}\to p^{\mathrm{gx}}$) | [USD] | realised in the exit $p^{\mathrm{fill}}_j$ | via F055 | $L^{\mathrm{gap}}$, $g^{\mathrm{open}}$ (F062, F065) — tier G only | tiers S and G are alternative scenarios, never added | tier families are separate budgets (06 §2) |
 | Execution cost of other (manual, risk-reducing) exits | [USD] | F057 ('other' chain) inside $p^{\mathrm{fill}}_j$ | via F055 | none ex ante: such orders are outside the floor theorems (A-EXE-05) | no | single location; a period with such an order is outside T-10 |
 | Liquidation cost of holdings $\Lambda_t$ (incl. exit fee, F035) | [USD] | F034; $\Delta\Lambda$ in F055 | via F055 | not credited in $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}}$ | **yes** | **OC-1** |
 | Model re-estimation $\Delta\Lambda$ | [USD] | F055 valuation adjustment | via F055 | through $K_t$ only | no | DC-9 |
-| Pending-order cash $C^{\mathrm{res}}$ | [USD] | none until fill (then F052) | none | H14 via F048, remaining cost $(n'-q)p'^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ (F144) | no | deducted once from own cash; broker $\mathrm{BP}$ only restricts (F048) |
+| Pending-order cash $C^{\mathrm{res}}$ | [USD] | none until fill (then F052) | none | H14 via F048, remaining cost $(n'-q)p'^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ (F144), and the owed entry fees of terminal orders (F148) | no | deducted once from own cash; broker $\mathrm{BP}$ only restricts (F048) |
 | Pending-order risk $R^{\mathrm{res}},G^{\mathrm{res}},Z^{\mathrm{res}},N^{\mathrm{res}},Q^{\mathrm{res}}$ | [USD], [sh$_i$] | none until fill; filled parts enter $q$ (F051), paid fees enter cash (F052) | none | re-evaluated at $\tau_t$ from the order state (F144): remaining quantity and remaining cost only; a partially filled order is charged $r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ (F145) and its held part no separate open risk | no (realised entry price and fees are in $W$ only) | single charge per exposure; re-evaluating an already reserved opportunity as new is blocked by G11 ($Q^{\mathrm{res}}_{i,t}\ne0$); a dropped order violates A-AUTH-02 and is undetectable by the pure engine — **UNRESOLVED: idempotency obligation of the integration contract** (owner: Phase-10 integration contract; fail-closed there: an opportunity identifier present in the ledger is never re-reserved). The ledger's own full-reservation rule (A-AUTH-05) is bookkeeping for T-11, not an engine input |
 | Realised strategy loss $\mathrm{SL}_{s,t}$ | [USD] | inside $W$ via F055 | via F055 | H3 (F078) against the window-start base $B^{\mathrm{win}}_s$ | no | counted once in H3; $\mathrm{SL}$ undefined ⇒ AUD-028 rule (06 §4) |
 | Income $\mathrm{Inc}$ | [USD] | F052 | via F055 | not credited ex ante (T-10 assumes $\ge0$) | ex-date drop in $\mathcal M$ vs cash | DC-7 (distinct real events) |
@@ -194,8 +196,13 @@ Monotonicity in $e\le n$ (partial fills): all three are non-decreasing in quanti
 
 **Held positions** (DC-5, no $\Lambda$ credit): $r^{\mathrm{open}}_i$ as in DC-5 [F064];
 $g^{\mathrm{open}}_i=q_i\big(m_i-p^{\mathrm{gx}}_i(q_i)\big)+\phi^{\mathrm{sell}}_i(q_i)$ **[F065]**;
-$u^{\mathrm{open}}_i=q_im_i+\phi^{\mathrm{sell}}_{i,0}(q_i)$ **[F066]**. A negative raw value is an ANOMALY (e.g. $m_i<p^{\mathrm{stop}}_i$
-without a trigger) ⇒ $\alpha_t=0$, never "negative risk". $p^{\mathrm{stop}}_i=\bot$ ⇒ D-06 (tier U value), never zero.
+$u^{\mathrm{open}}_i=q_im_i+\phi^{\mathrm{sell}}_{i,0}(q_i)$ **[F066]**. None of them carries an entry fee: owed entry fees are charged in F144 (F148). **ANOMALY**
+(gate G8, closure correction CLOSURE-REV-001): a held exposure whose authoritative mark has reached or crossed its live stop, $m_i\le p^{\mathrm{stop}}_i$
+(long) ⇒ $\alpha_t=0$ for new risk, whatever $\hat\kappa^{\mathrm{out}}$, $\hat\Gamma$, $\hat\Lambda$ or the fee schedule. Every negative raw value of F064 or F065 implies
+it ($m_i-p^{\mathrm{stop}}_i<-\kappa^{\mathrm{out}}_i(q_i)-\phi^{\mathrm{split}}_i(q_i)/q_i\le0$, and $p^{\mathrm{gx}}_i\le p^{\mathrm{stop}}_i$ by F060), so the `5c486f0` sign test is subsumed; the
+converse fails — mark $48.99$ below stop $49$ gives $r^{\mathrm{open}}=+5.9$ with $\kappa^{\mathrm{out}}$ at its floor, and a larger estimate or fee could make a negative
+raw value positive (CLOSURE-REV-001) — which is why the gate tests the mark, not a cost-dependent sign. $p^{\mathrm{stop}}_i=\bot$ ⇒ D-06 (tier U value),
+never zero.
 
 **Position-level exit-value bound (A-TRIG, v0.2, AUD-001).** For each exposure $i$ of the period — a held position without a pending order
 ($q^{\mathrm{exp}}_i=q_{i,t}$); a new or pending order on a fresh instrument ($q^{\mathrm{exp}}_i=e$); or a held position with a pending remainder of the
@@ -231,12 +238,27 @@ because the unfilled part may not fill ($e=0$) while the stop can have been trai
 $0\le e\le n'-q_{i,t}$ of a term linear in $e$ is at an end point (AUD-039). Exhaustive exact enumeration (full, partial and multiple partial fills;
 per-order minimum fees; up to $N^{\mathrm{ex}}=3$ exit orders plus a remainder at the cut; fees billed at once or late) gives worst loss $=r^{\mathrm{pf}}_i-\Lambda_{i,t}$ in
 every state with the stop below the limit; with stops from $2$ below to $3$ above the limit ($46{,}200$ scenarios, $1{,}800$ states) the clamped
-charge is never understated and is exact in $1{,}250$ states. No realised cost is inside it. The ANOMALY rule of the held positions applies to the
-held part: if the raw open risk of the held quantity alone, $r^{\mathrm{open}}_i(q_{i,t})$ or $g^{\mathrm{open}}_i(q_{i,t})$ (F064, F065 with F140), or any of $r^{\mathrm{pf}}_i,g^{\mathrm{pf}}_i,u^{\mathrm{pf}}_i$
-is negative, then $\alpha_t=0$ — never a credit from "negative risk" (closure, AUD-051: F145 had dropped this rule, which F064 carried at `f37c1b6`). Example:
+charge is never understated and is exact in $1{,}250$ states. No realised cost is inside it. The ANOMALY rule applies to the held part in the same
+form: its mark at or below the exposure's live stop fails G8 (CLOSURE-REV-001; this replaces the sign test of AUD-051, which a larger estimate or
+fee could mask). Every negative value of $r^{\mathrm{pf}}_i$ or $g^{\mathrm{pf}}_i$ implies it, because the clamped term and $\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$
+are $\ge0$ ($\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o\le\phi^{\mathrm{buy}}(n')$, F148), so a negative charge forces $m_{i,t}<p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(n')\le p^{\mathrm{stop}}_i$. Example:
 order $6$ sh at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.1+0.01n$, fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=2$; $2$ sh filled (fee $1$ paid), mark $52$,
 $\Lambda_{i,t}=1.02$: worst loss $12.94$, $r^{\mathrm{pf}}_i=13.96$; the draft's $r^{\mathrm{open}}_i+L^{\mathrm{stop}}(6)=19.20$ over-charged by $5.24$, which includes the paid
 fee $1$ a second time.
+
+**Entry-fee booking state (critical closure correction, CLOSURE-REV-003).** For every entry order $o$ whose fees are not yet confirmed final —
+pending, or venue-confirmed terminal — with cumulative filled quantity $q^{\mathrm{fill}}_o$ (execution reports):
+$\phi^{\mathrm{acc}}_o=\phi^{\mathrm{buy}}_o(q^{\mathrm{fill}}_o)$, the largest entry fee its fills can cost (A-EXE-04); $\phi^{\mathrm{paid}}_o$, the part of it *booked into* $W_t$ at the cut —
+debited in $C_t$ or recorded as payable in $Y_t$ of the same snapshot (A-AUTH-04), not the fees reported, assessed or expected; and
+$\phi^{\mathrm{owed}}_o=\phi^{\mathrm{acc}}_o-\phi^{\mathrm{paid}}_o$, set to $0$ when the broker confirms the fees final **[F148]**. Domain: $0\le\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o$. A negative
+value, or more booked than the schedule allows ($\phi^{\mathrm{paid}}_o>\phi^{\mathrm{acc}}_o$, which violates A-EXE-04), is an impossible accounting state: $\alpha_t=0$, and
+every charge uses $\phi^{\mathrm{paid}}_o$ clipped to $[0,\phi^{\mathrm{acc}}_o]$, so the excess is never credited. *Where it is charged, exactly once:* for a pending
+order inside F145 and $C^{\mathrm{res}}$ (F144), through $\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o=\big[\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{acc}}_o\big]+\phi^{\mathrm{owed}}_o$; for a terminal order whose fees
+are not final, as an F144 reservation $r=g=u=C^{\mathrm{res}}=\phi^{\mathrm{owed}}_o$ (notional and quantity $0$); held positions (F064–F066) carry no entry fee; F070
+subtracts it through $C^{\mathrm{res}}_t$. *Conservation:* $\phi^{\mathrm{paid}}_o+\phi^{\mathrm{owed}}_o=\phi^{\mathrm{acc}}_o$; a booking of $b$ moves $b$ from $\phi^{\mathrm{owed}}_o$ to $\phi^{\mathrm{paid}}_o$ and
+lowers $W_t$ by $b$, so $W_t-\sum_o\phi^{\mathrm{owed}}_o$ is unchanged **[F149]** (T-29): before booking the fee is a reservation, after booking it is in $W_t$,
+never in both and never in neither. At `5c486f0` a terminal order dropped its owed fee ($W_{t+1}=F_t-\tfrac12$ with $100$ sh, buy fee $\max(1,0.005k)$,
+sell fee $0$) and a reported but unbooked fee was counted as paid ($F_t-4.75$); 08 T-10 (vii), T-19.
 
 **One exposure per instrument (A-SCOPE-05, added after review).** $\kappa^{\mathrm{out}}$ and $\Lambda$ are super-additive in quantity, so the
 risk of adding $n$ to a held $q$ is **not** $r^{\mathrm{open}}(q)+L^{\mathrm{stop}}(n)$. Counterexample (exact): $q=100$ at $50$, stop $49$,
@@ -249,9 +271,12 @@ proposed only — pending orders on the same instrument are not yet covered (RQ-
 
 ## 6. Flow neutrality: unitisation
 
-Units change only on external flows, at the prevailing NAV: $U_{t+1}=U_t+X_{t+1}/\nu^{\star}$ **[F069]** where $\nu^{\star}$ is the NAV at the flow
-instant (**timing convention UNDEFINED — REQUIRES RESOLUTION**, RQ-31). Then $\nu$ (F036) is unaffected by flows, and high-water marks,
-drawdowns and daily/weekly floors are defined on $\nu$ and scaled by $U_t$ (F037–F042). Absolute-dollar quantities
+Units change only on external flows, at the reference NAV: $U_{t+1}=U_t+X_{t+1}/\nu^{\star}$ **[F069]** where $\nu^{\star}$ is the reference NAV
+$\nu^{\mathrm{R}}=(E-\Lambda^{\mathrm{floor}})/U$ (F146) at the flow instant (**timing convention UNDEFINED — REQUIRES RESOLUTION**, RQ-31). Then $\nu^{\mathrm{R}}$ is
+unaffected by flows; high-water marks and day/week references are defined on $\nu^{\mathrm{R}}$, drawdowns compare the current $\nu$ with them, and
+floors are scaled by $U_t$ (F037–F042). Units are a carried reference: at an estimate-inclusive $\nu^{\star}$ a withdrawal redeems more units when
+$\hat\Lambda$ is high and lowers every $U$-scaled floor ($E=10^6$, $\hat\Lambda=50{,}000$, $\Lambda^{\mathrm{floor}}=1{,}000$, $U=1{,}000$, withdrawal $95{,}000$:
+$U=900$ and $K=45{,}810$, instead of $U=904{,}000/999$ and $K=41{,}400$; CLOSURE-REV-002, 08 T-28). Absolute-dollar quantities
 ($F^{\mathrm{abs}}$) are *not* scaled — a withdrawal can therefore legitimately drive $K_t\le0$.
 
 ## 7. Conditions under which $\mathbb E[\log(W_{t+1}/W_t)]$ is defined (Phase-2 gate for Phase 8)
@@ -261,7 +286,8 @@ drawdowns and daily/weekly floors are defined on $\nu$ and scaled by $U_t$ (F037
    $\ge0$, $X_{t+1}=0$, $\mathrm{Fin}_{t+1}=0$ and liquidation values $\ge-$exit fees (A-ACC-05), every position may become worthless, so
    $W_{t+1}\ge W^{\min}_{t+1}(a)$ with $W^{\min}_{t+1}(a)=C_t-Y_t-C^{\mathrm{res}}_t-L^{\mathrm{abs}}(n)-\sum_i\phi^{\mathrm{split}}_{i,0}(\bar q_i)-\bar A_{t+1}$ **[F070]**
    (closure form, AUD-038), where $C^{\mathrm{res}}_t$ is the remaining cash commitment of pending orders (F144: remaining quantity at the limit plus
-   remaining entry fees; fees already paid and the filled part's cost are in $C_t$ and are not subtracted again), $\bar q_i$ is the largest quantity of
+   remaining entry fees; fees already booked and the filled part's cost are in $C_t$ and are not subtracted again) plus the owed entry fees of
+   terminal orders (F148; omitting them gave $W_{t+1}=W^{\min}_{t+1}-1$, CLOSURE-REV-003), $\bar q_i$ is the largest quantity of
    $i$ that can be held in the period ($q_{i,t}$, or the total $n'$ of a pending order on $i$), $\phi^{\mathrm{split}}_{i,0}$ is F140 applied to the sell fee at price
    $0$ (a sale of part of a holding at price $0$ plus the remainder's valuation fee otherwise gives $W_{t+1}=W^{\min}_{t+1}-1$, REV-034), and
    $\bar A_{t+1}$ is an $\mathcal F_t$-measurable upper bound on

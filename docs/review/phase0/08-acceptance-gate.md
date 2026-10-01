@@ -126,6 +126,10 @@ halts. The proofs are paper proofs, reviewed by this audit and one independent a
 
 ## 9. Phase-0 closure (final closure-correction commit)
 
+> **Superseded.** The independent closure review of `5c486f004feb3835a43e40b6970ef3f452adbf73` found PHASE 0 **NOT PASSED** at that SHA
+> (3 CRITICAL, 8 IMPORTANT, 5 MINOR; [09-closure-review-registry.md](09-closure-review-registry.md)). The decision of §9.11 and the verdicts
+> of §9.3, §9.6 and §9.9 below were wrong at that SHA and are kept as written. The current record is §10.
+
 §1–§8 record the state at `f37c1b6` and are kept as written. Two of their verdicts were wrong at that commit and are superseded here: §6
 "hard-layer inputs … holds" (ADV had no policy bound, AUD-040) and §8 "PHASE 0 = PASSED" (a third independent review found two CRITICAL
 defects, AUD-039 and AUD-040).
@@ -258,3 +262,44 @@ of a partially filled order ("negative risk frees budget"); restored in 05 §5, 
 every floor theorem is PROOF REQUIRES ADDITIONAL ASSUMPTIONS, A-TRIG / A-GAP fail in gaps and halts, and the proofs are paper proofs checked by
 exact enumeration, not mechanised (Art. 14). The closure corrections themselves (AUD-039 … AUD-051) have been verified by this audit only; each
 of the three earlier independent reviews found a CRITICAL defect in the state it reviewed.
+
+## 10. Independent closure review and critical corrections
+
+### 10.1 Record
+
+| Field | Value |
+|---|---|
+| REVIEWED SHA | `5c486f004feb3835a43e40b6970ef3f452adbf73` |
+| PHASE-0 STATUS AT THAT SHA | **NOT PASSED** |
+| Critical findings | CLOSURE-REV-001, CLOSURE-REV-002, CLOSURE-REV-003 |
+| Correction commit | "Fix Phase-0 critical closure defects", the child of `5c486f0` (SHA reported in the final report) |
+| Scope of the correction | the three CRITICAL findings only; IMPORTANT and MINOR findings are left OPEN except where a critical repair required a wording or dependency update |
+
+### 10.2 What the correction changed
+
+| Finding | Correction | Proof / evidence |
+|---|---|---|
+| CLOSURE-REV-001 | G7 cost clause on the policy floor $\kappa^{\min}p^{\mathrm{stop}}_o$; G8 on the mark ($m_{i,t}\le p^{\mathrm{stop}}_i$ fails); ANOMALY rule restated in 05 §5; T-07 and T-08 restated | T-27 (PROVED): no gate turns FAIL into PASS under a more conservative estimate; exact searches $50\to0$ (G7), $30\to0$ (G8) |
+| CLOSURE-REV-002 | references valued at $W^{\mathrm{R}}=E-\Lambda^{\mathrm{floor}}$ (F146): $H$, $\nu^{\mathrm{day}}_0$, $\nu^{\mathrm{wk}}_0$, and units issued at $\nu^{\mathrm{R}}$ (F069); $\mathrm{DD}^{\mathrm{R}}$ (F147); T-06c restated | T-28 (PROVED): instantaneous and temporal dominance; $+9{,}000$ regression; $13{,}517\to0$ histories |
+| CLOSURE-REV-003 | $\phi^{\mathrm{paid}}$ = fees booked into $W_t$; owed fees reserved until booked, also for terminal orders (F144, F148); domain guard ($\alpha_t=0$, no credit); fee postings in 05 §1; T-10 and T-19 rebuilt | T-29 (PROVED): each fee dollar booked or reserved exactly once; fee-timing enumerations $480\to0$ (T-10), $56\to0$ (T-19) |
+
+Regression matrix: [09-closure-review-registry.md](09-closure-review-registry.md) — 13 exact cases, 12 failing at `5c486f0` (one valid control
+case), all passing after the correction.
+
+### 10.3 Status after the correction
+
+| Condition (Phase-0 PASS rule) | Result |
+|---|---|
+| GATE_TOTAL = 0 | 0 (checker); the checker verifies form, not truth |
+| UNRESOLVED CRITICAL findings = 0 | 0 (CLOSURE-REV-001 … 003 resolved) |
+| UNRESOLVED IMPORTANT findings | **8 open** (CLOSURE-REV-004 … 011) |
+| No known risk understatement | **not met**: CLOSURE-REV-004 (exit-fee catch-up), 005 (several stops), 006 (held vs filled quantity) and 007 (cash semantics) are known understatements under conditions that T-10 now lists as open dependencies |
+| Hard limits cannot be enlarged by estimates or model output | met at every epoch for caps, gates and carried references (T-27, T-28); CLOSURE-REV-008 (invalid estimator ⇒ policy floor) and 011 (strategy id) remain open channels in the fail-closed rule and the H3 budget selection |
+| Non-finite numeric states fail closed | met; CLOSURE-REV-013 (canonical bytes) open, MINOR |
+| No executable trading functionality | met |
+
+### 10.4 Decision
+
+**PHASE 0 = NOT PASSED.** The three CRITICAL findings are resolved; eight IMPORTANT findings remain open and the Phase-0 acceptance
+policy does not permit open IMPORTANT mathematical or safety findings.
+

@@ -31,12 +31,12 @@ Worked examples use $\delta_q=1$ sh and USD prices unless stated.
 | T-05 | Wealth monotonicity of budgets and caps | PROVED | F073, F098 |
 | T-06a | Maximum-drawdown gate | PROVED | F038, F040, F092 |
 | T-06b | "MDD ≤ $d^{\max}$" from the gate alone | DISPROVED | F039 |
-| T-06c | Per-epoch drawdown bound under trailing | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F139 |
-| T-07 | Liquidity monotonicity | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F064, F111 |
-| T-08 | Transaction-cost monotonicity | PROVED | F061–F063 |
+| T-06c | Per-epoch drawdown bound under trailing | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F139, F147 |
+| T-07 | Liquidity monotonicity | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F064, F111, F146 |
+| T-08 | Transaction-cost monotonicity | PROVED | F061–F063, F092 |
 | T-09 | Uncertainty monotonicity of feasibility-defined caps | PROVED | F125 |
 | T-09N | Argmax sizing monotone in ambiguity | DISPROVED | F017 |
-| T-10 | Capital-floor preservation (one period, tiered) | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F072, F120–F122 |
+| T-10 | Capital-floor preservation (one period, tiered) | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F072, F120–F122, F148 |
 | T-10N | Floor preservation without the v0.2 hypotheses | DISPROVED | F120 |
 | T-11 | Risk-reservation conservation | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F108, F119 |
 | T-11N | Naive reservation schemes | DISPROVED | F108 |
@@ -52,7 +52,7 @@ Worked examples use $\delta_q=1$ sh and USD prices unless stated.
 | T-17a | Naive stop-risk envelope admits unbounded notional | PROVED | F110, F128 |
 | T-17b | Stop-risk budget with an exit-cost floor | PROVED | F111, F128 |
 | T-18 | Comonotone aggregation | PROVED | F134 |
-| T-19 | Log-growth domain | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F019, F070 |
+| T-19 | Log-growth domain | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F019, F070, F148 |
 | T-20a | Cushion invariance under hold, static floor | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F124 |
 | T-20b | Cushion invariance under a ratcheting floor | DISPROVED | F040–F042 |
 | T-21 | Cushion necessity and sufficiency | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F120 |
@@ -63,12 +63,15 @@ Worked examples use $\delta_q=1$ sh and USD prices unless stated.
 | T-24N | Rounding in other directions | DISPROVED | F129 |
 | T-25 | Floor-breach decomposition | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F123 |
 | T-26 | VaR non-subadditivity | PROVED | F009 |
+| T-27 | Gate monotonicity in estimates | PROVED | F092, F111 |
+| T-28 | Estimate dominance at every epoch (instantaneous and temporal) | PROVED | F146, F037, F069 |
+| T-29 | Entry-fee booking conservation | PROVED | F148, F149 |
 | OPEN-1 | Multi-step viability kernel | NOT YET PROVEN | F120, F122 |
 | OPEN-2 | Certified-advantage validity | UNDEFINED | F027 |
 | OPEN-3 | Required-input registry completeness | NOT YET PROVEN | F046 |
 | OPEN-4 | Market-wide cost perturbations of $\Delta J$ | NOT YET PROVEN | F025 |
 
-Counts: PROVED 22 · PROOF REQUIRES ADDITIONAL ASSUMPTIONS 8 · DISPROVED 11 · NOT YET PROVEN 4 · UNDEFINED 1 · total 46.
+Counts: PROVED 25 · PROOF REQUIRES ADDITIONAL ASSUMPTIONS 8 · DISPROVED 11 · NOT YET PROVEN 4 · UNDEFINED 1 · total 49.
 
 **Revision R1 (v0.1 → v0.1.1).** An independent adversarial review found 4 blockers, 9 major and 11 minor defects (registered as
 REV-001 … REV-024 in `docs/review/phase0/`). Blockers: T-10 failed for add-ons (→ G11); T-07 was false because open risk credited $\Lambda$ (→ OC-1);
@@ -94,6 +97,15 @@ fail-closed charges replaced by $\alpha_t=0$ (AUD-044); floor references rounded
 (AUD-036, AUD-046); hard budgets clamped at $0$ (AUD-047); A-TRIG's model component named (AUD-048); cross-references, F121 and T-06c's epoch
 high-water mark (AUD-049); terminal = venue-confirmed (AUD-050). T-21 (b) and (c) now require inactive clamps. The closure's manual review
 restored the ANOMALY rule for the held part of a partially filled order, which F145 had dropped (AUD-051).
+
+**Revision R4 (critical closure corrections).** An independent review of the closure commit `5c486f0` found Phase 0 NOT PASSED, with three
+CRITICAL defects (registered in `docs/review/phase0/09-closure-review-registry.md`). CLOSURE-REV-001: G7 and G8 depended on estimates in the
+wrong direction — G7 now uses the policy floor $\kappa^{\min}p^{\mathrm{stop}}_o$, G8 tests the mark against the stop; gate monotonicity is T-27; T-07 and
+T-08 are restated to what holds. CLOSURE-REV-002: carried references stored past estimates — references now use the policy-floor valuation
+$W^{\mathrm{R}}$ (F146), units are issued at $\nu^{\mathrm{R}}$, T-06c is restated with $\mathrm{DD}^{\mathrm{R}}$ (F147), and dominance across epochs is T-28.
+CLOSURE-REV-003: fee booking — $\phi^{\mathrm{paid}}_o$ is what is booked in $W_t$, owed fees stay reserved until booked, including for terminal orders
+(F148, F149, T-29); T-10 and T-19 are rebuilt with the booking semantics stated. CLOSURE-REV-004 … 016 remain open; T-10 lists 004–006 as open
+dependencies.
 
 ---
 
@@ -125,7 +137,8 @@ $R^{\mathrm{mod}}>\bar M$ (invalid).
 `== R_hard` if OPTIONAL; finite negative ⇒ `0`; finite in $[0,\bar M]$ ⇒ `min(R_hard, R_mod)`. Metamorphic (AUD-002, restated at closure,
 AUD-040): $Q^{\mathrm{hard}}$ computed with any estimator outputs is $\le Q^{\mathrm{hard}}$ computed with every estimated input at its policy bound
 ($\kappa^{\min}p^{\mathrm{stop}}$, $\Gamma^{\min}$, $\Lambda^{\mathrm{floor}}$, $\mathrm{ADV}^{\max}$, the human-set cluster map); a missing estimate gives $\alpha_t=0$. (The former wording
-"an arbitrarily optimistic estimate never increases $Q^{\mathrm{hard}}$" is false: $666$ vs $953$ sh, 06 §5.) Property-based and fuzz.
+"an arbitrarily optimistic estimate never increases $Q^{\mathrm{hard}}$" is false: $666$ vs $953$ sh, 06 §5.) The comparison holds at every epoch,
+including through carried references (T-28), and each gate predicate is tested separately (T-27). Property-based and fuzz.
 
 ---
 
@@ -357,25 +370,33 @@ exactly. *Halt:* exit impossible during a halt; same effect as a gap. ∎
 **THEOREM ID.** T-06c
 
 **STATEMENT.** If at every epoch $t$, after adjustments made **before** the cut $\mathsf S_t$ by an external risk-reducing authority (stop
-modifications or sales), $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t\le K_t$ holds, and every period satisfies the tier-S hypotheses of T-10, then
-$\mathrm{DD}_t\le d^{\max}$ at every epoch.
+modifications or sales), $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t\le K_t$ holds, and every period satisfies the tier-S hypotheses of T-10, then the
+reference drawdown satisfies $\mathrm{DD}^{\mathrm{R}}_t\le d^{\max}$ at every epoch (F147), and $\mathrm{DD}_t\le d^{\max}$ at every epoch that sets no new
+reference high; at an epoch that does, $\mathrm{DD}_t=(\Lambda_t-\Lambda^{\mathrm{floor}}_t)/W^{\mathrm{R}}_t$, the estimate premium (G4 blocks new risk
+if it reaches $d^{\max}$).
 
 **ASSUMPTIONS.** All tier-S assumptions of T-10 (A-TRIG, A-FLOW-01, A-ACC-07, …) in every period; the pre-cut adjustment rule; $F^{\mathrm{dd}}\in F$;
-the high-water mark is updated at epochs only, $H_{t+1}=\max(H_t,\nu_{t+1})$ ($\mathcal H_t$ = epoch marks in F037; AUD-049).
+the high-water mark is updated at epochs only, $H_{t+1}=\max(H_t,\nu^{\mathrm{R}}_{t+1})$ (F037 with F146; $\mathcal H_t$ = epoch marks; AUD-049).
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
-**PROOF.** T-10 with $n=0$ gives $W_{t+1}\ge F_t\ge F^{\mathrm{dd}}_t=(1-d^{\max})H_tU_t$; $U$ is constant ($X=0$), so $\nu_{t+1}\ge(1-d^{\max})H_t$ (F139). If
-$\nu_{t+1}\le H_t$ then $H_{t+1}=H_t$ and $\mathrm{DD}_{t+1}\le d^{\max}$; otherwise $\mathrm{DD}_{t+1}=0$. ∎
+**PROOF.** T-10 with $n=0$ gives $W_{t+1}\ge F_t\ge F^{\mathrm{dd}}_t=(1-d^{\max})H_tU_t$; $U$ is constant ($X=0$) and $W^{\mathrm{R}}_{t+1}\ge W_{t+1}$
+($\Lambda\ge\Lambda^{\mathrm{floor}}$, F111, F146), so $\nu^{\mathrm{R}}_{t+1}\ge\nu_{t+1}\ge(1-d^{\max})H_t$ (F139). If $\nu^{\mathrm{R}}_{t+1}\le H_t$ then $H_{t+1}=H_t$ and
+$\mathrm{DD}^{\mathrm{R}}_{t+1}\le\mathrm{DD}_{t+1}\le d^{\max}$; otherwise $H_{t+1}=\nu^{\mathrm{R}}_{t+1}$, $\mathrm{DD}^{\mathrm{R}}_{t+1}=0$ and
+$\mathrm{DD}_{t+1}=1-\nu_{t+1}/\nu^{\mathrm{R}}_{t+1}=(\Lambda_{t+1}-\Lambda^{\mathrm{floor}}_{t+1})/W^{\mathrm{R}}_{t+1}$ (F147). ∎
 
 **COUNTEREXAMPLE ATTEMPT.** Trailing by stop modification alone can be infeasible (if $K_t/q_{i,t}<\kappa^{\mathrm{out}}$ the required stop lies above
 the mark), so the authority must be able to sell; intra-period drawdown is not covered; the v0.1 form without the pre-cut rule was vacuous.
 If $\mathcal H_t$ also contained intra-period highs the bound fails: $H_t=100$, intra-period peak $120$, $\nu_{t+1}=95\ge(1-0.1)H_t$ gives $\mathrm{DD}_{t+1}=20.8\%>10\%$
 (third review, AUD-049). With the pre-closure unclamped charge a trailed stop gave $\mathrm{DD}_{t+1}=410/38{,}100>1\%=d^{\max}$ (AUD-039).
+With references from estimate-inclusive $\nu_u$ (`5c486f0`) a past estimate lowered the floor itself (CLOSURE-REV-002, T-28). The
+estimate-inclusive $\mathrm{DD}_t$ exceeds $d^{\max}$ at a new reference high exactly when the estimate premium exceeds $d^{\max}W^{\mathrm{R}}_t$ — a
+conservative outcome (G4 blocks), not a floor breach.
 
 **NUMERICAL EDGE CASES.** $W_{t+1}=F_t$ gives $\mathrm{DD}_{t+1}=d^{\max}$ exactly — then T-06a blocks new risk.
 
-**MACHINE-TESTABLE INVARIANT.** Monte Carlo on paths inside the tier-S set with the pre-cut rule ⇒ $\mathrm{DD}\le d^{\max}$ at epochs; paths outside
+**MACHINE-TESTABLE INVARIANT.** Monte Carlo on paths inside the tier-S set with the pre-cut rule ⇒ $\mathrm{DD}^{\mathrm{R}}\le d^{\max}$ at epochs, and
+$\mathrm{DD}\le d^{\max}$ at epochs without a new reference high; paths outside
 are logged as assumption violations.
 
 ---
@@ -384,27 +405,52 @@ are logged as assumption violations.
 
 **THEOREM ID.** T-07
 
-**STATEMENT.** Holding everything else fixed, $Q^{\mathrm{hard}}$ is non-decreasing in the ADV of any instrument and non-increasing in its spread.
+**STATEMENT (restated at the critical closure correction, CLOSURE-REV-001).** Holding the authoritative history and every other input fixed:
+(a) $Q^{\mathrm{hard}}_t$ is non-decreasing in the estimated ADV of any instrument. (b) For an opportunity whose limit satisfies G7's price clause
+$p^{\mathrm{lim}}\le p^{\mathrm{ask}}(1+\chi)$ at the narrower spread, the policy-bound envelope $\bar Q^{\mathrm{hard}}_t$ (S-307) is non-increasing in the spread of
+any instrument at a fixed mid. (c) Under the hypotheses of (b), $Q^{\mathrm{hard}}_t$ itself is non-increasing in that spread if the estimates
+$\hat\kappa^{\mathrm{out}},\hat\Lambda$ are non-decreasing in spread and, at an epoch whose own reference value sets $H_t$, $\nu^{\mathrm{day}}_0$ or $\nu^{\mathrm{wk}}_0$, the
+estimate premium $\hat\Lambda_{i,t}-\Lambda^{\mathrm{floor}}_{i,t}$ is non-decreasing in spread. The v0.2 form ("$Q^{\mathrm{hard}}$ non-decreasing in ADV and
+non-increasing in spread") is false; see below.
 
-**ASSUMPTIONS.** A-MATH-01; A-EXE-02 ($\hat\kappa^{\mathrm{out}}$, $\kappa^{\mathrm{liq}}$, $\hat\Lambda$ non-increasing in ADV, non-decreasing in spread); A-ACC-06 with the
-floors F111 (monotone in spread); OC-1 (open risk without $\Lambda$ credit, F064); H12–H13 budgets increasing in ADV; G5.
+**ASSUMPTIONS.** A-MATH-01; A-EXE-02 for (a) and (c) ($\hat\kappa^{\mathrm{out}}$, $\hat\Lambda$ non-increasing in ADV, non-decreasing in spread); F111 (policy
+bounds, $\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$); F146 (estimate-free references); OC-1 (open risk without $\Lambda$ credit, F064); G7 in its
+closure form; G5; for (b) the price-clause hypothesis; for (c) the premium condition.
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
-**PROOF.** Higher ADV or lower spread lowers $\Lambda$ (raising $W$, hence $B$ and $K$), lowers $\kappa^{\mathrm{out}}$ (lowering every consumption and every
-open-risk term), and raises the H12–H13 budgets; the maximum of a constant policy floor and a monotone estimate (F111) is monotone. Every
-$b_k$ is non-decreasing and every $g_k$ non-increasing in liquidity; feasible sets are nested; $\min$ preserves order; G5 is monotone. ∎
+**PROOF.** (a) A larger estimated ADV lowers $\hat\kappa^{\mathrm{out}}$ and $\hat\Lambda$ (A-EXE-02), hence $\kappa^{\mathrm{out}}$ and $\Lambda$ (F111: the maximum of a fixed
+floor and a non-increasing estimate is non-increasing), and raises $\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$. Lower $\Lambda$ raises $W_t$; the
+floors use references built from $W^{\mathrm{R}}$ (F146), which contain no estimate, so $K_t$ and every base rise; lower $\kappa^{\mathrm{out}}$ lowers every
+consumption and open-risk charge; the H12–H13 budgets rise. G3 and G4 can only pass more easily; G7 and G8 do not depend on ADV (T-27).
+Feasible sets are nested and $\min$ preserves order.
+(b) Under the policy bounds, $\kappa^{\mathrm{out}}=\kappa^{\min}p^{\mathrm{stop}}$, $\Gamma=\Gamma^{\min}$ and $\mathrm{ADV}=\mathrm{ADV}^{\max}$ do not depend on spread, while
+$\Lambda=\Lambda^{\mathrm{floor}}=q\varsigma/2+\phi^{\mathrm{sell}}(q)$ rises with it, so $W_t=W^{\mathrm{R}}_t$ falls. Each floor is $F^{\mathrm{abs}}$, or $c\max(a,W^{\mathrm{R}}_t)$ with
+$c\in\{1-d^{\max},1-\ell^{\mathrm{day}},1-\ell^{\mathrm{wk}}\}$ and $a$ an earlier reference times $U_t$ (a reference set at this epoch is $W^{\mathrm{R}}_t$), or
+$F^{\mathrm{lock}}$ with $\eta^{\mathrm{lock}}<1$; each $W^{\mathrm{R}}_t-F_j$ equals $\min(W^{\mathrm{R}}_t-ca,(1-c)W^{\mathrm{R}}_t)$ (or has slope $\ge1-\eta^{\mathrm{lock}}>0$ for the lock) and is
+non-decreasing in $W^{\mathrm{R}}_t$, so $K_t=\min_j(W^{\mathrm{R}}_t-F_j)$ and every base fall. Open risks use the mark and no $\Lambda$ credit (OC-1);
+consumptions use $p^{\mathrm{lim}}$; G5 can only fail more; G7's cost clause uses $\kappa^{\min}$ and its price clause holds at both spreads by hypothesis;
+G8 uses the mark. Hence the envelope does not increase.
+(c) With estimates, $\Lambda=\max(\Lambda^{\mathrm{floor}},\hat\Lambda)$ rises by at least the rise of $\Lambda^{\mathrm{floor}}$ when the premium is non-decreasing, so
+$W_t$ falls at least as much as $W^{\mathrm{R}}_t$, while each floor falls by at most $c<1$ times the fall of $W^{\mathrm{R}}_t$: $K_t$ does not rise. The
+consumptions and charges rise with $\hat\kappa^{\mathrm{out}}$ (A-EXE-02). ∎
 
 **COUNTEREXAMPLE ATTEMPT.** The v0.1 form with $\Lambda$ credit in open risk (review, re-verified exactly): hold $1{,}000$ sh at $50$, stop $45$,
 $\kappa^{\mathrm{out}}=0.05$, cash $200{,}000$, $B=W$, $f^{\mathrm{trd}}=f^{\mathrm{port}}=2\%$, new order consumption $5.05n$. Low ADV ($\Lambda=500$): $W=249{,}500$,
 credited open risk $4{,}550$, H2 budget $440$, $Q=87$. High ADV ($\Lambda=100$): $W=249{,}900$, credited open risk $4{,}950$, budget $48$, $Q=9$. Worse
-liquidity, larger cap. Under OC-1 both budgets are $\le0$ and $Q=0$ (monotone). Other failures: fitted impact models non-monotone in ADV;
-displayed depth used as a cap (inadmissible).
+liquidity, larger cap. Under OC-1 both budgets are $\le0$ and $Q=0$ (monotone). The v0.2 statement is false (CLOSURE-REV-001 and the critical
+re-audit): (i) with G7 on $\kappa^{\mathrm{out}}$ (`5c486f0`) a wider spread raises $\hat\kappa^{\mathrm{out}}$ and lets G7 pass (spread $0.0998$: fails; $0.30$: passes,
+$Q^{\mathrm{hard}}>0$) — removed by the closure G7; (ii) G7's price clause: mid $50$, $\chi=0.001$, limit $50.08$: at spread $0.02$ ($p^{\mathrm{ask}}=50.01$) it
+fails, at spread $0.20$ ($p^{\mathrm{ask}}=50.10$) it passes — an observation, not a cost, hence the hypothesis of (b); (iii) at an epoch that sets the
+reference, $E_t=150{,}000$, $U=1$, $d^{\max}=10\%$, $\hat\Lambda=500$ binding and fixed while $\Lambda^{\mathrm{floor}}$ rises $100\to200\to400$ with the spread:
+$K_t=14{,}590\to14{,}680\to14{,}860$ while the envelope's cushion falls $14{,}990\to14{,}980\to14{,}960$ — hence the premium condition of (c); $K_t$ stays
+below the envelope throughout (T-28). Other failures: fitted impact models non-monotone in ADV; displayed depth used as a cap (inadmissible).
 
 **NUMERICAL EDGE CASES.** $\mathrm{ADV}\to0$ (A-MKT-06 ⇒ $\alpha_t=0$); $\sqrt{\ }$ in impact models only with certified upper bounds (01 §9 item 4).
 
-**MACHINE-TESTABLE INVARIANT.** Metamorphic: ADV ↑ ⇒ $Q^{\mathrm{hard}}$ not ↓; spread ↑ ⇒ $Q^{\mathrm{hard}}$ not ↑ — for the opportunity's instrument and for held
-instruments; cost-model monotonicity checked on a grid at model load.
+**MACHINE-TESTABLE INVARIANT.** Metamorphic: estimated ADV ↑ ⇒ $Q^{\mathrm{hard}}$ not ↓; spread ↑ at a fixed mid ⇒ $\bar Q^{\mathrm{hard}}$ not ↑ for
+opportunities passing G7's price clause at both spreads — for the opportunity's instrument and for held instruments; A-EXE-02 and the premium
+condition checked on a grid at model load.
 
 ---
 
@@ -412,21 +458,39 @@ instruments; cost-model monotonicity checked on a grid at model load.
 
 **THEOREM ID.** T-08
 
-**STATEMENT.** (a) If $\phi'\ge\phi$ and $\kappa^{\mathrm{out}\prime}\ge\kappa^{\mathrm{out}}$ pointwise, then $Q^{\mathrm{hard}\prime}\le Q^{\mathrm{hard}}$. (b) If moreover
-$J(a)=\mathbb E[\mathcal U(W_{t+1}(a))]$ with $\mathcal U$ non-decreasing and the perturbation affects only the fills generated by $a$, then $\Delta J'(a)\le\Delta J(a)$.
+**STATEMENT (restated at the critical closure correction, CLOSURE-REV-001).** (a) If $\hat\kappa^{\mathrm{out}\prime}\ge\hat\kappa^{\mathrm{out}}$ pointwise in
+quantity, both admissible inputs of F111 and the policy floor $\kappa^{\min}$ unchanged, then $Q^{\mathrm{hard}\prime}\le Q^{\mathrm{hard}}$. (a′) If $\phi'\ge\phi$
+pointwise (buy, sell and price-$0$ schedules) and every fee-state and load check passes under $\phi$ ($\alpha_t=1$), then the policy-bound envelope
+satisfies $\bar Q^{\mathrm{hard}\prime}\le\bar Q^{\mathrm{hard}}$ (S-307). (b) If moreover $J(a)=\mathbb E[\mathcal U(W_{t+1}(a))]$ with $\mathcal U$ non-decreasing and the
+perturbation affects only the fills generated by $a$, then $\Delta J'(a)\le\Delta J(a)$.
 
-**ASSUMPTIONS.** A-MATH-01; the hypotheses in the statement.
+**ASSUMPTIONS.** A-MATH-01; the hypotheses in the statement; gates in their closure form (T-27); references by F146.
 
 **PROOF STATUS.** PROVED
 
-**PROOF.** (a) $L^{\mathrm{stop}},L^{\mathrm{gap}},L^{\mathrm{abs}}$ (F061–F063) and the H14 consumption increase pointwise; feasible sets shrink. (b) $W_{t+1}(a^{\varnothing})$ is
+**PROOF.** (a) $\hat\kappa^{\mathrm{out}}$ enters only $\kappa^{\mathrm{out}}=\max(\kappa^{\min}p^{\mathrm{stop}},\hat\kappa^{\mathrm{out}})$ (F111), which rises pointwise. $\kappa^{\mathrm{out}}$
+appears in the consumptions $L^{\mathrm{stop}},L^{\mathrm{gap}}$ (through $p^{\mathrm{gx}}$, F060) and in the charges F064, F065, F144, F145 — each non-decreasing in
+it, the clamp $(\cdot)^+$ included — and in no base, cushion, reference, cash term or gate (G7 uses $\kappa^{\min}$, G8 the mark; T-27). Budgets fall,
+consumptions rise, feasible sets shrink. (a′) Under the policy bounds $\Lambda=\Lambda^{\mathrm{floor}}=q\varsigma/2+\phi^{\mathrm{sell}}(q)$ rises with the sell schedule,
+so $W^{\mathrm{R}}_t$ falls and, as in T-07 (b), $K_t$ and every base fall; consumptions, open-risk charges (through $\phi^{\mathrm{split}}$), $C^{\mathrm{res}}$ and the
+H14 consumption rise; $\phi^{\mathrm{acc}}_o$ rises, so a fee state valid under $\phi$ stays valid; G7 and G8 contain no fee. (b) $W_{t+1}(a^{\varnothing})$ is
 unchanged and $W_{t+1}(a)$ decreases pointwise (costs enter F055 negatively); $\mathcal U$ is non-decreasing. ∎
 
-**COUNTEREXAMPLE ATTEMPT.** None within the hypotheses. Market-wide perturbations (which also change $J(a^{\varnothing})$) are OPEN-4.
+**COUNTEREXAMPLE ATTEMPT.** The v0.2 statement ("$\phi'\ge\phi$ and $\kappa^{\mathrm{out}\prime}\ge\kappa^{\mathrm{out}}$ pointwise ⇒ $Q^{\mathrm{hard}\prime}\le Q^{\mathrm{hard}}$", PROVED at
+`5c486f0`) is false (CLOSURE-REV-001): G7 on $\kappa^{\mathrm{out}}$ failed at the floor and passed at $\hat\kappa^{\mathrm{out}}=0.1$ ($Q=0$ vs $9{,}090$); G8 as a
+sign test of F064 turned $-3.1$ (\$1 minimum fee, ANOMALY) into $+4.9$ (\$5 minimum) and re-opened trading. The closure gates remove both. Not
+claimed, with counterexamples: (i) $Q^{\mathrm{hard}}$ with estimates in the fee schedule, at an epoch that sets a reference while $\hat\Lambda$ binds and
+is held fixed: $K_t=d^{\max}E_t-\hat\Lambda_t+(1-d^{\max})\Lambda^{\mathrm{floor}}_t$ rises with $\phi^{\mathrm{sell}}$ ($E_t=150{,}000$, $\hat\Lambda=500$, $\Lambda^{\mathrm{floor}}$ $100\to200$:
+$14{,}590\to14{,}680$); it holds when $\hat\Lambda$ carries the schedule's exit fee one for one (composition F035), and $Q^{\mathrm{hard}}\le\bar Q^{\mathrm{hard}}$ always
+(T-28); (ii) a schedule raised so that a previously invalid $\phi^{\mathrm{paid}}_o$ becomes valid ($\phi^{\mathrm{paid}}_o=2$ with $q^{\mathrm{fill}}_o=2$: invalid under a \$1
+minimum, valid under \$2) moves $\alpha_t$ from $0$ to $1$ — excluded by the hypothesis $\alpha_t=1$ under $\phi$; (iii) raising the policy floor $\kappa^{\min}$
+itself can let G7 pass — a human policy change (Art. 16), not an estimate, excluded by the hypothesis of (a). Market-wide perturbations (which
+also change $J(a^{\varnothing})$) are OPEN-4.
 
-**NUMERICAL EDGE CASES.** Fee quantisation upward (01 §9 item 15) preserves (a).
+**NUMERICAL EDGE CASES.** Fee quantisation upward (01 §9 item 15) preserves (a) and (a′).
 
-**MACHINE-TESTABLE INVARIANT.** Metamorphic on the fee schedule and on a scaling of $\kappa^{\mathrm{out}}$.
+**MACHINE-TESTABLE INVARIANT.** Metamorphic: $\hat\kappa^{\mathrm{out}}$ scaled up ⇒ $Q^{\mathrm{hard}}$ not up; fee schedule up ⇒ $\bar Q^{\mathrm{hard}}$ not up; each gate
+tested separately (T-27).
 
 ---
 
@@ -481,49 +545,58 @@ larger ambiguity set increased the chosen size. ∎
 **STATEMENT.** Tier S: $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t\ \Rightarrow\ W_{t+1}\ge F_t$ (F120). Tier G: $G^{\mathrm{open}}_t+G^{\mathrm{res}}_t+L^{\mathrm{gap}}(n)\le K_t\Rightarrow W_{t+1}\ge F_t$
 (F121). Tier U: $Z^{\mathrm{open}}_t+Z^{\mathrm{res}}_t+L^{\mathrm{abs}}(n)\le K_t\Rightarrow W_{t+1}\ge F_t$ (F122).
 
-**ASSUMPTIONS.** Tier S: A-MATH-01; A-SCOPE-03; A-SCOPE-05 with G11; A-FLOW-01 ($X_{t+1}=0$); A-ACC-01, A-ACC-02, A-ACC-03 (transition F055);
-A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$); A-ACC-04; A-ACC-06 ($\Lambda\ge0$); A-MKT-05 (every entry fill $\le p^{\mathrm{lim}}$); A-EXE-01, A-EXE-02;
-A-EXE-03 (cumulative fill $\le$ order quantity); A-EXE-04 (fees on cumulative filled quantity); A-EXE-05 (no other orders); A-AUTH-02 (complete
-ledger, including each pending order's filled quantity and fees paid); A-AUTH-04 (one cut); **A-TRIG** (position-level exit-value bound F072 at the
-$\tau_t$ inputs); open risk by F064, reservations by F144 and partially filled orders by F145 (all at the $\tau_t$ inputs, REV-028, AUD-034);
-hard-layer inputs by F111; the split envelope F140 in place of $\phi^{\mathrm{sell}}$ throughout (equal to it for super-additive schedules); per-share
-distances of pending orders clamped at $0$ in F144, F145 (AUD-039); an exposure without an authoritative stop charged $u^{\mathrm{open}}$ (D-06) and covered by
-A-MKT-01 and A-ACC-05 (tier-U form of F072) instead of A-TRIG (case (1′), AUD-042).
+**ASSUMPTIONS.** Tier S: A-MATH-01; A-SCOPE-03; A-SCOPE-05 with G11; A-FLOW-01 ($X_{t+1}=0$); A-ACC-01, A-ACC-02, A-ACC-03 (transition
+F055, fee postings included in $\mathcal J_{t+1}$, 05 §1); A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$); A-ACC-04; A-ACC-06 ($\Lambda\ge0$); A-MKT-05
+(every entry fill $\le p^{\mathrm{lim}}$); A-EXE-01, A-EXE-02; A-EXE-03 (cumulative fill $\le$ order quantity); **A-EXE-04 with the booking semantics of
+F148**: the entry fees of one order over its lifetime are at most $\phi^{\mathrm{buy}}$ of its cumulative filled quantity and may be booked into $W$ at the
+fill, later, or after the order is terminal. T-10 does **not** assume fill-time booking; it requires that every entry order whose fees are not final
+is in the order state with $\phi^{\mathrm{paid}}_o$ equal to the fees booked into $W_t$ at the cut and $0\le\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o$ (F148), so that
+owed-but-unbooked fees stay reserved (F144, F145) until they are booked (T-29). A-EXE-05 (no other orders); A-AUTH-02 (complete order state:
+quantity, limit, current stop, cumulative fill, fees booked, fee-final confirmation); A-AUTH-04 (one cut); **A-TRIG** (position-level exit-value
+bound F072 at the $\tau_t$ inputs); charges F064–F066 (held positions; no entry-fee term), F144 (pending orders and the owed fees of terminal
+orders) and F145 (partially filled orders), all at the $\tau_t$ inputs (REV-028, AUD-034, CLOSURE-REV-003); hard-layer inputs by F111; F140 in
+place of $\phi^{\mathrm{sell}}$ throughout; per-share distances of pending orders clamped at $0$ (AUD-039); exposures without an authoritative stop by
+case (1′) (D-06, A-MKT-01, A-ACC-05; AUD-042). **Open dependencies (not resolved by the critical correction):** (i) A-TRIG is assumed for every
+exposure, including one whose exit order is partially executed at $\tau_t$, where the sufficient conditions listed in 04 A-TRIG do not imply it
+(exit-fee catch-up, CLOSURE-REV-004); (ii) each exposure has one live stop $p^{\mathrm{stop}}_i$ protecting all of its held and future quantity
+(CLOSURE-REV-005); (iii) for a partially filled order the held quantity $q_{i,t}$ equals the order's cumulative fill $q^{\mathrm{fill}}_o$ — no exit while the
+entry is pending (CLOSURE-REV-006).
 Tier G: A-GAP (tier-G form of F072) instead of A-TRIG. Tier U: A-MKT-01 and A-ACC-05 (tier-U form of F072) instead of A-TRIG.
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
-**PROOF (tier S; one case since v0.2).** By A-ACC-04 and G11, $W_{t+1}-W_t=\sum_i\Delta_i+\mathrm{Inc}_{t+1}$, where $\Delta_i$ is the change of cash plus
-liquidation value attributable to exposure $i$ (F055 with $X=\mathrm{Fin}=\mathrm{Accr}=0$).
-(1) *Held exposure* ($q^{\mathrm{exp}}_i=q_{i,t}$): it contributed $q_{i,t}m_{i,t}-\Lambda_{i,t}$ before the period and contributes $\mathrm{XV}_{i,t+1}$ after it
-(exit proceeds net of all exit fees plus liquidation value of any remainder). By A-TRIG,
-$\Delta_i\ge q_{i,t}\big(p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(q_{i,t})\big)-\phi^{\mathrm{sell}}_i(q_{i,t})-q_{i,t}m_{i,t}+\Lambda_{i,t}=-r^{\mathrm{open}}_i+\Lambda_{i,t}\ge-r^{\mathrm{open}}_i$ (F064, A-ACC-06).
-(1′) *Held exposure without an authoritative stop* (D-06; AUD-042): charged $u^{\mathrm{open}}_i=q_{i,t}m_{i,t}+\phi^{\mathrm{split}}_{i,0}(q_{i,t})$ (F066 with F140) in $R^{\mathrm{open}}_t$.
-A-TRIG is undefined without a stop; by A-MKT-01 and A-ACC-05, $\mathrm{XV}_{i,t+1}\ge-\phi^{\mathrm{split}}_{i,0}(q_{i,t})$, so $\Delta_i\ge-u^{\mathrm{open}}_i+\Lambda_{i,t}$. (A partially filled order
-whose stop is missing is charged $u^{\mathrm{pf}}_i$ in the same way.)
-(2) *New or pending order on a fresh instrument* (G11), cumulative fill $e\le n$ (A-EXE-03) at prices $\le p^{\mathrm{lim}}$ (A-MKT-05) with entry fees
-$\le\phi^{\mathrm{buy}}(e)$ (A-EXE-04): cash paid $\le e\,p^{\mathrm{lim}}+\phi^{\mathrm{buy}}(e)$ and, by A-TRIG with $q^{\mathrm{exp}}_i=e$,
-$\mathrm{XV}_{i,t+1}\ge e(p^{\mathrm{stop}}_o-\kappa^{\mathrm{out}}(e))-\phi^{\mathrm{split}}(e)$; hence $\Delta_i\ge-L^{\mathrm{stop}}(e)\ge-L^{\mathrm{stop}}(n)$ (F061 with F140; monotone by
-A-EXE-01, A-EXE-02, F140 and $p^{\mathrm{lim}}>p^{\mathrm{stop}}_o$ from G7). A pending order without fills is bounded with its limit, its current stop and the $\tau_t$
-inputs — the same inputs A-TRIG uses. Its current stop may have been trailed to or above its limit after G7 checked it, so with
-$x=p'^{\mathrm{lim}}-p^{\mathrm{stop}}+\kappa^{\mathrm{out}}(n')$ of either sign, $e\,x\le n'x^+$ for $0\le e\le n'$ and
-$\Delta_i\ge-\big[n'x^++\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')\big]$, which is exactly its F144 charge ($r^{\mathrm{pf}}$ with $q=0$; AUD-039); so these orders together are
-bounded by their part of $R^{\mathrm{res}}_t$. (A value computed with older inputs is not enough: REV-028. Without the clamp the charge can be negative:
-stop $51$, limit $50$, $\kappa^{\mathrm{out}}=0.1$, \$1 minimum fees, $n'=100$: $-87$ against a worst loss of $1.2$.) Unfilled orders give $\Delta_i=0$.
-(2′) *Order partially filled before $\tau_t$* (AUD-033; closure form AUD-034): held $q_{i,t}>0$ and a pending remainder of the same order of
-total quantity $n'$ at limit $p'^{\mathrm{lim}}$, fees $\phi^{\mathrm{paid}}_o$ already paid — one exposure (G11), charged $r^{\mathrm{pf}}_i$ (F145) in $R^{\mathrm{res}}_t$ and nothing in
-$R^{\mathrm{open}}_t$. With $e\le n'-q_{i,t}$ filled in the period (A-EXE-03) at prices $\le p'^{\mathrm{lim}}$, the entry fees paid in the period are at most
-$\phi^{\mathrm{buy}}(q_{i,t}+e)-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ (A-EXE-04: all fees of the order $\le\phi^{\mathrm{buy}}$ of its cumulative fill). A-TRIG with
-$q^{\mathrm{exp}}_i=q_{i,t}+e$ and $\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i)\le\kappa^{\mathrm{out}}_i(n')$, $\phi^{\mathrm{split}}(q^{\mathrm{exp}}_i)\le\phi^{\mathrm{split}}(n')$ gives
-$\Delta_i\ge-\big[q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+e(p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o\big]+\Lambda_{i,t}\ge-r^{\mathrm{pf}}_i+\Lambda_{i,t}$,
-using $0\le e\le n'-q_{i,t}$, so $e\,x\le(n'-q_{i,t})x^+$ for $x=p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n')$ of either sign — the current stop may have been
-trailed to or above the limit (AUD-039; the unclamped `f37c1b6` charge breached the floor by $29$, T-10N). The paid fees and the filled quantity's entry price are realised and already in $W_t$; they are
-not charged again. Two alternatives fail: charging only the unfilled remainder under-charges ($\kappa^{\mathrm{out}}(n)=0.001n$, no fees, $n'=200$,
-$q_{i,t}=100$ marked at $52$, limit $50$, stop $49$: worst loss $440>r^{\mathrm{open}}_i+L^{\mathrm{stop}}(100)=420$); keeping the full-order reservation beside the held
-part's open risk ($550$ here) charges realised fees and the filled quantity's risk twice (05 §5 example: over-charge $5.24$ including the paid
-fee).
-(3) Summing with $\mathrm{Inc}\ge0$: $W_{t+1}\ge W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))\ge W_t-K_t=F_t$.
-Tiers G and U: identical with the tier's form of F072. ∎
+**PROOF (tier S; rebuilt at the critical closure correction).** *Accounting.* By A-ACC-01…04 and G11, $W_{t+1}-W_t=\sum_i\Delta_i+\mathrm{Inc}_{t+1}$,
+where $\Delta_i$ collects the fills and fee postings of the period attributable to exposure $i$ and the change of its liquidation value (F055 with
+$X=\mathrm{Fin}=\mathrm{Accr}=0$). *Fees.* For an entry order $o$ the fee postings in $(\tau_t,\tau_{t+1}]$ are at most $\phi^{\mathrm{buy}}_o$ of its cumulative fill at
+$\tau_{t+1}$ minus $\phi^{\mathrm{paid}}_o$ (A-EXE-04 on lifetime fees; F148: $\phi^{\mathrm{paid}}_o$ is exactly what $W_t$ already contains) — the fees of the period's
+fills plus $\phi^{\mathrm{owed}}_o$; for an order without fills in the period, at most $\phi^{\mathrm{owed}}_o$.
+(1) *Held exposure with a live stop and no pending entry order:* it contributed $q_{i,t}m_{i,t}-\Lambda_{i,t}$ before the period and contributes
+$\mathrm{XV}_{i,t+1}$ (exit proceeds net of all exit fees plus liquidation value of any remainder) after it; by A-TRIG this part of $\Delta_i$ is
+$\ge q_{i,t}\big(p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(q_{i,t})\big)-\phi^{\mathrm{split}}_i(q_{i,t})-q_{i,t}m_{i,t}+\Lambda_{i,t}=-r^{\mathrm{open}}_i+\Lambda_{i,t}$ (F064, A-ACC-06).
+(1′) *Held exposure without an authoritative stop* (D-06): by A-MKT-01 and A-ACC-05, $\mathrm{XV}_{i,t+1}\ge-\phi^{\mathrm{split}}_{i,0}(q_{i,t})$, so this part is
+$\ge-u^{\mathrm{open}}_i+\Lambda_{i,t}$ (F066 with F140); a partially filled order whose stop is missing is charged $u^{\mathrm{pf}}_i$ in the same way.
+(1″) *Owed fee of a terminal entry order* $o$ on any instrument, held or not (CLOSURE-REV-003): no fill can occur, so its fee postings in the period
+are at most $\phi^{\mathrm{owed}}_o$, which is exactly its F144 owed-fee reservation; this part of $\Delta_i$ is $\ge-\phi^{\mathrm{owed}}_o$.
+(2) *New order, or pending order without fills* (G11): cumulative fill $e\le n'$ (A-EXE-03) at prices $\le p'^{\mathrm{lim}}$ (A-MKT-05), fee postings
+$\le\phi^{\mathrm{buy}}(e)$ ($\phi^{\mathrm{paid}}_o=0$), and by A-TRIG with $q^{\mathrm{exp}}_i=e$, $\mathrm{XV}_{i,t+1}\ge e(p^{\mathrm{stop}}-\kappa^{\mathrm{out}}(e))-\phi^{\mathrm{split}}(e)$. With
+$x=p'^{\mathrm{lim}}-p^{\mathrm{stop}}+\kappa^{\mathrm{out}}(n')$ of either sign (the current stop may have been trailed to or above the limit after G7 checked it),
+$e\,x\le n'x^+$ for $0\le e\le n'$, and monotonicity (A-EXE-01, A-EXE-02, F140) gives $\Delta_i\ge-\big[n'x^++\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')\big]$ — the F144
+charge ($r^{\mathrm{pf}}$ with $q=0$); for the new order $x>0$ by G7 and the bound is $L^{\mathrm{stop}}(n)$ (F061 with F140). A value computed with older
+inputs is not enough (REV-028); without the clamp the charge can be negative (stop $51$, limit $50$, $\kappa^{\mathrm{out}}=0.1$, \$1 minimum fees, $n'=100$:
+$-87$ against a worst loss of $1.2$; AUD-039). Unfilled orders give $\Delta_i=0$.
+(2′) *Order partially filled before* $\tau_t$ (AUD-033, AUD-034): held $q_{i,t}>0$ and a pending remainder of the same order of total quantity $n'$,
+$\phi^{\mathrm{paid}}_o$ booked — one exposure (G11), charged $r^{\mathrm{pf}}_i$ (F145) in $R^{\mathrm{res}}_t$ and nothing in $R^{\mathrm{open}}_t$. With $e\le n'-q_{i,t}$ filled in the
+period at prices $\le p'^{\mathrm{lim}}$, the fee postings are at most $\phi^{\mathrm{buy}}(q_{i,t}+e)-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$, which covers the owed fee
+of the filled part and the fees of future fills (F148). A-TRIG with $q^{\mathrm{exp}}_i=q_{i,t}+e$, $\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i)\le\kappa^{\mathrm{out}}_i(n')$,
+$\phi^{\mathrm{split}}(q^{\mathrm{exp}}_i)\le\phi^{\mathrm{split}}(n')$ and $e\,x\le(n'-q_{i,t})x^+$ for $x=p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n')$ of either sign give
+$\Delta_i\ge-\big[q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+(n'-q_{i,t})x^++\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o\big]+\Lambda_{i,t}=-r^{\mathrm{pf}}_i+\Lambda_{i,t}$.
+The filled quantity's entry price and the booked fees are in $W_t$ and are not charged again. Charging only the remainder under-charges
+($\kappa^{\mathrm{out}}(n)=0.001n$, no fees, $n'=200$, $q_{i,t}=100$ marked at $52$, limit $50$, stop $49$: worst loss $440-\Lambda_{i,t}>r^{\mathrm{open}}_i+L^{\mathrm{stop}}(100)=420$
+whenever $\Lambda_{i,t}<20$); charging open risk plus the full-order reservation charges realised costs twice (05 §5: $5.24$).
+(3) Each exposure, each pending order and each owed fee is charged exactly once (an owed fee of a pending order inside F145, of a terminal order
+only in F144; F064–F066 carry no entry fee; T-29). Summing with $\mathrm{Inc}\ge0$ and $\Lambda_t=\sum_i\Lambda_{i,t}$:
+$W_{t+1}\ge W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))\ge W_t-K_t=F_t$.
+Tiers G and U: identical with the tier's form of F072 and the same fee terms (the owed-fee reservation is part of $G^{\mathrm{res}}_t$ and $Z^{\mathrm{res}}_t$). ∎
 
 **COUNTEREXAMPLE ATTEMPT.** (o) Closure re-derivation: exhaustive exact enumeration of one exposure (order of $6$ sh; $0$–$6$ filled at $\tau_t$;
 marks $49,50,52$; further fills in the period at the limit or better; per-order minimum or linear fees, paid at once or late; constant or
@@ -539,14 +612,21 @@ $5{,}882$ such trials of the `f37c1b6` charge (AUD-039). (v) Removing any hypoth
 enumeration with stops from $2$ below to $3$ above the limit, constant, super-additive and convex $\kappa^{\mathrm{out}}$, minimum and linear fees,
 $N^{\mathrm{ex}}=1,2$ ($46{,}200$ scenarios, $1{,}800$ states): no understatement, exact in $1{,}250$ states; randomised exact search of F145 and F144
 ($20{,}000$ trials, $8{,}795$ with the stop at or above the limit): no understatement, against $1{,}772$ understatements without the clamp.
+(vii) Fee booking (CLOSURE-REV-003, at `5c486f0`): a terminal order's owed fee was charged nowhere — $100$ sh, buy fee $\max(1,0.005k)$, sell fee
+$0$, spread $0.01$: $W_{t+1}=F_t-\tfrac12$; $40$ sh, buy fee minimum $5$, sell fee minimum $1$, spread $0.02$: $W_{t+1}=F_t-3.6$; and a fee reported but
+not booked was counted as paid: $W_{t+1}=F_t-4.75$. With F148 the same states give $F_t+\tfrac12$, $F_t+1.4$ and $F_t+\tfrac14$. Exact enumeration of
+fee timing (bookings at the fill, within the period, or after the order is terminal; $\phi^{\mathrm{paid}}_o\in\{0,\phi^{\mathrm{acc}}_o/2,\phi^{\mathrm{acc}}_o\}$; three buy and two
+sell schedules; $1{,}788$ states): $480$ understatements with the `5c486f0` charges, $0$ with F148.
 
 **NUMERICAL EDGE CASES.** Equality in the premise (floor attained, not breached); aggregates rounded up and $K_t$ rounded down (T-24); fees
-quantised up (01 §9 item 15); $e=0$; a stop exactly at the limit ($x=\kappa^{\mathrm{out}}(n')>0$, clamp inactive); $-0$ rejected at the boundary.
+quantised up (01 §9 item 15); $e=0$; a stop exactly at the limit ($x=\kappa^{\mathrm{out}}(n')>0$, clamp inactive); $-0$ rejected at the boundary;
+$\phi^{\mathrm{paid}}_o=\phi^{\mathrm{acc}}_o$ (nothing owed); $\phi^{\mathrm{paid}}_o>\phi^{\mathrm{acc}}_o$ ⇒ $\alpha_t=0$, no credit (F148).
 
 **MACHINE-TESTABLE INVARIANT.** Simulator with adversarial paths drawn inside the tier's disturbance set (comonotone all-stops scenario,
 triggered-unfilled states, split fills, partial exits at the cut) ⇒ $W_{t+1}\ge F_t$; F072 checked per exposure ex post; each T-10N
-counterexample is a regression test that must fail when its hypothesis is removed; paths outside are logged as assumption violations with
-breach magnitude.
+counterexample is a regression test that must fail when its hypothesis is removed; fee-timing property test (random fills, bookings at the
+fill, later or after the terminal state, fee-final events: each fee dollar in $W_t$ or in exactly one charge, T-29, and $W_{t+1}\ge F_t$); paths
+outside are logged as assumption violations with breach magnitude.
 
 ---
 
@@ -915,12 +995,16 @@ $\log(W_{t+1}/W_t)\ge\log(W^{\min}_{t+1}/W_t)>-\infty$ under every law supported
 
 **ASSUMPTIONS.** A-MATH-01; T-10's common hypotheses (AUD-043): A-SCOPE-03, A-SCOPE-05 with G11, A-FLOW-01, A-ACC-01…04, A-ACC-06,
 A-MKT-05 (fills at or below the limit), A-EXE-01…05 (A-EXE-05: no other orders), A-AUTH-02, A-AUTH-04, pending orders by F144; A-ACC-07
-with $\mathrm{Fin}=0$, $\mathrm{Inc}\ge0$ and $\mathrm{Accr}_{t+1}\le\bar A_{t+1}$ (S-185) in place of $\mathrm{Accr}=0$; A-MKT-01; A-ACC-05 (tier-U form of F072 with F140); $W_t>0$.
+with $\mathrm{Fin}=0$, $\mathrm{Inc}\ge0$ and $\mathrm{Accr}_{t+1}\le\bar A_{t+1}$ (S-185) in place of $\mathrm{Accr}=0$; A-MKT-01; A-ACC-05 (tier-U form of F072 with F140);
+A-EXE-04 with the booking semantics of F148 (owed entry fees of terminal orders in $C^{\mathrm{res}}_t$); $W_t>0$. Open dependency: A-ACC-05 is assumed
+also for an exposure whose exit order is partially executed at $\tau_t$, whose cumulative exit fee is not modelled (CLOSURE-REV-004).
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
 **PROOF.** Tier-U bound: every position worthless, each exposure's exit fees at most $\phi^{\mathrm{split}}_{i,0}(\bar q_i)$ (A-ACC-05, F140, monotone), pending orders filled
-at their limits with at most their remaining fees and the new order at $L^{\mathrm{abs}}(n)$; realised costs are already in $C_t$ (AUD-038); monotonicity of
+at their limits with at most their remaining fees and the new order at $L^{\mathrm{abs}}(n)$; entry-fee postings of the period are at most
+$\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ for a pending order and $\phi^{\mathrm{owed}}_o$ for a terminal one, both inside $C^{\mathrm{res}}_t$ (F144, F148); realised and
+booked costs are already in $C_t$ (AUD-038); monotonicity of
 $\log$. The ball contains the mixture of $\hat{\mathbb P}$ (weight $1-\epsilon^{\mathrm{mix}}$) with a point mass at a scenario $\xi_0$ in which every price is
 $0$, at finite transport cost for small $\epsilon^{\mathrm{mix}}$. ∎
 
@@ -928,7 +1012,10 @@ $0$, at finite transport cost for small $\epsilon^{\mathrm{mix}}$. ∎
 (REV-012). With per-order minimum fees and a holding sold in part at price $0$ (fee $1$) while the remainder is valued with its own fee
 ($\Lambda=1$), $W_{t+1}=W^{\min}_{t+1}-1$ unless F070 uses $\phi^{\mathrm{split}}$ (REV-034). Without the common hypotheses (third review, AUD-043): $C=1{,}000$,
 pending $10$ @ $10$, $W^{\min}=900$; a fill at $12$ above the limit (A-MKT-05 fails) then prices → $0$ gives $880<900$; a manual buy of $90$ @ $10$
-(A-EXE-05 fails) gives $W_{t+1}=0$ and an undefined logarithm.
+(A-EXE-05 fails) gives $W_{t+1}=0$ and an undefined logarithm. Owed fee of a terminal order (CLOSURE-REV-003, `5c486f0`): cash $1{,}000$,
+$10$ sh held, exit fee $\max(1,0.005k)$ per order in two parts at price $0$, owed entry fee $1$: bound $W^{\min}=998$ against $W_{t+1}=997$; with F148
+$W^{\min}=997=W_{t+1}$. Exact fee-timing enumeration ($168$ states, prices $\to0$, bookings at the fill, later or after the terminal state): $56$
+violations at `5c486f0`, $0$ with F148.
 
 **NUMERICAL EDGE CASES.** `Decimal(0).ln()` returns `-Infinity` without a signal (observed): the domain check precedes evaluation;
 $W^{\min}=0$ exactly is excluded (strict inequality).
@@ -1178,6 +1265,130 @@ $\ge100$ with probability $1-0.96^2=0.0784>0.05$, so $\mathrm{VaR}_{0.95}$ of th
 **NUMERICAL EDGE CASES.** None.
 
 **MACHINE-TESTABLE INVARIANT.** VaR is never used as an aggregatable budget.
+
+---
+
+### T-27 Gate Monotonicity in Estimates
+
+**THEOREM ID.** T-27
+
+**STATEMENT.** Call an estimate more conservative when $\hat\kappa^{\mathrm{out}}$, $\hat\Gamma_i$ or $\hat\Lambda_{i,t}$ is larger, $\mathrm{ADV}^{\mathrm{est}}_{i,t}$ is smaller, or the
+statistical refinement of the cluster map is coarser (S-006). Holding every other input fixed, no gate G1–G11 of F092 and no post-filter that
+fails at an estimate passes at a more conservative one: the allowed transitions are PASS→PASS, PASS→FAIL and FAIL→FAIL; FAIL→PASS is
+impossible. In particular a gate that fails with every estimate at its policy bound — the least conservative admissible value (F111) — fails
+for every admissible estimate.
+
+**ASSUMPTIONS.** A-MATH-01; F092 in its closure form (G7 with $\kappa^{\min}p^{\mathrm{stop}}_o$, G8 on the mark); references by F146; $K_t$ by F044 and
+$\mathrm{DD}_t$ by F038.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** It suffices to list the estimate-dependent gates. G1 ($\alpha_t$): validity and presence of inputs, not their size — a missing or invalid
+estimate fails G1 whatever the other estimates are (F111). G2, G5, G6, G9, G10, G11: trading status, spread and mark observations, event flags,
+direction, universe, held and reserved quantities — no estimate. G7 (closure form): $p^{\mathrm{lim}},p^{\mathrm{stop}}_o,m^{\mathrm{arr}},p^{\mathrm{ask}}$ and the policy values
+$\kappa^{\min},\ell^{\min},\chi$ — no estimate. Its cost clause is the infimum of the sizing per-share loss $p^{\mathrm{lim}}-p^{\mathrm{stop}}_o+\kappa^{\mathrm{out}}(n)$ over every
+quantity and every admissible estimate ($\kappa^{\mathrm{out}}\ge\kappa^{\min}p^{\mathrm{stop}}_o$, F111), so it still establishes the division guard of 01 §9 item 16 for
+every estimate. G8: authoritative marks and live stops — no estimate, no fee. G3 ($K_t>0$): $K_t=W_t-F_t$; $W_t$ is non-increasing in
+$\hat\Lambda$ (F034, F111) and independent of the other estimates; $F_t$ depends only on references (F146: no estimate) and policy. G4
+($\mathrm{DD}_t<d^{\max}$): $\mathrm{DD}_t=1-\nu_t/H_t$ with $H_t$ estimate-free (F037, F146), $U_t$ estimate-free (F069) and $\nu_t=W_t/U_t$ non-increasing in
+$\hat\Lambda$. The post-filter acts on $Q^{\mathrm{hard}}$, which is non-increasing in conservativeness (T-28). ∎
+
+**COUNTEREXAMPLE ATTEMPT.** The `5c486f0` gates violate it (CLOSURE-REV-001): G7 on $\kappa^{\mathrm{out}}$ ($p^{\mathrm{lim}}=50$, $p^{\mathrm{stop}}_o=49.99$,
+$\kappa^{\min}=0.001$, $\ell^{\min}=0.002$: fails at the floor $0.04999$, passes at $\hat\kappa^{\mathrm{out}}=0.1$ with $Q=9{,}090$); G8 as a sign test of F064
+($100$ sh, mark $48.9$, stop $49$: raw $-3.1$ at the floor, $+12$ at $\hat\kappa^{\mathrm{out}}=0.2$); G3 and G4 with references from estimate-inclusive $\nu_u$
+(a larger past $\hat\Lambda$ lowers $H$, raises $K$ and lowers $\mathrm{DD}$; CLOSURE-REV-002). Exact searches: G7 over $3$ limits, $5$ stop distances and
+$15$ ordered estimate pairs ($225$ cases: $50$ FAIL→PASS with the `5c486f0` predicate, $0$ now); G8 over $2$ quantities, $6$ marks around the stop,
+$6$ ordered estimate pairs and $3$ fee schedules, plus fee-schedule pairs ($30$ FAIL→PASS for the sign test, $0$ now); G3 and G4 over $20{,}000$
+random four-epoch histories with one estimate path dominating another ($6{,}446$ violations with estimate-inclusive references, $0$ with F146).
+
+**NUMERICAL EDGE CASES.** Mark exactly at the stop (G8 fails); $\kappa^{\min}=0$ (G7's cost clause becomes the bare stop distance); the cost clause
+attained with equality (passes).
+
+**MACHINE-TESTABLE INVARIANT.** For every gate and every estimated input, metamorphic pairs (estimate, more conservative estimate) never show
+FAIL→PASS; each gate predicate is tested separately, not only through $Q^{\mathrm{hard}}$; the `5c486f0` cases above are regressions that must fail
+with the old predicates and pass with the closure ones.
+
+---
+
+### T-28 Estimate Dominance at Every Epoch (Instantaneous and Temporal)
+
+**THEOREM ID.** T-28
+
+**STATEMENT.** Fix the authoritative history up to $\tau_t$ — positions, cash, liabilities, order state, marks, quotes, flows, fee schedule and
+policy. Compare any admissible estimates at every epoch $u\le t$ with the evaluation that puts every estimated input at its policy bound at
+every epoch, whose cap is $\bar Q^{\mathrm{hard}}_t$ (S-307). (i) *Temporal:* every carried reference — $H_t$, $\nu^{\mathrm{day}}_0$, $\nu^{\mathrm{wk}}_0$, $U_t$ (F037, F041,
+F069) — is the same under both; no estimate is stored for a later epoch. (ii) *Instantaneous:* at $t$, $W_t\le W^{\mathrm{R}}_t$; every budget is at most,
+and every consumption at least, its policy-bound value; every gate that fails at the policy bounds fails (T-27). (iii) Hence
+$Q^{\mathrm{hard}}_t\le\bar Q^{\mathrm{hard}}_t$ at every epoch, and the final quantity after F049 and F126 is at most $\bar Q^{\mathrm{hard}}_t$.
+
+**ASSUMPTIONS.** A-MATH-01; F111 (policy bounds), F146 (reference valuation), F049, F126, T-27. While $\mathrm{SL}_{s,t}$ and $B^{\mathrm{win}}_s$ are UNDEFINED
+the strategy term follows the fail-closed rule of 06 §4; once defined (RQ-11) each must be at most its policy-bound value (e.g. $B^{\mathrm{win}}_s$
+computed from $W$), or (iii) is not claimed for H3.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** (i) Induction over epochs. $\nu^{\mathrm{R}}_u=(E_u-\Lambda^{\mathrm{floor}}_u)/U_u$ (F146) uses marks, cash and liabilities ($E_u$), the observed spread and
+the fee schedule ($\Lambda^{\mathrm{floor}}_u$) and $U_u$; $H_t=\max_u\nu^{\mathrm{R}}_u$; $\nu^{\mathrm{day}}_0,\nu^{\mathrm{wk}}_0$ are $\nu^{\mathrm{R}}$ at the day and week start; and
+$U_{u+1}=U_u+X_{u+1}/\nu^{\mathrm{R}}$ at the flow (F069). None contains an estimate, so if they agree at $u$ they agree at $u+1$, and they agree at
+the start of the history. (ii) $\Lambda_t=\max(\Lambda^{\mathrm{floor}}_t,\hat\Lambda_t)\ge\Lambda^{\mathrm{floor}}_t$ gives $W_t\le W^{\mathrm{R}}_t$, the policy-bound value of
+$W_t$ (F034, F146). Floors (F040–F043) depend only on references and policy, so they agree, and $K_t$ is at most its policy-bound value; the
+base candidates $W_t$, $\min(W_t,\nu^{\mathrm{day}}_0U_t)$ and $K_t$ are at most theirs and $\nu^{\mathrm{day}}_0U_t$ equals its own (06, base table). The
+charges F064–F066, F144, F145 and the consumptions F061–F063 are non-decreasing in $\kappa^{\mathrm{out}}$ and in $\Gamma$ (through $p^{\mathrm{gx}}$, F060) and
+contain no $\Lambda$ (OC-1), and $\kappa^{\mathrm{out}}\ge\kappa^{\min}p^{\mathrm{stop}}$, $\Gamma\ge\Gamma^{\min}$ (F111). Cluster aggregates over a coarsening of the
+human map are at least those over the map (S-006; sums of non-negative terms). $\mathrm{ADV}\le\mathrm{ADV}^{\max}$ makes the H12–H13 budgets at most
+theirs. Cash terms ($C^{\mathrm{res}}$, F048) contain no estimate. Gates: T-27. (iii) For each cap the feasible set $\{n:g_k(n)\le b_k\}$ is contained in
+its policy-bound counterpart, so its maximum (F094) is no larger; the minimum over caps preserves this; a failing gate gives $0$. F049 gives
+$b^{\mathrm{allow}}_k\le(b^{\mathrm{hard}}_k)^+$ and F126 returns at most $Q^{\mathrm{hard}}$. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** Instantaneous monotonicity alone is not enough. At `5c486f0` the references used estimate-inclusive $\nu_u$
+(CLOSURE-REV-002): $E_u=10^6$, $\hat\Lambda_u=50{,}000$ against a floor of $1{,}000$; later $E_t=990{,}000$, $\Lambda_t=1{,}000$, $d^{\max}=10\%$, $U=1$:
+$H=989{,}000$ and $K_t=98{,}900$, against $89{,}900$ (with $H=999{,}000$) at the policy bounds — the estimate at $u$ enlarged the cushion at $t$ by
+$9{,}000$ although every cap at $t$ was monotone in the estimates at $t$. Units: a withdrawal of $95{,}000$ at the estimate-inclusive NAV
+($E=10^6$, $\hat\Lambda=50{,}000$, floor $1{,}000$, $U=1{,}000$) left $U=900$ and $K=45{,}810$; at $\nu^{\mathrm{R}}$ it leaves $U=904{,}000/999$ and $K=41{,}400$, the
+policy-bound value. Exact search: $20{,}000$ random five-epoch histories with flows — $13{,}517$ histories with some epoch above the policy-bound
+cushion under estimate-inclusive references and units, $0$ with F146.
+
+**NUMERICAL EDGE CASES.** $\hat\Lambda=\Lambda^{\mathrm{floor}}$ (equality); rounding of stored references (01 §9 item 3; the direction for $\nu^{\mathrm{day}}_0$
+used as a base is the open CLOSURE-REV-009).
+
+**MACHINE-TESTABLE INVARIANT.** Two evaluations over the same randomly generated authoritative history — arbitrary admissible estimates
+versus policy bounds at every epoch: stored references bit-identical at every epoch; $Q^{\mathrm{hard}}_t\le\bar Q^{\mathrm{hard}}_t$ and every gate that fails at
+the policy bounds fails; the $+9{,}000$ and the units cases are regressions.
+
+---
+
+### T-29 Entry-Fee Booking Conservation
+
+**THEOREM ID.** T-29
+
+**STATEMENT.** For every entry order $o$ and every sequence of events — fills, fee bookings (to cash or as a payable), the venue-confirmed
+terminal state, the confirmation that its fees are final — with $\phi^{\mathrm{paid}}_o$ in its domain (F148): (a) until the fees are final,
+$\phi^{\mathrm{paid}}_o+\phi^{\mathrm{owed}}_o=\phi^{\mathrm{acc}}_o$ (F149); (b) a booking of $b\ge0$ raises $\phi^{\mathrm{paid}}_o$ by $b$ and lowers $\phi^{\mathrm{owed}}_o$ by $b$; a fill
+raises $\phi^{\mathrm{acc}}_o$ and $\phi^{\mathrm{owed}}_o$ by the same amount; the terminal state changes neither; (c) $W_t-\sum_o\phi^{\mathrm{owed}}_o$ is unchanged by a
+booking; (d) at every cut each entry-fee dollar up to $\phi^{\mathrm{acc}}_o$ is either in $W_t$ or in exactly one hard-layer charge — inside
+$r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ and $C^{\mathrm{res}}$ (F145, F144) for a pending order, in the owed-fee reservation of F144 for a terminal one — never in both and
+never in neither; when the fees are confirmed final the unbooked remainder (the unused part of the bound, $\ge0$ by A-EXE-04) is released.
+
+**ASSUMPTIONS.** A-MATH-01; the definitions F144, F145, F148, F149, with $\phi^{\mathrm{paid}}_o$ and $W_t$ taken from the same cut.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** (a) Definition F148. (b) A booking adds $b$ to the fees in $W_t$, hence to $\phi^{\mathrm{paid}}_o$, and leaves $\phi^{\mathrm{acc}}_o$ unchanged; a fill raises
+$q^{\mathrm{fill}}_o$ and $\phi^{\mathrm{acc}}_o=\phi^{\mathrm{buy}}_o(q^{\mathrm{fill}}_o)$ and books nothing; the terminal state changes neither $q^{\mathrm{fill}}_o$ nor the bookings. (c) The
+booking lowers $W_t$ by $b$ (F052, F055) and $\sum_o\phi^{\mathrm{owed}}_o$ by $b$. (d) A booked dollar is in $W_t$ and, by (a), no longer in
+$\phi^{\mathrm{owed}}_o$; an unbooked one is in $\phi^{\mathrm{owed}}_o$, which appears inside $\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ in F145 and $C^{\mathrm{res}}$ for a pending order
+and only in the F144 owed-fee reservation for a terminal one (F064–F066 carry no entry fee). ∎
+
+**COUNTEREXAMPLE ATTEMPT.** `5c486f0` violated (d) — "never in neither" — in three ways: a terminal order's owed fee was in no charge and not in
+$W_t$ (cases A, B, C of CLOSURE-REV-003); a fee reported but not booked was treated as paid (case D); $\phi^{\mathrm{paid}}_o>\phi^{\mathrm{acc}}_o$ was credited (case
+E). Exact event-sequence check ($5{,}000$ random sequences, $60{,}000$ events: fills, bookings of none, half or all of the owed fee at any time,
+terminal and fee-final events; $\phi^{\mathrm{paid}}_o$, $\phi^{\mathrm{owed}}_o$ and $W_t-\sum_o\phi^{\mathrm{owed}}_o$ tracked): no violation.
+
+**NUMERICAL EDGE CASES.** $\phi^{\mathrm{paid}}_o=\phi^{\mathrm{acc}}_o$ (nothing owed); a booking larger than $\phi^{\mathrm{owed}}_o$ leaves the domain ($\alpha_t=0$, F148);
+fees confirmed final below the bound (release).
+
+**MACHINE-TESTABLE INVARIANT.** Event-sequence property test: (a)–(c) exactly at every step; in the simulated engine every booked fee is in
+$W_t$ and every owed fee in exactly one charge; $W_t-\sum_o\phi^{\mathrm{owed}}_o$ constant across bookings.
 
 ---
 

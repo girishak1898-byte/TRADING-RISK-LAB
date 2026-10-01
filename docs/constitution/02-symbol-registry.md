@@ -187,21 +187,28 @@ physical unit (set, identifier, operator). Machine-readable dimensions: 03 `dimt
 | S-293 | $R^{\mathrm{led}}_{o}$ | Stop-risk reservation recorded in the ledger for pending order $o$ (ledger bookkeeping, T-11; not an input to engine budgets, which re-evaluate by F144) | scalar | pending orders | $\mathbb Q_{\ge0}$ | [USD] | + | n/a | reservation ledger | O |
 | S-294 | $N^{\mathrm{ex}}$ | Maximum number of exit (sell) orders per exposure per period, declared by the execution integration and versioned in $\mathsf v$ | integer | n/a | $\mathbb N$ | [1] | + | **UNDEFINED — REQUIRES RESOLUTION** (RQ-35); unknown ⇒ per-execution worst case | integration contract | P |
 | S-295 | $B^{\mathrm{win}}_{s}$ | Risk base at the start of strategy $s$'s loss window (fixed within the window; window defined with $\mathrm{SL}$, RQ-11) | scalar | $\mathbb S$ | $\mathbb Q$ | [USD] | + | **UNDEFINED — REQUIRES RESOLUTION** with $\mathrm{SL}$ (RQ-11) | derived | D |
-| S-296 | $\phi^{\mathrm{paid}}_{o}$ | Entry fees already paid on pending order $o$ (cumulative, from execution reports) | scalar | pending orders | $\mathbb Q_{\ge0}$ | [USD] | + cost | $\le\phi^{\mathrm{buy}}$ of the cumulative filled quantity (A-EXE-04) | ledger | R |
+| S-296 | $\phi^{\mathrm{paid}}_{o}$ | Entry fees of order $o$ already economically booked into $W_t$ at the cut: debited in $C_t$ or recorded as payable in $Y_t$ of the same snapshot (A-AUTH-04) — not fees reported, assessed or expected (F148, CLOSURE-REV-003) | scalar | entry orders not yet fee-final | $\mathbb Q_{\ge0}$ | [USD] | + cost | $0\le\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o$, else $\alpha_t=0$ (F148) | ledger | R |
 | S-297 | $r^{\mathrm{pf}}_{i},\ g^{\mathrm{pf}}_{i},\ u^{\mathrm{pf}}_{i}$ | Stop / gap / absolute exposure charge of instrument $i$ carrying an order that is pending with part of it already filled (F145); replaces open risk plus reservation for that instrument | scalar | $\mathbb T\times\mathbb I$ | $\mathbb Q_{\ge0}$ | [USD] | + loss | exact worst case under the tier's hypotheses | derived | D |
 | S-298 | $\bar q_i$ | Largest quantity of instrument $i$ that can be held in the period: $q_{i,t}$, or the total quantity $n'$ of a pending order on $i$ (F070) | lattice | $\mathbb I$ | $\mathbb L_{\ge0}$ | [sh$_i$] | + long | $\ge q_{i,t}$ | derived | D |
 | S-299 | $\mathrm{ADV}^{\mathrm{est}}_{i,t}$ | Trailing average daily volume from a frozen, versioned estimator | scalar | $\mathbb T\times\mathbb I$ | $\mathbb Q_{\ge0}$ | [sh$_i$/day] | + | estimator **UNDEFINED — REQUIRES RESOLUTION** (RQ-06) | statistic | E |
 | S-300 | $\mathrm{ADV}^{\max}_i$ | Policy cap on the volume used by H12, H13 (per instrument or instrument class) | scalar | $\mathbb I$ | $\mathbb Q_{>0}$ | [sh$_i$/day] | + | value **UNDEFINED — REQUIRES RESOLUTION** | policy | P |
+| S-301 | $W^{\mathrm{R}}_t$ | Reference wealth: mark-to-mid equity less the liquidation cost at its policy floor, $E_t-\Lambda^{\mathrm{floor}}_t$ (F146); contains no estimate | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + | $\ge W_t$ | derived | D |
+| S-302 | $\nu^{\mathrm{R}}_t$ | Reference NAV per unit $W^{\mathrm{R}}_t/U_t$ (F146); the only valuation used for carried references (F037, F041, F069) | scalar | $\mathbb T$ | $\mathbb Q$ | [USD/unit] | + | $\ge\nu_t$ | derived | D |
+| S-303 | $\mathrm{DD}^{\mathrm{R}}_t$ | Reference drawdown $1-\nu^{\mathrm{R}}_t/H_t$ (F147) | scalar | $\mathbb T$ | $[0,\infty)$ | [1] | + worse | $\le\mathrm{DD}_t$ | derived | D |
+| S-304 | $q^{\mathrm{fill}}_o$ | Cumulative filled quantity of entry order $o$ (execution reports) | lattice | entry orders | $\mathbb L_{\ge0}$ | [sh$_i$] | + | $\le n'$ (A-EXE-03) | ledger | R |
+| S-305 | $\phi^{\mathrm{acc}}_o$ | Largest entry fee the fills of order $o$ can cost, $\phi^{\mathrm{buy}}(q^{\mathrm{fill}}_o)$ (F148, A-EXE-04) | scalar | entry orders | $\mathbb Q_{\ge0}$ | [USD] | + cost | $\ge\phi^{\mathrm{paid}}_o$, else $\alpha_t=0$ | derived | D |
+| S-306 | $\phi^{\mathrm{owed}}_o$ | Entry fee of order $o$ owed but not yet booked into $W_t$: $\phi^{\mathrm{acc}}_o-\phi^{\mathrm{paid}}_o$ until its fees are confirmed final, then $0$ (F148) | scalar | entry orders | $\mathbb Q_{\ge0}$ | [USD] | + cost | reserved in F144, F145 until booked (T-29) | derived | D |
+| S-307 | $\bar Q^{\mathrm{hard}}_t$ | Hard quantity cap with every estimated input at its policy bound at every epoch (policy-bound envelope, T-28) | lattice | $\mathbb T$ | $\mathbb L_{\ge0}$ | [sh$_i$] | + | $\ge Q^{\mathrm{hard}}_t$ (T-28) | derived | D |
 
 ## G. Capital, floors, drawdown, budgets, caps
 
 | ID | Symbol | Meaning | Type | Domain | Codomain | Units | Sign | Valid range | Source | Class |
 |---|---|---|---|---|---|---|---|---|---|---|
 | S-100 | $B_t$ | Risk base (candidates F073) | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + | **UNDEFINED — REQUIRES RESOLUTION** (06 §4; RQ-02) | derived | D |
-| S-101 | $H_t$ | High-water mark of $\nu$ (F037) | scalar | $\mathbb T$ | $\mathbb Q_{>0}$ | [USD/unit] | + | observation set $\mathcal H_t$ **UNDEFINED** (RQ-03) | state | D |
+| S-101 | $H_t$ | High-water mark of the reference NAV $\nu^{\mathrm{R}}$ (F037, F146; never of an estimate-inclusive NAV, CLOSURE-REV-002) | scalar | $\mathbb T$ | $\mathbb Q_{>0}$ | [USD/unit] | + | observation set $\mathcal H_t$ **UNDEFINED** (RQ-03) | state | D |
 | S-102 | $\mathrm{DD}_t$ | Drawdown (F038) | scalar | $\mathbb T$ | $[0,\infty)$ | [1] | + worse | $\ge1$ iff $\nu\le0$ | derived | D |
 | S-103 | $\mathrm{MDD}_t$ | Maximum drawdown (F039) | scalar | $\mathbb T$ | $[0,\infty)$ | [1] | + worse | n/a | derived | D |
-| S-104 | $\nu^{\mathrm{day}}_0,\ \nu^{\mathrm{wk}}_0$ | NAV per unit at start of trading day / week | scalar | $\mathbb T$ | $\mathbb Q$ | [USD/unit] | n/a | boundaries **UNDEFINED** (RQ-31) | state | D |
+| S-104 | $\nu^{\mathrm{day}}_0,\ \nu^{\mathrm{wk}}_0$ | Reference NAV per unit $\nu^{\mathrm{R}}$ (F146) at the start of the trading day / week | scalar | $\mathbb T$ | $\mathbb Q$ | [USD/unit] | n/a | boundaries **UNDEFINED** (RQ-31) | state | D |
 | S-105 | $F^{\mathrm{abs}}$ | Absolute capital floor | scalar | n/a | $\mathbb Q_{\ge0}$ | [USD] | n/a | value **UNDEFINED — REQUIRES RESOLUTION** | policy | P |
 | S-106 | $F^{\mathrm{dd}}_t$ | Drawdown floor (F040) | scalar | $\mathbb T$ | $\mathbb Q_{\ge0}$ | [USD] | n/a | n/a | derived | D |
 | S-107 | $F^{\mathrm{day}}_t,\ F^{\mathrm{wk}}_t$ | Daily / weekly floors (F041) | scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | n/a | n/a | derived | D |
@@ -326,7 +333,7 @@ physical unit (set, identifier, operator). Machine-readable dimensions: 03 `dimt
 | S-234 | $\Upsilon$ | Generic predicate (a gate, or a model constraint in T-09) | predicate | states | $\{0,1\}$ | n/a | n/a | n/a | notation | M |
 | S-170 | $\mathcal M_{t+1}$ | Market ("paper") component in ECAI (F058) | random scalar | $\mathbb T$ | $\mathbb Q$ | [USD] | + profit | n/a | derived | R |
 | S-171 | $\pi^{\mathrm{ref}}_{j,k}$ | Cost-decomposition chain | alias of S-082 | $\mathcal J\times\mathbb N_0$ | $\mathbb Q_{>0}$ | [USD/sh$_i$] | n/a | n/a | derived | D |
-| S-173 | $\nu^{\star}$ | NAV per unit at the instant of an external flow | scalar | flows | $\mathbb Q$ | [USD/unit] | n/a | timing **UNDEFINED** (RQ-31) | derived | D |
+| S-173 | $\nu^{\star}$ | Reference NAV per unit $\nu^{\mathrm{R}}$ (F146) at the instant of an external flow (F069) | scalar | flows | $\mathbb Q$ | [USD/unit] | n/a | timing **UNDEFINED** (RQ-31) | derived | D |
 | S-174 | $W^{\min}$ | Worst-case next-period wealth under tier U, $W^{\min}_{t+1}(a)$ (F070) | scalar | actions | $\mathbb Q$ | [USD] | + | $\mathcal F_t$-measurable | derived | D |
 | S-175 | $\Delta$ | First difference prefix: $\Delta y_{t+1}=y_{t+1}-y_t$ | operator | sequences | sequences | as operand | n/a | n/a | notation | M |
 | S-178 | $a^{\star}_t$ | Optimiser proposal / argmax (F017) | vector | $\mathbb T$ | $\mathbb L^{N_t}$ | [sh$_i$] | n/a | verified before use | optimiser | D |

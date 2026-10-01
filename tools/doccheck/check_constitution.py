@@ -6,7 +6,7 @@ access, no order handling and performs no network access. It reads Markdown file
 under docs/ and reports:
 
   1. deliverable presence (01..14)
-  2. cross-reference closure (T-, RQ-, D-, H, G, FM-, RT-, F###, DC-, OC-, E-, DT-, L-, S-, A-, REV-, AUD-)
+  2. cross-reference closure (T-, RQ-, D-, H, G, FM-, RT-, F###, DC-, OC-, E-, DT-, L-, S-, A-, REV-, AUD-, CLOSURE-REV-)
   3. symbol closure: UNREGISTERED_SYMBOLS, DUPLICATE_MEANING_SYMBOLS, registry row completeness
   3b. theorem register: eight canonical fields, one of the five statuses, status consistent with the classes of
       the cited assumptions (PROVED may not rest on MARKET/EXECUTION/STATISTICAL/OPERATIONAL/RESEARCH assumptions)
@@ -490,16 +490,17 @@ def main():
         "A": set(re.findall(r"\| (A-[A-Z]+(?:-\d+)?) \|", d("04"))),
         "REV": set(re.findall(r"^### (REV-\d{3})", review_text, re.M)),
         "AUD": set(re.findall(r"^### (AUD-\d{3})", review_text, re.M)),
+        "CREV": set(re.findall(r"^### (CLOSURE-REV-\d{3})", review_text, re.M)),
     }
     pats = {"T": r"\bT-\d+[a-zN]*\b", "RQ": r"\bRQ-\d+", "D": r"\bD-\d+\b", "H": r"\bH\d+\b", "G": r"\bG\d+\b",
             "FM": r"\bFM-[A-Z]+-\d+", "RT": r"\bRT-\d+", "F": r"\bF\d{3}\b", "DC": r"(?<!FM-)\bDC-\d+", "OC": r"\bOC-\d+",
             "E": r"(?<![A-Z-])E-\d+\b", "DT": r"\bDT-\d+", "L": r"(?<![A-Z-])L-\d+\b", "S": r"\bS-\d+",
             "A": r"\bA-(?:SCOPE|ACC|AUTH|MKT|STOPLIVE|STOP|TRIG|GAP|LIQ|EXE|STAT|NLA|NUM|TIME|SET|FLOW|MATH)(?:-\d+)?\b",
-            "REV": r"\bREV-\d{3}\b", "AUD": r"\bAUD-\d{3}\b"}
+            "REV": r"(?<!CLOSURE-)\bREV-\d{3}\b", "AUD": r"\bAUD-\d{3}\b", "CREV": r"\bCLOSURE-REV-\d{3}\b"}
     xref = []
     for k, pat in pats.items():
         used = set(re.findall(pat, allt + review_text))
-        if k in ("REV", "AUD") and not review_text:
+        if k in ("REV", "AUD", "CREV") and not review_text:
             continue
         miss = sorted(u for u in used if u not in defs[k])
         if k == "T":  # a v0.1.1 family ID (e.g. T-06) is defined when its split parts (T-06a, T-06b, ...) are

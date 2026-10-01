@@ -664,6 +664,7 @@ chain findings → corrections stays auditable.*
 | Mathematical consequence | Exact under A-TRIG, but A-TRIG is implausible exactly in this state (mark below a stop); the draft would have credited cushion from it. |
 | Required correction | The ANOMALY rule applies to $r^{\mathrm{open}}(q_{i,t})$, $g^{\mathrm{open}}(q_{i,t})$ of the held part and to $r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ (05 §5; G8 in 06 and F092). |
 | Test / proof obligation | Held part marked below its stop ⇒ NO\_TRADE (G8). |
+| Superseded | The sign test introduced here could be masked by a larger estimate or fee and missed a mark just below the stop; it was replaced by the estimate-free mark test of G8 ($m_{i,t}\le p^{\mathrm{stop}}_i$ fails) at the critical closure correction (CLOSURE-REV-001, [09-closure-review-registry.md](09-closure-review-registry.md)). |
 
 ## Third independent review of `f37c1b6` — mapping
 
