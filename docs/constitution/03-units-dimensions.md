@@ -155,6 +155,8 @@ q_fill S-304 sh
 phi_acc S-305 USD
 phi_owed S-306 USD
 Q_bar S-307 sh
+n_o S-308 sh
+q_unf S-309 sh
 w_in S-260 day
 h_ex S-262 day
 h S-011 day

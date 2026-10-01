@@ -1,6 +1,7 @@
 # Phase-0 Review — Independent Closure Review of `5c486f0` (CLOSURE-REV registry)
 
-This file is permanent failure evidence. It records that the Phase-0 closure state was wrong, and how the three CRITICAL defects were corrected.
+This file is permanent failure evidence. It records that the Phase-0 closure state was wrong, how the three CRITICAL defects were corrected, and
+how CLOSURE-REV-006 was corrected afterwards.
 It does not rewrite earlier records: the PASS decision in [08-acceptance-gate.md](08-acceptance-gate.md) §9 is kept as written and is superseded
 by this registry (§10 there).
 
@@ -12,8 +13,9 @@ by this registry (§10 there).
 | Findings | CRITICAL 3 (CLOSURE-REV-001, CLOSURE-REV-002, CLOSURE-REV-003) · IMPORTANT 8 (CLOSURE-REV-004 … 011) · MINOR 5 (CLOSURE-REV-012 … 016) |
 | Review method | Adversarial review of the diff in the authoring session, with two fresh-context sub-reviewers; every finding reproduced by the author in exact rational arithmetic before classification. Not an organisationally independent review. |
 | Superseded record | 08-acceptance-gate.md §9 "PHASE 0 = PASS" at `5c486f0` |
+| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN |
 
-## Status after the critical correction commit
+## Status after the correction commits
 
 | ID | Severity | Object | Status |
 |---|---|---|---|
@@ -22,16 +24,19 @@ by this registry (§10 there).
 | CLOSURE-REV-003 | CRITICAL | entry fees can disappear depending on when they are booked | **RESOLVED** by the critical correction commit |
 | CLOSURE-REV-004 | IMPORTANT | exit-fee catch-up on a partially executed exit order | OPEN |
 | CLOSURE-REV-005 | IMPORTANT | exposures protected by several stops | OPEN |
-| CLOSURE-REV-006 | IMPORTANT | held vs filled quantity in F144/F145; no guard for $q>n'$ | OPEN |
+| CLOSURE-REV-006 | IMPORTANT | held vs filled quantity in F144/F145; no guard for $q>n'$ | **RESOLVED** by the held/filled quantity correction commit (child of `80ca693`) |
 | CLOSURE-REV-007 | IMPORTANT | H14 cash semantics (F048, remaining-only $C^{\mathrm{res}}$) | OPEN |
 | CLOSURE-REV-008 | IMPORTANT | A-EXE-02 falls back to the policy floor on an invalid estimator | OPEN |
 | CLOSURE-REV-009 | IMPORTANT | rounding direction of $\nu^{\mathrm{day}}_0$ used as a base; $B^{\mathrm{win}}$ has none | OPEN |
 | CLOSURE-REV-010 | IMPORTANT | H3 window base enlarges the cap beyond the claimed double count | OPEN |
 | CLOSURE-REV-011 | IMPORTANT | strategy id classed as an order parameter selects the H3 budget | OPEN |
+| CLOSURE-REV-018 | IMPORTANT | G11 admits a second non-terminal entry order on an instrument (found at the CLOSURE-REV-006 correction) | OPEN |
+| CLOSURE-REV-019 | IMPORTANT | exit fee of an exit executed before the cut and booked after it is charged nowhere (found at the CLOSURE-REV-006 correction) | OPEN |
 | CLOSURE-REV-012 … 016 | MINOR | T-21 qualifications; canonical bytes; edge-case consistency; lifecycle wording; registry hygiene | OPEN |
+| CLOSURE-REV-017 | MINOR | source class of $\phi^{\mathrm{paid}}_o$ (found at the CLOSURE-REV-006 correction) | OPEN |
 
-T-10 lists CLOSURE-REV-004, 005 and 006 as open dependencies and stays PROOF REQUIRES ADDITIONAL ASSUMPTIONS. No IMPORTANT finding was
-hidden by strengthening an unrelated assumption.
+T-10 lists CLOSURE-REV-004, 005, 018 and 019 as open dependencies (006, its former dependency (iii), is resolved) and stays PROOF REQUIRES ADDITIONAL
+ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assumption.
 
 ## Findings
 
@@ -99,7 +104,9 @@ hidden by strengthening an unrelated assumption.
 | Object | quantity semantics of F144 (filled) and F145 (held); no guard for $q>n'$ |
 | Counterexample (exact) | after a partial exit while the entry is pending ($n'=200$, $100$ filled, $40$ held, mark $48.95$, stop $49$, $\kappa=0.01$): filled-quantity reading $r^{\mathrm{pf}}=99$, held-quantity reading $162$; breach $-6/5$ under the first. $q=150>n'=100$ with per-share distance $1.1$: price terms $110$ against $165$ for the visible holding. |
 | Required correction | Held quantity for the held part, $n'-q^{\mathrm{fill}}$ for the remainder; $\alpha_t=0$ unless held $\le q^{\mathrm{fill}}\le n'$. |
-| Status | OPEN (T-10 open dependency (iii)). F148 uses $q^{\mathrm{fill}}_o$ for fees, which is correct under either reading. |
+| Reproduction | Both counterexamples reproduced exactly before any formula was changed (limit $50$, fee $\max(1,0.005k)$, $N^{\mathrm{ex}}=1$, $\phi^{\mathrm{paid}}_o=1$, spread $0.01$, $\Lambda_{i,t}=6/5$): fill reading $99$, holding reading $162$, worst loss $501/5$, $W_{t+1}-F_t=-6/5$ at $K_t=99$; $q_{i,t}=150$, $n'=100$, mark $=$ limit $50$, stop $49$, $\kappa^{\mathrm{out}}=0.1$: price terms $110$ against $165$. |
+| Resolution | Quantities kept apart: S-032 held $q_{i,t}$ (made explicit); S-304 cumulative fill $q^{\mathrm{fill}}_o$ (made explicit; its source class corrected from R to O — it is an authoritative input at the cut); new S-308 $n'_o$ and S-309 $q^{\mathrm{unf}}_o=n'_o-q^{\mathrm{fill}}_o$. F145 rebuilt: held part on $q_{i,t}$, pending part on $q^{\mathrm{unf}}_o$, exit cost and exit fees on $\bar q_i=q_{i,t}+q^{\mathrm{unf}}_o$, entry fees $\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$; F145 remains conditional on CLOSURE-REV-005. F144: pending-portion terms on $q^{\mathrm{unf}}_o$, the owed fee identified separately as a liability of the filled shares. F150: validity $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ on the lattice, else $\alpha_t=0$ and a fail-closed charge (a finite charge dominating every valid reading when every quantity is well formed; otherwise no finite charge and RECOVERY; never $0$). S-298 / F070 $\bar q_i$; T-10 case (2′) rebuilt and open dependency (iii) removed; T-21 updated mechanically; 05 §5, §7; 06 §5, §5a; 04 A-EXE-03, A-AUTH-02; FM-DC-13. |
+| Status | **RESOLVED** by the held/filled quantity correction commit (child of `80ca693`); evidence in the CLOSURE-REV-006 regression matrix and validation table below and in 08 T-10 (viii). F148 uses $q^{\mathrm{fill}}_o$ for fees and is unchanged. |
 
 ### CLOSURE-REV-007
 
@@ -191,6 +198,35 @@ hidden by strengthening an unrelated assumption.
 | Finding | F144/F145 rows omit A-EXE-01…03; $B^{\mathrm{win}}$ classed authoritative in 06 §5a but derived and UNDEFINED in S-295; cluster aggregates must use the current map, not ledger tags; per-execution entry fees ⇒ $\alpha_t=0$ does not say that pending orders fall outside T-10; T-11 does not list A-ACC-03. (The "$440>420$" wording of T-10 (2′) was corrected in the rebuilt proof.) |
 | Status | OPEN |
 
+### CLOSURE-REV-017
+
+| Field | Value |
+|---|---|
+| Severity | MINOR |
+| Object | 02 S-296 $\phi^{\mathrm{paid}}_o$, source class R |
+| Finding | class R means "realised only in $(\tau_t,\tau_{t+1}]$, not $\mathcal F_t$-measurable", but $\phi^{\mathrm{paid}}_o$ at the cut is an authoritative order-state input (06 §5a). Found while making S-304 canonical for CLOSURE-REV-006; S-304 had the same class and was corrected there because it is one of the quantities that finding defines. |
+| Status | OPEN |
+
+### CLOSURE-REV-018
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT — under the per-instrument reading of F145, T-10's conclusion fails inside its stated hypotheses |
+| Object | gate G11 and A-SCOPE-05 (test $Q^{\mathrm{res}}_{i,t}=0$); F144, F145, F150, written for one non-terminal entry order per instrument |
+| Counterexample (exact) | entry order $o_1$ for $100$ fully filled but not yet venue-confirmed terminal, entry fee $\max(1,0.005k)$ owed and not booked, every share exited: $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=q^{\mathrm{unf}}_{o_1}=0$, so G11 admits $o_2$ for $100$ on the same instrument; $o_2$ fills fully (fee $1$ booked), $100$ held, mark $52$, stop $49$, limit $50$, $\kappa^{\mathrm{out}}=0.01$, sell fee $0$, spread $0.01$ ($\Lambda_{i,t}=1/2$). One F145 for $i$ with $o_2$ charges $301$ against a worst loss of $603/2$ — the owed fee $1$ of $o_1$ is charged nowhere: $W_{t+1}=F_t-\tfrac12$ at $K_t=301$. Evaluated per order instead, the held part is charged twice: conservative at mark $52$, but at mark $48.95$ (sell fee $\max(1,0.005k)$, $\Lambda_{i,t}=3/2$) the sum is $2$ below the exact worst case. |
+| Required correction | G11 to require that no non-terminal entry order exists on $i$ (not only $Q^{\mathrm{res}}_{i,t}=0$), or F144, F145 and F150 defined per instrument over all of its non-terminal entry orders. |
+| Status | OPEN (T-10 open dependency (iv)). Found while correcting CLOSURE-REV-006 and not corrected there; it is pre-existing at `80ca693`, whose F144 also gave $Q^{\mathrm{res}}=n'-q^{\mathrm{fill}}=0$ for a fully filled order. |
+
+### CLOSURE-REV-019
+
+| Field | Value |
+|---|---|
+| Severity | IMPORTANT — T-10's conclusion fails inside its stated hypotheses |
+| Object | A-EXE-04 (fees may be booked after an order is terminal) applied to **exit** orders; F144 and F148 reserve the owed fees of entry orders only; T-10, T-19 |
+| Counterexample (exact) | $100$ sh held, stop $49$; the stop sells all $100$ at $48.9$ before $\tau_t$ and the exit order is terminal; its sell fee $\max(1,0.005k)=1$ is not yet booked at the cut. Nothing is held or pending, so $R^{\mathrm{open}}_t=R^{\mathrm{res}}_t=0\le K_t=\tfrac12$; the fee is booked in the period: $W_{t+1}=W_t-1=F_t-\tfrac12$. |
+| Required correction | the exit-side analogue of F148 (owed exit fees reserved until booked, for terminal and for working exit orders, the latter together with CLOSURE-REV-004), or exit fees required to be booked at the cut ($\alpha_t=0$ otherwise). |
+| Status | OPEN (T-10 open dependency (v); T-19 open dependency). Found while correcting CLOSURE-REV-006 and not corrected there; distinct from CLOSURE-REV-004, which concerns a working exit order's fee catch-up. |
+
 ## Regression matrix (exact rational arithmetic)
 
 "Old" evaluates the `5c486f0` formulas, "new" the corrected ones. A row passes when no hard limit is enlarged, no gate turns FAIL into PASS
@@ -224,3 +260,45 @@ against the corrected ones (the $\phi^{\mathrm{paid}}_o=1$ row is the valid cont
 | T-10 understatement over fee timing (booking at fill, later, after terminal) | $1{,}788$ states, three buy and two sell schedules | $480$ | $0$ |
 | T-19 $W_{t+1}<W^{\min}_{t+1}$ over fee timing, prices $\to0$ | $168$ states | $56$ | $0$ |
 | T-29 conservation identities | $5{,}000$ event sequences, $60{,}000$ events | — | $0$ violations |
+
+## CLOSURE-REV-006 regression matrix (exact rational arithmetic)
+
+Base: limit $50$, stop $49$, $\kappa^{\mathrm{out}}=0.01$, buy and sell fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=1$, spread $0.01$,
+$\phi^{\mathrm{paid}}_o=\phi^{\mathrm{acc}}_o$, mark $48.95$ unless stated; quantities $(n',q^{\mathrm{fill}}_o,q_{i,t})$. "Old" is the `80ca693` F145 with its one
+quantity symbol read as the holding (as written in F145) and as the fill (as written in F144). $W_{t+1}-F_t$ is the worst outcome with $K_t$ equal
+to the charge (T-10's premise with equality, no new order); the worst loss is the largest loss over every outcome inside T-10's hypotheses (further
+fills $0\ldots q^{\mathrm{unf}}_o$ at the limit, maximal entry fees, exit at the F072 bound). A valid row passes when $W_{t+1}\ge F_t$. An invalid row passes
+when $\alpha_t=0$ and the charge is not below the visible holding's own charge; no worst loss is defined there (the state is outside T-10).
+
+| # | Case | G8 | Worst loss | Old, holding reading: charge ($W_{t+1}-F_t$) | Old, fill reading: charge ($W_{t+1}-F_t$) | New | Old | New |
+|---|---|---|---|---|---|---|---|---|
+| 1 | $q_{i,t}=q^{\mathrm{fill}}_o=n'$: $(200,200,200)$ | fail | $-8$ | $-6$ ($+2$) | $-6$ ($+2$) | $-6$ ($+2$) | passes | passes |
+| 2 | $q_{i,t}<q^{\mathrm{fill}}_o<n'$, partial exit after partial entry fill (Case A): $(200,100,40)$ | fail | $501/5$ | $162$ ($+309/5$) | $99$ ($-6/5$) | $507/5$ ($+6/5$) | fails | passes |
+| 3 | $q_{i,t}=0<q^{\mathrm{fill}}_o<n'$: $(200,100,0)$ | n/a (nothing held) | $103$ | $204$ ($+101$) | $99$ ($-4$) | $103$ ($0$) | fails | passes |
+| 4 | $q_{i,t}<q^{\mathrm{fill}}_o=n'$: $(200,200,40)$ | fail | $-4/5$ | $162$ ($+814/5$) | $-6$ ($-26/5$) | $2/5$ ($+6/5$) | fails | passes |
+| 5 | $q^{\mathrm{fill}}_o=0$: $(200,0,0)$ | n/a | $205$ | $205$ ($0$) | $205$ ($0$) | $205$ ($0$) | passes | passes |
+| 6 | partial exit after partial entry fill, mark $52$: $(200,100,40)$ | pass | $1111/5$ | $284$ ($+309/5$) | $404$ ($+909/5$) | $1117/5$ ($+6/5$) | passes | passes |
+| 7 | full fill followed by partial exit: $(200,200,150)$ | fail | $-23/4$ | $93/2$ ($+209/4$) | $-6$ ($-1/4$) | $-4$ ($+7/4$) | fails | passes |
+| 8 | $q_{i,t}>q^{\mathrm{fill}}_o$, mark $52$: $(200,100,150)$ | pass | — (holding's own charge $907/2$) | $505$ | — | $\alpha_t=0$; $3{,}560{,}899/200$ | passes | passes |
+| 9 | $q^{\mathrm{fill}}_o>n'$, mark $52$: $(200,250,100)$ | pass | — (holding's own charge $303$) | $405$ | — | $\alpha_t=0$; $3{,}040{,}949/200$ | passes | passes |
+| 10 | $q_{i,t}>n'$ (Case B): $(100,100,150)$, mark $50$, $\kappa^{\mathrm{out}}=0.1$, no fees | pass | — (holding's own charge $165$) | $110$ | — | $\alpha_t=0$; $12{,}500$ | fails | passes |
+| 11 | $q^{\mathrm{fill}}_o$ missing | — | — | undefined | — | $\alpha_t=0$; no finite charge (RECOVERY) | — | passes |
+| 12 | $q_{i,t}=40.5$, off the lattice | — | — | undefined | — | $\alpha_t=0$; no finite charge (RECOVERY) | — | passes |
+| 13 | $q_{i,t}=-10$ | — | — | undefined | — | $\alpha_t=0$; no finite charge (RECOVERY) | — | passes |
+| 14 | $n'=-200$ | — | — | undefined | — | $\alpha_t=0$; no finite charge (RECOVERY) | — | passes |
+
+Every old failure of a valid row is the fill reading; it needs the held per-share term to be negative (mark below the stop less the exit cost),
+where G8 already blocks new risk while the cushion accounting is understated — except row 3, where nothing is held, G8 does not apply and the
+understatement reaches the budgets with $\alpha_t=1$. The holding reading never under-charged a valid state (it charged exited shares again as
+future fills) but under-charged row 10, with the mark above the stop and $\alpha_t=1$.
+
+## CLOSURE-REV-006 validation evidence (exact; scripts kept outside the repository)
+
+| Property | Search | Old (`80ca693`) | New |
+|---|---|---|---|
+| Valid states: charge $-\Lambda_{i,t}$ below the worst loss (T-10) | every valid $(n',q^{\mathrm{fill}}_o,q_{i,t})$ with $n'\le6$ ($83$ states) × $5$ marks × $6$ stops × $5$ $\kappa^{\mathrm{out}}$ schedules (one above the stop price) × $5$ fee schedules (one a percentage fee) × $N^{\mathrm{ex}}\in\{1,2\}$ × $3$ booking levels × tiers S, G, U: $927{,}900$ checks | $106{,}128$ (fill reading); $0$ (holding reading) | $0$ |
+| Clamp-inactive checks in which the charge is attained (T-21 (b)) | same | — | $859{,}900$ of $859{,}900$ |
+| $W_{t+1}<F_t$ at $K_t$ = charge in the seven required categories (partial entry fill, partial exit, $q_{i,t}<q^{\mathrm{fill}}_o$, $q^{\mathrm{fill}}_o=n'$, $q_{i,t}=0$ after fills, remainder $>0$, full fill then reduced holding) | $35{,}000$ random trials, $n'\le150$, random limits, stops, marks, ten $\kappa^{\mathrm{out}}$ schedules | $53$ (fill reading) | $0$ |
+| Invalid states with $\alpha_t\neq0$ | $1{,}212$ states (missing, off the lattice, $q_{i,t}<0$, $q^{\mathrm{fill}}_o<0$, $n'\le0$, $q_{i,t}>q^{\mathrm{fill}}_o$, $q^{\mathrm{fill}}_o>n'$, $q_{i,t}>n'$) | no guard | $0$ ($883$ with no finite charge) |
+| F150 charge below the same tier's charge of a valid reading, the visible holding's own charges or the reported fill's fee | $329$ states with a finite charge, $3{,}981{,}600$ checks | — | $0$ (the tier-U component alone: $10{,}056$) |
+| Conservation: share partition, $Q^{\mathrm{res}}$ under exits and fills, committed entry cash, F149, owed fee kept, booked fee not repeated | $83$ states; $20{,}000$ random lifecycles, $260{,}100$ cuts | exited shares in a quantity term in $56$ of $83$ states under either reading; an exit raises $Q^{\mathrm{res}}$ from $100$ to $160$ under the holding reading | $0$ violations; no valid lifecycle state flagged invalid |

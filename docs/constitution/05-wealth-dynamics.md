@@ -156,7 +156,7 @@ summed) or UNRESOLVED with an owner.
 | Execution cost of other (manual, risk-reducing) exits | [USD] | F057 ('other' chain) inside $p^{\mathrm{fill}}_j$ | via F055 | none ex ante: such orders are outside the floor theorems (A-EXE-05) | no | single location; a period with such an order is outside T-10 |
 | Liquidation cost of holdings $\Lambda_t$ (incl. exit fee, F035) | [USD] | F034; $\Delta\Lambda$ in F055 | via F055 | not credited in $r^{\mathrm{open}},g^{\mathrm{open}},u^{\mathrm{open}}$ | **yes** | **OC-1** |
 | Model re-estimation $\Delta\Lambda$ | [USD] | F055 valuation adjustment | via F055 | through $K_t$ only | no | DC-9 |
-| Pending-order cash $C^{\mathrm{res}}$ | [USD] | none until fill (then F052) | none | H14 via F048, remaining cost $(n'-q)p'^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ (F144), and the owed entry fees of terminal orders (F148) | no | deducted once from own cash; broker $\mathrm{BP}$ only restricts (F048) |
+| Pending-order cash $C^{\mathrm{res}}$ | [USD] | none until fill (then F052) | none | H14 via F048, remaining cost $q^{\mathrm{unf}}_op'^{\mathrm{lim}}+\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$ on the unfilled remainder (F144; it includes the owed fee of the filled shares, held or exited), and the owed entry fees of terminal orders (F148) | no | deducted once from own cash; broker $\mathrm{BP}$ only restricts (F048) |
 | Pending-order risk $R^{\mathrm{res}},G^{\mathrm{res}},Z^{\mathrm{res}},N^{\mathrm{res}},Q^{\mathrm{res}}$ | [USD], [sh$_i$] | none until fill; filled parts enter $q$ (F051), paid fees enter cash (F052) | none | re-evaluated at $\tau_t$ from the order state (F144): remaining quantity and remaining cost only; a partially filled order is charged $r^{\mathrm{pf}},g^{\mathrm{pf}},u^{\mathrm{pf}}$ (F145) and its held part no separate open risk | no (realised entry price and fees are in $W$ only) | single charge per exposure; re-evaluating an already reserved opportunity as new is blocked by G11 ($Q^{\mathrm{res}}_{i,t}\ne0$); a dropped order violates A-AUTH-02 and is undetectable by the pure engine — **UNRESOLVED: idempotency obligation of the integration contract** (owner: Phase-10 integration contract; fail-closed there: an opportunity identifier present in the ledger is never re-reserved). The ledger's own full-reservation rule (A-AUTH-05) is bookkeeping for T-11, not an engine input |
 | Realised strategy loss $\mathrm{SL}_{s,t}$ | [USD] | inside $W$ via F055 | via F055 | H3 (F078) against the window-start base $B^{\mathrm{win}}_s$ | no | counted once in H3; $\mathrm{SL}$ undefined ⇒ AUD-028 rule (06 §4) |
 | Income $\mathrm{Inc}$ | [USD] | F052 | via F055 | not credited ex ante (T-10 assumes $\ge0$) | ex-date drop in $\mathcal M$ vs cash | DC-7 (distinct real events) |
@@ -229,20 +229,43 @@ $W_{t+1}=F_t-1$ with $L^{\mathrm{stop}}=113$ (REV-029); with $N^{\mathrm{ex}}=3$
 separate execution).
 For a super-additive schedule ($\phi(k)+\phi(n-k)\le\phi(n)$ for all $k$) the envelope equals $\phi^{\mathrm{sell}}(n)$, so the rule changes nothing there.
 
-**Partially filled order (closure, AUD-033, AUD-034).** An instrument holding $q_{i,t}>0$ from an order of total $n'$ at limit $p'^{\mathrm{lim}}$ that is still
-pending is one exposure. It is charged the exact worst case of the held part and the unfilled remainder together, with the entry fees already
-paid, $\phi^{\mathrm{paid}}_o$, excluded because they are realised and already in $W_t$:
-$r^{\mathrm{pf}}_i=q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+(n'-q_{i,t})(p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))^++\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$ **[F145]**
-(tier G with $p^{\mathrm{gx}}_i(n')$, tier U with exit price $0$), in place of $r^{\mathrm{open}}_i$ plus the order's reservation (F144). The clamp $(\cdot)^+$ is needed
-because the unfilled part may not fill ($e=0$) while the stop can have been trailed to or above the limit after G7 checked it; the worst case over
-$0\le e\le n'-q_{i,t}$ of a term linear in $e$ is at an end point (AUD-039). Exhaustive exact enumeration (full, partial and multiple partial fills;
+**Partially filled order (closure, AUD-033, AUD-034; quantities kept apart, CLOSURE-REV-006).** An instrument $i$ whose entry order $o$ (total $n'_o$
+at limit $p'^{\mathrm{lim}}$) is still pending after part of it has filled is one exposure (G11). Three quantities [sh$_i$] are kept apart: the cumulative
+venue fill $q^{\mathrm{fill}}_o$ (execution reports; entry fees accrue on it, F148), the held quantity $q_{i,t}$ (the authoritative position after partial
+exits, reductions, execution corrections and reconciliation) and the unfilled remainder $q^{\mathrm{unf}}_o=n'_o-q^{\mathrm{fill}}_o$ (what can still fill, A-EXE-03);
+the $q^{\mathrm{fill}}_o-q_{i,t}$ exited shares are gone and their proceeds are in $W_t$. G11 makes every held share a fill of $o$, so a valid state has
+$0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ with every quantity on the lattice; any other state, or a quantity missing or off the lattice, is invalid:
+$\alpha_t=0$ and the fail-closed charge below, with no quantity inferred from another **[F150]**. In a valid state the exposure is charged the exact
+worst case of the held part and the remainder together, the entry fees already booked, $\phi^{\mathrm{paid}}_o$, excluded because they are in $W_t$:
+$r^{\mathrm{pf}}_i=q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i))+q^{\mathrm{unf}}_o(p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i))^++\phi^{\mathrm{split}}(\bar q_i)+\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$ **[F145]**
+with $\bar q_i=q_{i,t}+q^{\mathrm{unf}}_o$ the largest quantity holdable in the period (tier G with $p^{\mathrm{gx}}_i(\bar q_i)$, tier U with exit price $0$), in place
+of $r^{\mathrm{open}}_i$ plus the order's reservation (F144); each quantity term is [sh$_i$]$\times$[USD/sh$_i$], each fee term [USD]. *Derivation:* in the period
+$e\in[0,q^{\mathrm{unf}}_o]$ more shares fill at prices $\le p'^{\mathrm{lim}}$ (A-EXE-03, A-MKT-05) with entry-fee postings $\le\phi^{\mathrm{buy}}(q^{\mathrm{fill}}_o+e)-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$
+(A-EXE-04, F148), and the exposure $q_{i,t}+e\le\bar q_i$ exits within its F072 bound; with $\kappa^{\mathrm{out}}$ and $\phi^{\mathrm{split}}$ non-decreasing the loss is at most
+$r^{\mathrm{pf}}_i-\Lambda_{i,t}$, attained at $e=q^{\mathrm{unf}}_o$ when no clamp is active (08 T-10 (2′), T-21). The fee term is on $n'_o$, not on $\bar q_i$: fees accrue on
+fills, so exited shares still owe theirs. Exited shares are in no quantity term. With one symbol for both, the `80ca693` form failed either way
+(CLOSURE-REV-006): read as the fill, a partial exit while the entry was pending under-charged — $n'=200$, $100$ filled, $40$ held, mark $48.95$, stop $49$,
+limit $50$, $\kappa^{\mathrm{out}}=0.01$, fee $\max(1,0.005k)$, $N^{\mathrm{ex}}=1$, $\phi^{\mathrm{paid}}_o=1$, spread $0.01$: charge $99$ against a worst loss of $100.2$,
+$W_{t+1}=F_t-6/5$; with every filled share exited ($q_{i,t}=0$: nothing held, so G8 does not apply) $99$ against $103$; read as the holding, the remainder
+$n'-q_{i,t}=160$ charged the $60$ exited shares again as future fills ($162$), and $q_{i,t}=150>n'=100$ made it negative (price terms $110$ against $165$ for
+the visible holding, mark above the stop). F145 now gives $101.4=100.2+\Lambda_{i,t}$ and $103$, both exact; the third state is invalid. The clamp $(\cdot)^+$ is
+needed because the unfilled part may not fill ($e=0$) while the stop can have been trailed to or above the limit after G7 checked it; the worst case
+over $0\le e\le q^{\mathrm{unf}}_o$ of a term linear in $e$ is at an end point (AUD-039). Exhaustive exact enumeration (full, partial and multiple partial fills;
 per-order minimum fees; up to $N^{\mathrm{ex}}=3$ exit orders plus a remainder at the cut; fees billed at once or late) gives worst loss $=r^{\mathrm{pf}}_i-\Lambda_{i,t}$ in
 every state with the stop below the limit; with stops from $2$ below to $3$ above the limit ($46{,}200$ scenarios, $1{,}800$ states) the clamped
-charge is never understated and is exact in $1{,}250$ states. No realised cost is inside it. The ANOMALY rule applies to the held part in the same
+charge is never understated and is exact in $1{,}250$ states; with the quantities kept apart, every valid $(n'_o,q^{\mathrm{fill}}_o,q_{i,t})$ with $n'_o\le6$
+($927{,}900$ checks) gives no understatement and equality whenever no clamp is active (08 T-10 (viii)). No realised cost is inside it.
+*Invalid quantity state* (F150): when every quantity is present, on the lattice and non-negative, each tier is charged the largest of the three F145
+components of the virtual state "visible holding real, the whole order still to fill, fees on every fill that can exist, nothing booked"
+($q^{\mathrm{unf}}_o$ replaced by $n'_o$, $\bar q_i$ by $q_{i,t}+n'_o$, the entry fee by $\phi^{\mathrm{buy}}(\max(q_{i,t},q^{\mathrm{fill}}_o)+n'_o)$, $\phi^{\mathrm{paid}}_o$ by $0$), which dominates the same tier's
+F145 charge of every valid reading $q_{i,t}\le q^{\mathrm{fill}}\le n'_o$; the largest of the three is needed because the tier-U component alone falls below a
+valid reading's tier-S charge when $\kappa^{\mathrm{out}}>p^{\mathrm{stop}}$ ($n'_o=20$, $q_{i,t}=1>q^{\mathrm{fill}}_o=0$, $\kappa^{\mathrm{out}}=60$, stop and mark $49$: $1{,}052<1{,}222$).
+Otherwise no finite charge exists, the floor conditions F120–F122 fail and the output is RECOVERY — never $0$. The ANOMALY rule applies to the held part in the same
 form: its mark at or below the exposure's live stop fails G8 (CLOSURE-REV-001; this replaces the sign test of AUD-051, which a larger estimate or
-fee could mask). Every negative value of $r^{\mathrm{pf}}_i$ or $g^{\mathrm{pf}}_i$ implies it, because the clamped term and $\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$
-are $\ge0$ ($\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o\le\phi^{\mathrm{buy}}(n')$, F148), so a negative charge forces $m_{i,t}<p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(n')\le p^{\mathrm{stop}}_i$. Example:
-order $6$ sh at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.1+0.01n$, fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=2$; $2$ sh filled (fee $1$ paid), mark $52$,
+fee could mask). Every negative value of $r^{\mathrm{pf}}_i$ or $g^{\mathrm{pf}}_i$ implies it, because the clamped term and $\phi^{\mathrm{split}}(\bar q_i)+\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$
+are $\ge0$ ($\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o\le\phi^{\mathrm{buy}}(n'_o)$, F148), so a negative charge forces $q_{i,t}>0$ and $m_{i,t}<p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(\bar q_i)\le p^{\mathrm{stop}}_i$.
+Example: order $6$ sh at $50$, stop $49$, $\kappa^{\mathrm{out}}(n)=0.1+0.01n$, fee $\max(1,0.005k)$ per order, $N^{\mathrm{ex}}=2$; $2$ sh filled and held (fee $1$ paid;
+$\bar q_i=6$), mark $52$,
 $\Lambda_{i,t}=1.02$: worst loss $12.94$, $r^{\mathrm{pf}}_i=13.96$; the draft's $r^{\mathrm{open}}_i+L^{\mathrm{stop}}(6)=19.20$ over-charged by $5.24$, which includes the paid
 fee $1$ a second time.
 
@@ -288,7 +311,7 @@ $U=900$ and $K=45{,}810$, instead of $U=904{,}000/999$ and $K=41{,}400$; CLOSURE
    (closure form, AUD-038), where $C^{\mathrm{res}}_t$ is the remaining cash commitment of pending orders (F144: remaining quantity at the limit plus
    remaining entry fees; fees already booked and the filled part's cost are in $C_t$ and are not subtracted again) plus the owed entry fees of
    terminal orders (F148; omitting them gave $W_{t+1}=W^{\min}_{t+1}-1$, CLOSURE-REV-003), $\bar q_i$ is the largest quantity of
-   $i$ that can be held in the period ($q_{i,t}$, or the total $n'$ of a pending order on $i$), $\phi^{\mathrm{split}}_{i,0}$ is F140 applied to the sell fee at price
+   $i$ that can be held in the period ($q_{i,t}+q^{\mathrm{unf}}_o$ with a pending entry order $o$ on $i$, else $q_{i,t}$; F150), $\phi^{\mathrm{split}}_{i,0}$ is F140 applied to the sell fee at price
    $0$ (a sale of part of a holding at price $0$ plus the remainder's valuation fee otherwise gives $W_{t+1}=W^{\min}_{t+1}-1$, REV-034), and
    $\bar A_{t+1}$ is an $\mathcal F_t$-measurable upper bound on
    $\mathrm{Accr}_{t+1}$. Every term is known at $\tau_t$ (revised after review: the earlier form contained future quantities and omitted flows). A

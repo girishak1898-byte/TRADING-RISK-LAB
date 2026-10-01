@@ -303,3 +303,42 @@ case), all passing after the correction.
 **PHASE 0 = NOT PASSED.** The three CRITICAL findings are resolved; eight IMPORTANT findings remain open and the Phase-0 acceptance
 policy does not permit open IMPORTANT mathematical or safety findings.
 
+## 11. CLOSURE-REV-006 correction (held and filled quantities)
+
+### 11.1 Record
+
+| Field | Value |
+|---|---|
+| Parent SHA | `80ca6935b708a66f3a28fade6de3de2f9fa63562` |
+| Correction commit | "Fix Phase-0 held and filled quantity semantics", the child of `80ca693` (SHA reported in the final report) |
+| Scope | CLOSURE-REV-006 only. CLOSURE-REV-004, 005, 007 … 011 and the MINOR findings are unchanged. Two defects found during the correction are registered, not corrected: CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT). |
+
+### 11.2 What the correction changed
+
+| Object | Correction | Proof / evidence |
+|---|---|---|
+| Quantities | held $q_{i,t}$ (S-032), cumulative fill $q^{\mathrm{fill}}_o$ (S-304), order quantity $n'_o$ (S-308), unfilled remainder $q^{\mathrm{unf}}_o=n'_o-q^{\mathrm{fill}}_o$ (S-309) kept apart | share partition: each share of the order is held, exited or unfilled, and in at most one quantity term ($0$ violations in $83$ states) |
+| F145 | held part on $q_{i,t}$, pending part on $q^{\mathrm{unf}}_o$, exit cost and exit fees on $\bar q_i=q_{i,t}+q^{\mathrm{unf}}_o$, entry fees $\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$; conditional on CLOSURE-REV-005 | T-10 (2′) rebuilt; $927{,}900$ exact checks without understatement, attained in all $859{,}900$ clamp-inactive checks |
+| F144 | notional, cash and quantity on $q^{\mathrm{unf}}_o$; the owed fee identified separately as a liability of the filled shares | $C^{\mathrm{res}}$ = remainder notional + remainder fees + owed fee in every one of $260{,}100$ lifecycle cuts; exits never change $Q^{\mathrm{res}}$ |
+| F150 | validity $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ on the lattice; otherwise $\alpha_t=0$ and a fail-closed charge — the largest of the three F145 components of the virtual state (holding real, whole order still to fill, no fee credit) when every quantity is well formed, otherwise no finite charge (RECOVERY) | $1{,}212$ invalid states, all $\alpha_t=0$; $3{,}981{,}600$ dominance checks, none violated |
+| T-10, T-21 | dependency (iii) closed; (i) CLOSURE-REV-004, (ii) CLOSURE-REV-005 kept; (iv) CLOSURE-REV-018 and (v) CLOSURE-REV-019 added (T-19 also lists 019); T-21 mechanical | statuses unchanged (PROOF REQUIRES ADDITIONAL ASSUMPTIONS) |
+
+Regression matrix: [09-closure-review-registry.md](09-closure-review-registry.md) — 14 exact cases (7 valid, 7 invalid); 5 fail against `80ca693`,
+all pass after the correction.
+
+### 11.3 Status after the correction
+
+| Condition (Phase-0 PASS rule) | Result |
+|---|---|
+| GATE_TOTAL = 0 | 0 (checker); the checker verifies form, not truth |
+| UNRESOLVED CRITICAL findings = 0 | 0 |
+| UNRESOLVED IMPORTANT findings | **9 open** (CLOSURE-REV-004, 005, 007 … 011, 018, 019) |
+| No known risk understatement | **not met**: CLOSURE-REV-004 (exit-fee catch-up), 005 (several stops), 007 (cash semantics), 018 (a second non-terminal entry order on one instrument) and 019 (exit fee booked after the cut) |
+| Hard limits cannot be enlarged by estimates or model output | unchanged from §10.3 (CLOSURE-REV-008, 011 open) |
+| Non-finite numeric states fail closed | met; an invalid or missing quantity now fails closed as well (F150) |
+| No executable trading functionality | met |
+
+### 11.4 Decision
+
+**PHASE 0 = NOT PASSED.** CLOSURE-REV-006 is resolved; nine IMPORTANT findings remain open, two of them (CLOSURE-REV-018, 019) found during
+this correction.

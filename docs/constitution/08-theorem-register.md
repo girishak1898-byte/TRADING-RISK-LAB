@@ -36,7 +36,7 @@ Worked examples use $\delta_q=1$ sh and USD prices unless stated.
 | T-08 | Transaction-cost monotonicity | PROVED | F061–F063, F092 |
 | T-09 | Uncertainty monotonicity of feasibility-defined caps | PROVED | F125 |
 | T-09N | Argmax sizing monotone in ambiguity | DISPROVED | F017 |
-| T-10 | Capital-floor preservation (one period, tiered) | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F072, F120–F122, F148 |
+| T-10 | Capital-floor preservation (one period, tiered) | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F072, F120–F122, F148, F150 |
 | T-10N | Floor preservation without the v0.2 hypotheses | DISPROVED | F120 |
 | T-11 | Risk-reservation conservation | PROOF REQUIRES ADDITIONAL ASSUMPTIONS | F108, F119 |
 | T-11N | Naive reservation schemes | DISPROVED | F108 |
@@ -106,6 +106,15 @@ $W^{\mathrm{R}}$ (F146), units are issued at $\nu^{\mathrm{R}}$, T-06c is restat
 CLOSURE-REV-003: fee booking — $\phi^{\mathrm{paid}}_o$ is what is booked in $W_t$, owed fees stay reserved until booked, including for terminal orders
 (F148, F149, T-29); T-10 and T-19 are rebuilt with the booking semantics stated. CLOSURE-REV-004 … 016 remain open; T-10 lists 004–006 as open
 dependencies.
+
+**Revision R5 (held and filled quantities, CLOSURE-REV-006).** F144 and F145 used one symbol for the held quantity and the cumulative fill. The
+quantities are now separate — held $q_{i,t}$ (S-032), fill $q^{\mathrm{fill}}_o$ (S-304), order $n'_o$ (S-308), unfilled remainder $q^{\mathrm{unf}}_o=n'_o-q^{\mathrm{fill}}_o$ (S-309);
+F145 is rebuilt on the held quantity and the remainder with $\bar q_i=q_{i,t}+q^{\mathrm{unf}}_o$; F144's pending-portion terms use the remainder and the owed
+fee is identified as a liability of the filled shares; F150 makes $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ a validity condition ($\alpha_t=0$ and a fail-closed
+charge otherwise). T-10's open dependency (iii) is closed; (i) CLOSURE-REV-004 and (ii) CLOSURE-REV-005 remain, and (iv) CLOSURE-REV-018 (one
+non-terminal entry order per instrument) and (v) CLOSURE-REV-019 (exit fees booked after the cut), both found during this correction and not
+corrected, are added; its status is unchanged. T-21 is updated
+mechanically. No theorem is added; counts are unchanged.
 
 ---
 
@@ -559,8 +568,12 @@ place of $\phi^{\mathrm{sell}}$ throughout; per-share distances of pending order
 case (1′) (D-06, A-MKT-01, A-ACC-05; AUD-042). **Open dependencies (not resolved by the critical correction):** (i) A-TRIG is assumed for every
 exposure, including one whose exit order is partially executed at $\tau_t$, where the sufficient conditions listed in 04 A-TRIG do not imply it
 (exit-fee catch-up, CLOSURE-REV-004); (ii) each exposure has one live stop $p^{\mathrm{stop}}_i$ protecting all of its held and future quantity
-(CLOSURE-REV-005); (iii) for a partially filled order the held quantity $q_{i,t}$ equals the order's cumulative fill $q^{\mathrm{fill}}_o$ — no exit while the
-entry is pending (CLOSURE-REV-006).
+(CLOSURE-REV-005; F145 remains conditional on it). **Quantity state (CLOSURE-REV-006, resolved; no longer an open dependency):** every pending
+entry order satisfies F150 — held $q_{i,t}$, cumulative fill $q^{\mathrm{fill}}_o$ and order quantity $n'_o$ present, on the lattice, $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$;
+exits while the entry is pending are covered by case (2′); an invalid state has $\alpha_t=0$ and the F150 charge, for which T-10 claims only the
+dominance of (viii). **Open dependencies registered at that correction:** (iv) at most one non-terminal entry order per instrument — G11's test
+$Q^{\mathrm{res}}_{i,t}=0$ admits a second entry order while a fully filled order awaits its terminal confirmation (CLOSURE-REV-018, OPEN); (v) every
+exit fee of an exit executed before $\tau_t$ is booked into $W_t$ at the cut — no exit-side owed-fee reservation exists (CLOSURE-REV-019, OPEN).
 Tier G: A-GAP (tier-G form of F072) instead of A-TRIG. Tier U: A-MKT-01 and A-ACC-05 (tier-U form of F072) instead of A-TRIG.
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
@@ -584,17 +597,24 @@ $e\,x\le n'x^+$ for $0\le e\le n'$, and monotonicity (A-EXE-01, A-EXE-02, F140) 
 charge ($r^{\mathrm{pf}}$ with $q=0$); for the new order $x>0$ by G7 and the bound is $L^{\mathrm{stop}}(n)$ (F061 with F140). A value computed with older
 inputs is not enough (REV-028); without the clamp the charge can be negative (stop $51$, limit $50$, $\kappa^{\mathrm{out}}=0.1$, \$1 minimum fees, $n'=100$:
 $-87$ against a worst loss of $1.2$; AUD-039). Unfilled orders give $\Delta_i=0$.
-(2′) *Order partially filled before* $\tau_t$ (AUD-033, AUD-034): held $q_{i,t}>0$ and a pending remainder of the same order of total quantity $n'$,
-$\phi^{\mathrm{paid}}_o$ booked — one exposure (G11), charged $r^{\mathrm{pf}}_i$ (F145) in $R^{\mathrm{res}}_t$ and nothing in $R^{\mathrm{open}}_t$. With $e\le n'-q_{i,t}$ filled in the
-period at prices $\le p'^{\mathrm{lim}}$, the fee postings are at most $\phi^{\mathrm{buy}}(q_{i,t}+e)-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$, which covers the owed fee
-of the filled part and the fees of future fills (F148). A-TRIG with $q^{\mathrm{exp}}_i=q_{i,t}+e$, $\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i)\le\kappa^{\mathrm{out}}_i(n')$,
-$\phi^{\mathrm{split}}(q^{\mathrm{exp}}_i)\le\phi^{\mathrm{split}}(n')$ and $e\,x\le(n'-q_{i,t})x^+$ for $x=p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n')$ of either sign give
-$\Delta_i\ge-\big[q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n'))+(n'-q_{i,t})x^++\phi^{\mathrm{split}}(n')+\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o\big]+\Lambda_{i,t}=-r^{\mathrm{pf}}_i+\Lambda_{i,t}$.
-The filled quantity's entry price and the booked fees are in $W_t$ and are not charged again. Charging only the remainder under-charges
+(2′) *Order partially filled before* $\tau_t$ (AUD-033, AUD-034; quantities CLOSURE-REV-006): pending order $o$ of total $n'_o$ with cumulative fill
+$q^{\mathrm{fill}}_o>0$, held $q_{i,t}$ with $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ (F150; $q^{\mathrm{fill}}_o-q_{i,t}$ shares exited before $\tau_t$, their proceeds in $W_t$), unfilled
+remainder $q^{\mathrm{unf}}_o=n'_o-q^{\mathrm{fill}}_o\ge0$, $\phi^{\mathrm{paid}}_o$ booked — one exposure (G11), charged $r^{\mathrm{pf}}_i$ (F145) in $R^{\mathrm{res}}_t$ and nothing in
+$R^{\mathrm{open}}_t$. With $e\le q^{\mathrm{unf}}_o$ [sh$_i$] filled in the period at prices $\le p'^{\mathrm{lim}}$, the fee postings are at most
+$\phi^{\mathrm{buy}}(q^{\mathrm{fill}}_o+e)-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$ [USD], which covers the owed fee of every filled share, held or exited, and the
+fees of future fills (F148). The exposure is $q^{\mathrm{exp}}_i=q_{i,t}+e\le\bar q_i=q_{i,t}+q^{\mathrm{unf}}_o$ [sh$_i$]; A-TRIG, $\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i)\le\kappa^{\mathrm{out}}_i(\bar q_i)$
+[USD/sh$_i$], $\phi^{\mathrm{split}}(q^{\mathrm{exp}}_i)\le\phi^{\mathrm{split}}(\bar q_i)$ [USD] and $e\,x\le q^{\mathrm{unf}}_ox^+$ [USD] for $x=p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i)$
+[USD/sh$_i$] of either sign give
+$\Delta_i\ge-\big[q_{i,t}(m_{i,t}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i))+q^{\mathrm{unf}}_ox^++\phi^{\mathrm{split}}(\bar q_i)+\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o\big]+\Lambda_{i,t}=-r^{\mathrm{pf}}_i+\Lambda_{i,t}$.
+The filled quantity's entry price, the exited shares' proceeds and the booked fees are in $W_t$ and are not charged again; an exited share is in
+neither quantity term, and only $q^{\mathrm{unf}}_o\ge0$ (from $q^{\mathrm{fill}}_o\le n'_o$) and $q_{i,t}\ge0$ are used — $q_{i,t}\le q^{\mathrm{fill}}_o$ is the consistency check of
+G11 and A-AUTH-02. Reading the held term with the fill under-charges after a partial exit (CLOSURE-REV-006: $99$ against a worst loss of $100.2$).
+Charging only the remainder under-charges
 ($\kappa^{\mathrm{out}}(n)=0.001n$, no fees, $n'=200$, $q_{i,t}=100$ marked at $52$, limit $50$, stop $49$: worst loss $440-\Lambda_{i,t}>r^{\mathrm{open}}_i+L^{\mathrm{stop}}(100)=420$
 whenever $\Lambda_{i,t}<20$); charging open risk plus the full-order reservation charges realised costs twice (05 §5: $5.24$).
 (3) Each exposure, each pending order and each owed fee is charged exactly once (an owed fee of a pending order inside F145, of a terminal order
-only in F144; F064–F066 carry no entry fee; T-29). Summing with $\mathrm{Inc}\ge0$ and $\Lambda_t=\sum_i\Lambda_{i,t}$:
+only in F144; F064–F066 carry no entry fee; T-29); each filled share is held (held term) or exited (in $W_t$), each unfilled share is in the
+remainder term only (CLOSURE-REV-006). Summing with $\mathrm{Inc}\ge0$ and $\Lambda_t=\sum_i\Lambda_{i,t}$:
 $W_{t+1}\ge W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))\ge W_t-K_t=F_t$.
 Tiers G and U: identical with the tier's form of F072 and the same fee terms (the owed-fee reservation is part of $G^{\mathrm{res}}_t$ and $Z^{\mathrm{res}}_t$). ∎
 
@@ -617,15 +637,33 @@ $0$, spread $0.01$: $W_{t+1}=F_t-\tfrac12$; $40$ sh, buy fee minimum $5$, sell f
 not booked was counted as paid: $W_{t+1}=F_t-4.75$. With F148 the same states give $F_t+\tfrac12$, $F_t+1.4$ and $F_t+\tfrac14$. Exact enumeration of
 fee timing (bookings at the fill, within the period, or after the order is terminal; $\phi^{\mathrm{paid}}_o\in\{0,\phi^{\mathrm{acc}}_o/2,\phi^{\mathrm{acc}}_o\}$; three buy and two
 sell schedules; $1{,}788$ states): $480$ understatements with the `5c486f0` charges, $0$ with F148.
+(viii) Quantity semantics (CLOSURE-REV-006, at `80ca693`, where F144 read $q$ as the fill and F145 as the holding): after a partial exit while the
+entry is pending ($n'=200$, $100$ filled, $40$ held, mark $48.95$, stop $49$, limit $50$, $\kappa^{\mathrm{out}}=0.01$, fee $\max(1,0.005k)$, $N^{\mathrm{ex}}=1$,
+$\phi^{\mathrm{paid}}_o=1$, spread $0.01$, $\Lambda_{i,t}=1.2$) the fill reading charged $99$ against a worst loss of $100.2$ ($W_{t+1}=F_t-6/5$) and the holding reading
+$162$; with $q_{i,t}=150>n'=100$ (mark $50$ above stop $49$, per-share distance $1.1$) the price terms were $110$ against $165$. Rebuilt: $101.4$ (exact),
+and $\alpha_t=0$ with the F150 charge $12{,}500$. Exhaustive exact enumeration of every valid $(n',q^{\mathrm{fill}}_o,q_{i,t})$ with $n'\le6$ ($83$ quantity
+states; five marks from $48.95$ to $52$, six stops from $48$ to $51$ around the limit $50$, five $\kappa^{\mathrm{out}}$ schedules including one above the
+stop price, five fee schedules including a percentage fee, $N^{\mathrm{ex}}=1,2$, three booking levels, tiers S, G, U; $927{,}900$ checks):
+no understatement and no $W_{t+1}<F_t$, equality in all $859{,}900$ clamp-inactive checks; the fill reading understated in $106{,}128$.
+Randomised exact search ($35{,}000$ trials, $n'\le150$, categories partial entry fill, partial exit, $q_{i,t}<q^{\mathrm{fill}}_o$, $q^{\mathrm{fill}}_o=n'$, $q_{i,t}=0$
+after fills, remainder $>0$, full fill then reduced holding): no $W_{t+1}<F_t$ (fill reading: $53$). Invalid states ($q_{i,t}<0$,
+$q^{\mathrm{fill}}_o<0$, $n'\le0$, $q_{i,t}>q^{\mathrm{fill}}_o$, $q^{\mathrm{fill}}_o>n'$, $q_{i,t}>n'$, missing, off the lattice; $1{,}212$ states, $329$ with a finite
+charge): $\alpha_t=0$ in every one; the F150 charge is at least the same tier's F145 charge of every valid reading $q_{i,t}\le q^{\mathrm{fill}}\le n'$, the visible
+holding's own charges and the reported fill's fee ($3{,}981{,}600$ checks, none violated; the tier-U component alone: $10{,}056$ violations).
+Dominance: for a valid reading, $\bar q_i\le q_{i,t}+n'$, the remainder is $\le n'$ and $\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(\max(q_{i,t},q^{\mathrm{fill}}_o)+n')$, and
+every term of F145 is monotone in these ($\kappa^{\mathrm{out}}$, $\phi$ non-decreasing, $p^{\mathrm{gx}}$ non-increasing).
 
 **NUMERICAL EDGE CASES.** Equality in the premise (floor attained, not breached); aggregates rounded up and $K_t$ rounded down (T-24); fees
 quantised up (01 §9 item 15); $e=0$; a stop exactly at the limit ($x=\kappa^{\mathrm{out}}(n')>0$, clamp inactive); $-0$ rejected at the boundary;
-$\phi^{\mathrm{paid}}_o=\phi^{\mathrm{acc}}_o$ (nothing owed); $\phi^{\mathrm{paid}}_o>\phi^{\mathrm{acc}}_o$ ⇒ $\alpha_t=0$, no credit (F148).
+$\phi^{\mathrm{paid}}_o=\phi^{\mathrm{acc}}_o$ (nothing owed); $\phi^{\mathrm{paid}}_o>\phi^{\mathrm{acc}}_o$ ⇒ $\alpha_t=0$, no credit (F148); $q_{i,t}=0<q^{\mathrm{fill}}_o$ (every filled
+share exited: remainder and owed fees only); $q^{\mathrm{fill}}_o=n'_o$ before the terminal confirmation ($q^{\mathrm{unf}}_o=0$); a quantity state outside F150 ⇒
+$\alpha_t=0$ and the F150 charge.
 
 **MACHINE-TESTABLE INVARIANT.** Simulator with adversarial paths drawn inside the tier's disturbance set (comonotone all-stops scenario,
 triggered-unfilled states, split fills, partial exits at the cut) ⇒ $W_{t+1}\ge F_t$; F072 checked per exposure ex post; each T-10N
 counterexample is a regression test that must fail when its hypothesis is removed; fee-timing property test (random fills, bookings at the
-fill, later or after the terminal state, fee-final events: each fee dollar in $W_t$ or in exactly one charge, T-29, and $W_{t+1}\ge F_t$); paths
+fill, later or after the terminal state, fee-final events: each fee dollar in $W_t$ or in exactly one charge, T-29, and $W_{t+1}\ge F_t$); quantity-state
+property test (random fills, partial exits and corrections: F150 at every cut, no exited share in a quantity term, $Q^{\mathrm{res}}$ unchanged by exits); paths
 outside are logged as assumption violations with breach magnitude.
 
 ---
@@ -997,7 +1035,8 @@ $\log(W_{t+1}/W_t)\ge\log(W^{\min}_{t+1}/W_t)>-\infty$ under every law supported
 A-MKT-05 (fills at or below the limit), A-EXE-01…05 (A-EXE-05: no other orders), A-AUTH-02, A-AUTH-04, pending orders by F144; A-ACC-07
 with $\mathrm{Fin}=0$, $\mathrm{Inc}\ge0$ and $\mathrm{Accr}_{t+1}\le\bar A_{t+1}$ (S-185) in place of $\mathrm{Accr}=0$; A-MKT-01; A-ACC-05 (tier-U form of F072 with F140);
 A-EXE-04 with the booking semantics of F148 (owed entry fees of terminal orders in $C^{\mathrm{res}}_t$); $W_t>0$. Open dependency: A-ACC-05 is assumed
-also for an exposure whose exit order is partially executed at $\tau_t$, whose cumulative exit fee is not modelled (CLOSURE-REV-004).
+also for an exposure whose exit order is partially executed at $\tau_t$, whose cumulative exit fee is not modelled (CLOSURE-REV-004); every exit fee of
+an exit executed before $\tau_t$ is booked at the cut (CLOSURE-REV-019).
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
@@ -1083,7 +1122,7 @@ attainable (every order may fill fully at its limit with the maximal fees allowe
 F072 with equality, and every exposure without a stop its tier-U bound; no dependence restriction), and let the charges be those of F064, F066
 (D-06), F144, F145 and F061 at the $\tau_t$ inputs.
 (a) *Sufficient condition:* $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t+\Lambda_t$ implies $W_{t+1}\ge F_t$ for every outcome in $\mathcal W^{\mathrm{S}}$.
-(b) *Necessary condition, when no clamp is active* ($p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(n')\ge0$ for every pending order): if $W_{t+1}\ge F_t$ for every
+(b) *Necessary condition, when no clamp is active* ($p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i)\ge0$ for every pending order): if $W_{t+1}\ge F_t$ for every
 outcome in $\mathcal W^{\mathrm{S}}$, then $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t+\Lambda_t$.
 (c) *Equivalence:* when no clamp is active, by (a) and (b), floor safety on $\mathcal W^{\mathrm{S}}$ holds **iff** $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t+\Lambda_t=E_t-F_t$.
 With an active clamp only (a) holds: the charge includes the unfilled part's fees, which no outcome with $e=0$ incurs.
@@ -1095,8 +1134,8 @@ $K_t<R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t+\Lambda_
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
 
 **PROOF.** (a) Step (3) of T-10 gives $W_{t+1}\ge W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))\ge W_t-K_t=F_t$. (b) In the attainable comonotone outcome
-every held exposure realises $\Delta_i=-r^{\mathrm{open}}_i+\Lambda_{i,t}$ (without a stop: $-u^{\mathrm{open}}_i+\Lambda_{i,t}$, prices → $0$), every partially filled order $\Delta_i=-r^{\mathrm{pf}}_i+\Lambda_{i,t}$ (it fills fully at its limit, pays
-$\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o$, and exits at its bound with fees $\phi^{\mathrm{split}}(n')$), every other pending order and the new order $\Delta_i=-L^{\mathrm{stop}}$, and
+every held exposure realises $\Delta_i=-r^{\mathrm{open}}_i+\Lambda_{i,t}$ (without a stop: $-u^{\mathrm{open}}_i+\Lambda_{i,t}$, prices → $0$), every partially filled order $\Delta_i=-r^{\mathrm{pf}}_i+\Lambda_{i,t}$ (its remainder $q^{\mathrm{unf}}_o$ fills at its limit, it pays
+$\phi^{\mathrm{buy}}(n'_o)-\phi^{\mathrm{paid}}_o$, and $\bar q_i=q_{i,t}+q^{\mathrm{unf}}_o$ exits at its bound with fees $\phi^{\mathrm{split}}(\bar q_i)$), every other pending order and the new order $\Delta_i=-L^{\mathrm{stop}}$, and
 $\mathrm{Inc}=0$; so $W_{t+1}=W_t-(R^{\mathrm{open}}_t-\Lambda_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n))$, which is $<F_t$ whenever the condition fails. (c) (a) and (b); $K_t+\Lambda_t=E_t-F_t$
 by F034, F044. (d) $\Lambda_t\ge0$ (A-ACC-06) gives sufficiency; the AUD-032 example below is a floor-safe state violating F120. ∎
 
@@ -1106,6 +1145,9 @@ $W_{t+1}=F_t+1$ (AUD-032). The v0.2 draft's "iff" also failed while a partially 
 (REV-025: charge $550>K_t+\Lambda_t=440$, worst outcome $W_{t+1}=F_t$); with F145 that charge is exact. The exhaustive enumeration of T-10 (o) found the
 charge minus $\Lambda$ equal to the attained worst loss in every state, which is (b) instance by instance. The `f37c1b6` statement "F120 is
 sufficient" was false for a stop trailed above a pending limit (AUD-039; T-10N); with the clamp (a) holds in all $46{,}200$ enumerated scenarios.
+With one symbol for the held quantity and the fill (`80ca693`, CLOSURE-REV-006), (a) failed under the fill reading and (b) under the holding reading
+after a partial exit while the entry was pending (Case A: $99$ and $162$ against an attained $101.4$); with F145 rebuilt on $q_{i,t}$ and $q^{\mathrm{unf}}_o$ the charge
+is attained in every clamp-inactive check of T-10 (viii).
 
 **NUMERICAL EDGE CASES.** At the boundary the attained outcome gives $W_{t+1}=F_t$ exactly.
 

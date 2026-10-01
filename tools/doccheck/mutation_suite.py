@@ -72,6 +72,14 @@ MUTATIONS = [
     ("formula row incomplete", C + "14-formula-registry.md",
      "| exposure charge of a partially filled order: exact worst case, realised costs excluded |", "|  |",
      "INCOMPLETE_FORMULA_ROWS"),
+    ("quantity-validity formula row incomplete", C + "14-formula-registry.md",
+     "| quantity-state validity and fail-closed charge: held quantity, cumulative fill and order quantity are never merged, inferred or defaulted |",
+     "|  |", "INCOMPLETE_FORMULA_ROWS"),
+    ("dimension error (unfilled remainder)", C + "14-formula-registry.md",
+     "`q <= q_fill; q_fill <= n_o; q_unf == n_o - q_fill;", "`q <= q_fill; q_fill <= n_o; q_unf == n_o - phi_paid;",
+     "DIMENSIONAL_CONFLICTS"),
+    ("unregistered unfilled-remainder symbol", C + "02-symbol-registry.md",
+     "| S-309 | $q^{\\mathrm{unf}}_o$ |", "| S-309 | $q^{\\mathrm{zzz}}_o$ |", "UNREGISTERED_SYMBOLS"),
 ]
 
 

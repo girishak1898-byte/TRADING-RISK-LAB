@@ -91,6 +91,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-DC-10 | Strategy loss cap on a moving base $B_t$ | realised strategy loss reduces $B_t$ and is subtracted again as $\mathrm{SL}$ | window-start base $B^{\mathrm{win}}_s$ (F078; closure, AUD-035) |
 | FM-DC-11 | Pending cash subtracted from a broker figure that already nets open orders | pending cash deducted twice | F048: $\min(\mathrm{BP}_t,C^{\mathrm{avail}}_t-C^{\mathrm{res}}_t)$ (closure, AUD-035) |
 | FM-DC-12 | Entry fee owed but not booked: terminal order, or fee reported but not booked | the fee is in neither $W$ nor any charge ($W_{t+1}=F_t-\tfrac12$; $F_t-4.75$) | $\phi^{\mathrm{paid}}$ = booked; owed fees reserved until booked (F148, T-29; CLOSURE-REV-003) |
+| FM-DC-13 | One symbol for the held quantity and the order's cumulative fill (F144 "filled", F145 "held") | after a partial exit while the entry is pending, exited shares charged as held ($W_{t+1}=F_t-6/5$) or again as future fills; $q_{i,t}>n'$ makes the remainder negative ($110$ against $165$) | held $q_{i,t}$, fill $q^{\mathrm{fill}}_o$ and remainder $q^{\mathrm{unf}}_o$ kept apart; F145 rebuilt; validity F150 ($\alpha_t=0$ and a fail-closed charge otherwise; CLOSURE-REV-006) |
 
 ### Drawdown and floors (FM-DD)
 
