@@ -53,7 +53,7 @@ test sample (01 §11).
 | RQ-28 | Decision epochs: event-driven vs clock-driven; effect on tail measures | §5 of 01 | specification | chosen and registered |
 | RQ-29 | Historical data source with bitemporal (knowledge-time) fidelity, corporate actions, delisted names, quotes for spreads | all data RQs | vendor/source assessment (no broker connectivity) | source meeting NLA and survivorship requirements |
 | RQ-34 | Add-on (scaling-in) risk: prove the incremental combined-bound charge (05 §5) including pending orders on the same instrument and a single authoritative stop per instrument | lifting G11 / D-12 | derivation + counterexample search | proof reviewed; G11 relaxable |
-| RQ-35 | Fee semantics: per order vs per execution; minimums, caps and rounding of regulatory fees; worst-case-over-splits envelope | A-EXE-04, T-10, T-11 | primary fee-schedule sources (read-only) | fee model with proven upper bound per order |
+| RQ-35 | Fee semantics: per order vs per execution; minimums, caps and rounding of regulatory fees; worst-case-over-splits envelope | A-EXE-04, T-10, T-11 | primary fee-schedule sources (read-only) | fee model with proven upper bound per order; an exit-routing envelope exact over working-order continuations, cancellations and fresh orders, to remove the registered over-charge OC-5 of $\Phi^{\mathrm{xfut}}$ (F155) |
 | RQ-33 | Is mechanised verification (e.g. an interactive theorem prover) worth its cost for T-01..T-03, T-10, T-24? | assurance level | pilot on T-02 | cost/benefit note |
 
 ## E. Drawdown and recovery

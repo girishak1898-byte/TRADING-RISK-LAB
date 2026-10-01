@@ -24,12 +24,12 @@ A-MKT-05 (every entry fill $\le p^{\mathrm{lim}}$), A-EXE-01, A-EXE-02, A-EXE-03
 filled quantity, booked into $W$ at the fill or later; owed fees reserved until booked, F148), A-EXE-05 (no other orders), A-AUTH-02 (complete
 ledger, including each pending order's filled quantity and fees booked, and terminal entry orders whose fees are not final),
 A-AUTH-04 (snapshot and ledger form one cut); reservations and partially filled orders charged by F144 and F145 (per-share distances clamped
-at $0$); an exposure without an authoritative stop charged $u^{\mathrm{open}}$ (D-06) and covered in every tier by the tier-U bound (A-MKT-01, A-ACC-05).
+at $0$); held shares charged per stop-lot (F153), every share without an authoritative stop at tier U (D-06, A-MKT-01, A-ACC-05); executing exit orders and terminal exit orders with fees not booked in full carried in $\mathcal X_{i,t}$ (F154), their future fees inside the charges ($\Phi^{\mathrm{xfut}}$, F155) and their owed fees as the reservation F157 (Wave A).
 
 | Tier | Guarantee holds if, in addition … | Constraint family | Assumption strength |
 |---|---|---|---|
-| **U** — unconditional | prices $\ge0$ (A-MKT-01); position-level tier-U exit value $\mathrm{XV}_i\ge-\phi^{\mathrm{sell}}_{i,0}(q^{\mathrm{exp}}_i)$ (A-ACC-05, F072); ledger/custody integrity (A-AUTH-01) | notional, gross, concentration, buying power, absolute-loss cushion H16 | weakest (structural facts for long cash equities) |
-| **S** — stop | position-level exit-value bound $\mathrm{XV}_i\ge q^{\mathrm{exp}}_i(p^{\mathrm{stop}}_i-\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i))-\phi^{\mathrm{sell}}_i(q^{\mathrm{exp}}_i)$ (A-TRIG, F072, at the $\tau_t$ inputs), for which A-STOP, A-STOPLIVE, A-EXE-04, at most $N^{\mathrm{ex}}$ exit orders per exposure with $\phi^{\mathrm{split}}$ (F140), and a remainder at the cut valued no lower than its stop bound are sufficient (04 A-TRIG); the remainder's valuation uses the estimate $\hat\Lambda_{t+1}$, so the bound has a model component (AUD-048) | stop-risk budgets ($R$-family) | strong; **known to fail** in gaps and halts |
+| **U** — unconditional | prices $\ge0$ (A-MKT-01); position-level tier-U exit value $\mathrm{XV}_i\ge-\Phi^{\mathrm{xowed}}_{i,t}-\Phi^{\mathrm{xfut}}_{i,0}$ (A-ACC-05, F072); ledger/custody integrity (A-AUTH-01) | notional, gross, concentration, buying power, absolute-loss cushion H16 | weakest (structural facts for long cash equities) |
+| **S** — stop | position-level exit-value bound $\mathrm{XV}_i\ge\sum_kq^{\mathrm{lot}}_{i,k}(p^{\mathrm{stop}}_{i,k}-\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i))+e(p^{\mathrm{stop}}_o-\kappa^{\mathrm{out}}_i(q^{\mathrm{exp}}_i))-\Phi^{\mathrm{xowed}}_{i,t}-\Phi^{\mathrm{xfut}}_i$ (A-TRIG, F072, at the $\tau_t$ inputs; per stop-lot, exit fees owed and future), for which A-STOP per lot, A-STOPLIVE, A-EXE-04 on both sides, at most $N^{\mathrm{ex}}$ fresh exit orders per exposure with $\phi^{\mathrm{split}}$ (F140, inside F155), and a remainder at the cut valued no lower than its lot's stop bound are sufficient (04 A-TRIG); the remainder's valuation uses the estimate $\hat\Lambda_{t+1}$, so the bound has a model component (AUD-048) | stop-risk budgets ($R$-family) | strong; **known to fail** in gaps and halts |
 | **G** — gap stress | position-level bound with exit price $p^{\mathrm{gx}}=\min((1-\Gamma_i)p^{\mathrm{stop}},p^{\mathrm{stop}}-\kappa^{\mathrm{out}})$ (A-GAP, F060, F072) | gap-risk budgets ($G$-family) | medium; fails beyond the stress level |
 | **L** — liquidity proxy | future tradable volume is not below the policy fraction of trailing ADV (A-LIQ, A-MKT-06) | participation and exit-horizon caps | medium; fails in liquidity collapse |
 
@@ -115,7 +115,10 @@ ledger cash, and the broker figure can only restrict (closure: the former form d
 **Reservations in budgets (closure form, REV-028, AUD-034).** Every reservation component is re-evaluated at $\tau_t$ from the order state —
 current F111 inputs, fee schedule and stop, total quantity $n'_o$ ordered, cumulative fill $q^{\mathrm{fill}}_o$, unfilled remainder $q^{\mathrm{unf}}_o=n'_o-q^{\mathrm{fill}}_o$, fees already booked into $W_t$, $\phi^{\mathrm{paid}}_o$ (F148) **[F144]** — and an instrument whose
 order is partially filled is charged the exact exposure charge $r^{\mathrm{pf}}_i,g^{\mathrm{pf}}_i,u^{\mathrm{pf}}_i$ **[F145]** (05 §5) instead of open risk plus a reservation.
-Its held part uses the held quantity $q_{i,t}$ and its pending part the unfilled remainder $q^{\mathrm{unf}}_o$; exited shares are in neither. A state outside
+Its held part uses the held quantity $q_{i,t}$ by stop-lot — each lot at its own stop, unprotected shares at tier U (F153; a higher stop never masks a
+lower one, CLOSURE-REV-005) — and its pending part the unfilled remainder $q^{\mathrm{unf}}_o$ at the order's current stop; exited shares are in neither; the
+exit fees of every executing or not fully booked exit order are carried in $\mathcal X_{i,t}$ (F154): the future part inside the charge ($\Phi^{\mathrm{xfut}}_i$, F155), the owed part as the
+reservation $r=g=u=C^{\mathrm{res}}=\Phi^{\mathrm{xowed}}_{i,t}$ **[F157]** on every instrument with such an order, held or not (CLOSURE-REV-004, CLOSURE-REV-019). A state outside
 $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$, or with a quantity missing or off the lattice, gives $\alpha_t=0$ and the fail-closed charge of F150 — a finite upper
 charge when every quantity is well formed, otherwise no finite charge (RECOVERY); never $0$, never a quantity inferred from another (CLOSURE-REV-006).
 The per-share distance of the unfilled part, $p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i)$ (and $p'^{\mathrm{lim}}-p^{\mathrm{gx}}_i(\bar q_i)$), is clamped at $0$: G7 checks the stop
@@ -156,7 +159,7 @@ which the deterministic function $Q^{\mathrm{hard}}$ is evaluated and do not cha
 
 | Input | Class | Enters | Effect on caps |
 |---|---|---|---|
-| $q_{i,t}$, $C_t$, $Y_t$, pending orders ($n'_o,p'^{\mathrm{lim}}$, stop, $q^{\mathrm{fill}}_o$, $\phi^{\mathrm{paid}}_o$), live stops $p^{\mathrm{stop}}_i$, $\mathrm{SL}_{s,t}$, $B^{\mathrm{win}}_s$ | AUTHORITATIVE | $W,K,B$, F050, F144, F145, H3, H8–H16 | defines the state |
+| $q_{i,t}$, $C_t$, $Y_t$, pending orders ($n'_o,p'^{\mathrm{lim}}$, stop, $q^{\mathrm{fill}}_o$, $\phi^{\mathrm{paid}}_o$), stop-lots $(q^{\mathrm{lot}}_{i,k},p^{\mathrm{stop}}_{i,k})$ (F153), exit orders $\mathcal X_{i,t}$ ($q^{\mathrm{xf}}_o,q^{\mathrm{xr}}_o,\phi^{\mathrm{xpaid}}_o$, lifecycle, fee finality; F154), $\mathrm{SL}_{s,t}$, $B^{\mathrm{win}}_s$ | AUTHORITATIVE | $W,K,B$, F050, F144, F145, F157, H3, H8–H16 | defines the state; lots summing to more than the holding ⇒ $\alpha_t=0$ (stated lots plus every share at tier U), more stop orders than $N^{\mathrm{ex}}$ ⇒ $\alpha_t=0$ (one fee part per stop order), exit remainders above the holding or a quantity missing ⇒ RECOVERY; never a stop inferred from another lot, never terminality inferred from a zero remainder, never a fee released by a confirmation |
 | $\theta$ (all fractions, $\mu^K,\mu^G$, $d^{\max}$, $\Gamma^{\min},\kappa^{\min},\ell^{\min}$, $\chi$, $n^{\min}$, $\bar N,\bar M$, $p^{\min},p^{\max}$, $F^{\mathrm{abs}}$, $N^{\mathrm{ex}}$), fee schedules $\phi$, cluster map $\mathrm{cl}$, $\mathrm{ADV}^{\max}_i$, calendar | AUTHORITATIVE (human-set, versioned) | every budget and gate | defines the envelope |
 | quotes $p^{\mathrm{bid}},p^{\mathrm{ask}}$ (hence $m,\varsigma$), $\mathrm{st}_i$, $\mathrm{ev}_i$, corporate actions | EXTERNAL OBSERVATION | $W$, open risks, G2, G5, G6, G8, G10 | state of the world; gates only block |
 | $\mathrm{BP}_t$ | EXTERNAL OBSERVATION | F048 only through $\min(\cdot)$ | **restrictive only** |
@@ -217,7 +220,7 @@ G5 $\varsigma_i/m_i\le\varsigma^{\max}$; G6 event policy on $\mathrm{ev}_i$ (**U
 $p^{\mathrm{lim}}-p^{\mathrm{stop}}_o+\kappa^{\min}p^{\mathrm{stop}}_o\ge\ell^{\min}p^{\mathrm{lim}}$ — the policy floor of the exit cost, never an estimate: $\kappa^{\mathrm{out}}(n)\ge\kappa^{\min}p^{\mathrm{stop}}_o$ for every
 quantity and every admissible estimate (F111), so the clause bounds the sizing per-share loss from below for every estimate, while a larger
 estimate can never make it pass; with $\kappa^{\mathrm{out}}$ in its place a pessimistic $\hat\kappa^{\mathrm{out}}=0.1$ turned $Q=0$ into $9{,}090$, CLOSURE-REV-001); G8 protective-stop
-state: for every held quantity with a live stop, $m_{i,t}>p^{\mathrm{stop}}_i$ (long); a mark at or below the stop fails G8 ($\alpha_t=0$ for new risk) whatever
+state: for every stop-lot of every held position with a live stop, $m_{i,t}>p^{\mathrm{stop}}_{i,k}$ (long; F153 — one lot is the former $m_{i,t}>p^{\mathrm{stop}}_i$); a mark at or below any lot's stop fails G8 ($\alpha_t=0$ for new risk) whatever
 costs, fees or estimates (05 §5; it covers every negative raw value of F064, F065, F145; the `5c486f0` sign test was masked by a larger estimate
 or fee and missed $m=48.99<49$, CLOSURE-REV-001); gate monotonicity in estimates: T-27; G9 $d=+1$ (D-01); G10 $i\in\mathbb I_t$ and
 $p^{\min}\le m^{\mathrm{arr}}\le p^{\max}$ (A-MKT-06); **G11** $q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$ and $\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$ — no entry order on $i$ is `NON_TERMINAL`, whatever its remaining
@@ -351,7 +354,7 @@ of any fill $e\le Q$ at any price $\le p^{\mathrm{lim}}$ (T-11). The ledger — 
 
 $0<f^{\mathrm{trd}}\le f^{\mathrm{port}}$; $0<f^{\mathrm{strat}}_s\le f^{\mathrm{port}}$; $0<f^{\mathrm{clr}}\le f^{\mathrm{port}}$; $f^{\mathrm{gap}}>0$;
 $0<f^{\mathrm{ord}},f^{\mathrm{conc}},f^{\mathrm{clu}}$; $0<\lambda^{\mathrm{gross}}\le1$ (D-02); $\mu^{K},\mu^{G}\in(0,1]$ (values $>1$ admit floor breach when all stops
-hit — T-21); $d^{\max},\ell^{\mathrm{day}},\ell^{\mathrm{wk}}\in(0,1)$; $\eta^{\mathrm{lock}}\in[0,1)$; $\Gamma^{\min}\in(0,1]$; $\kappa^{\min}\ge0$; $\rho^{\mathrm{in}},\rho^{\mathrm{ex}}\in(0,1]$;
+hit — T-21); $d^{\max},\ell^{\mathrm{day}},\ell^{\mathrm{wk}}\in(0,1)$; $\eta^{\mathrm{lock}}\in[0,1)$; $\Gamma^{\min}\in(0,1]$; $0\le\kappa^{\min}<1$ (T-33); $\rho^{\mathrm{in}},\rho^{\mathrm{ex}}\in(0,1]$;
 $h^{\mathrm{ex}},w^{\mathrm{in}}>0$; $\varsigma^{\max}>0$; $\chi\ge0$; $\ell^{\min}>0$; $0<p^{\min}<p^{\max}$; $n^{\min}\in\mathbb L_{\ge0}$; $F^{\mathrm{abs}}\ge0$; $\bar N,\bar M>0$.
 A $\theta$ outside this box ⇒ every decision is NO\_TRADE (reason INVALID\_POLICY). Redundant (never-binding) settings are
 permitted but reported.

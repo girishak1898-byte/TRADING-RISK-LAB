@@ -13,7 +13,7 @@ by this registry (§10 there).
 | Findings | CRITICAL 3 (CLOSURE-REV-001, CLOSURE-REV-002, CLOSURE-REV-003) · IMPORTANT 8 (CLOSURE-REV-004 … 011) · MINOR 5 (CLOSURE-REV-012 … 016) |
 | Review method | Adversarial review of the diff in the authoring session, with two fresh-context sub-reviewers; every finding reproduced by the author in exact rational arithmetic before classification. Not an organisationally independent review. |
 | Superseded record | 08-acceptance-gate.md §9 "PHASE 0 = PASS" at `5c486f0` |
-| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN; `8dbb0ee`'s child "Fix Phase-0 entry-order lifecycle exclusivity" resolves CLOSURE-REV-018; `a87b887`'s child "Fix Phase-0 estimator failure semantics" resolves CLOSURE-REV-008 and registers CLOSURE-REV-020 (MINOR, OPEN) |
+| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN; `8dbb0ee`'s child "Fix Phase-0 entry-order lifecycle exclusivity" resolves CLOSURE-REV-018; `a87b887`'s child "Fix Phase-0 estimator failure semantics" resolves CLOSURE-REV-008 and registers CLOSURE-REV-020 (MINOR, OPEN); `a5d40aa`'s child "Close Phase-0 execution and floor-risk defects" (Wave A) resolves CLOSURE-REV-004, 005 and 019 together, in one execution-accounting model (F153–F157, T-32, T-33) |
 
 ## Status after the correction commits
 
@@ -22,8 +22,8 @@ by this registry (§10 there).
 | CLOSURE-REV-001 | CRITICAL | gates G7, G8 depend on estimates in the wrong direction; T-07, T-08(a) false | **RESOLVED** by the critical correction commit (child of `5c486f0`) |
 | CLOSURE-REV-002 | CRITICAL | carried floor references store past estimates | **RESOLVED** by the critical correction commit |
 | CLOSURE-REV-003 | CRITICAL | entry fees can disappear depending on when they are booked | **RESOLVED** by the critical correction commit |
-| CLOSURE-REV-004 | IMPORTANT | exit-fee catch-up on a partially executed exit order | OPEN |
-| CLOSURE-REV-005 | IMPORTANT | exposures protected by several stops | OPEN |
+| CLOSURE-REV-004 | IMPORTANT | exit-fee catch-up on a partially executed exit order | **RESOLVED** by the Wave-A execution and floor-risk correction commit (child of `a5d40aa`) |
+| CLOSURE-REV-005 | IMPORTANT | exposures protected by several stops | **RESOLVED** by the Wave-A execution and floor-risk correction commit (child of `a5d40aa`) |
 | CLOSURE-REV-006 | IMPORTANT | held vs filled quantity in F144/F145; no guard for $q>n'$ | **RESOLVED** by the held/filled quantity correction commit (child of `80ca693`) |
 | CLOSURE-REV-007 | IMPORTANT | H14 cash semantics (F048, remaining-only $C^{\mathrm{res}}$) | OPEN |
 | CLOSURE-REV-008 | IMPORTANT | A-EXE-02 falls back to the policy floor on an invalid estimator | **RESOLVED** by the estimator failure correction commit (child of `a87b887`) |
@@ -31,13 +31,15 @@ by this registry (§10 there).
 | CLOSURE-REV-010 | IMPORTANT | H3 window base enlarges the cap beyond the claimed double count | OPEN |
 | CLOSURE-REV-011 | IMPORTANT | strategy id classed as an order parameter selects the H3 budget | OPEN |
 | CLOSURE-REV-018 | IMPORTANT | G11 admits a second non-terminal entry order on an instrument (found at the CLOSURE-REV-006 correction) | **RESOLVED** by the entry-order lifecycle correction commit (child of `8dbb0ee`) |
-| CLOSURE-REV-019 | IMPORTANT | exit fee of an exit executed before the cut and booked after it is charged nowhere (found at the CLOSURE-REV-006 correction) | OPEN |
+| CLOSURE-REV-019 | IMPORTANT | exit fee of an exit executed before the cut and booked after it is charged nowhere (found at the CLOSURE-REV-006 correction) | **RESOLVED** by the Wave-A execution and floor-risk correction commit (child of `a5d40aa`) |
 | CLOSURE-REV-012 … 016 | MINOR | T-21 qualifications; canonical bytes; edge-case consistency; lifecycle wording; registry hygiene | OPEN |
 | CLOSURE-REV-017 | MINOR | source class of $\phi^{\mathrm{paid}}_o$ (found at the CLOSURE-REV-006 correction) | OPEN |
 | CLOSURE-REV-020 | MINOR | existing-portfolio floor check undefined under a missing or invalid $\hat\Lambda$ (found at the CLOSURE-REV-008 correction) | OPEN |
 
-T-10 lists CLOSURE-REV-004, 005 and 019 as open dependencies (006 and 018, its former dependencies (iii) and (iv), are resolved) and stays PROOF REQUIRES ADDITIONAL
-ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assumption.
+After Wave A, T-10 has no open dependency (004, 005 and 019 are closed by F153–F157; 006 and 018 were closed earlier) and stays PROOF REQUIRES ADDITIONAL
+ASSUMPTIONS because its remaining assumptions (A-TRIG, A-STOP, A-STOPLIVE, A-EXE-01…05, A-MKT-05, A-AUTH-02, A-AUTH-04) are world assumptions.
+No IMPORTANT finding was hidden by strengthening an unrelated assumption: the Wave-A model charges the registered states more, not less, and
+no existing test or theorem was weakened.
 
 ## Findings
 
@@ -85,7 +87,9 @@ ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assum
 | Object | sufficient conditions of A-TRIG (04); A-ACC-05 as used by T-19 |
 | Counterexample (exact) | stop order for $1{,}100$ sh, $1{,}000$ sold before $\tau_t$ with no exit fee billed; $100$ held at mark $49$, stop $49$, $\kappa=0.1$, fee $\max(1,0.005k)$, spread $0.01$ ($\Lambda=3/2$), $r^{\mathrm{open}}=12=K_t$; the remaining $100$ exit at $48.9$ and the order's cumulative fee $\phi(1100)=11/2$ is billed: $\mathrm{XV}=9769/2<4888$, $W_{t+1}=F_t-2$, while every listed sufficient condition holds; T-19 analogue $W^{\min}-7/2$. |
 | Required correction | Carry each working exit order's cumulative quantity and fees booked, or drop the sufficiency claim for partially executed exits. |
-| Status | OPEN (T-10 open dependency (i); T-19 open dependency). |
+| Reproduction | Reproduced exactly at `a5d40aa` before any change: charge $r^{\mathrm{open}}=12=K_t$; registered routing (the remaining $100$ exit on the same order, cumulative fee $\phi(1100)=11/2$ billed) loses $14$: $W_{t+1}=F_t-2$; T-19 analogue $W^{\min}-7/2$. Over every admissible routing (the working order continues on part of the shares, the rest through fresh orders) the worst loss is $1599/100$. |
+| Resolution | Exit-order fee state $\mathcal X_{i,t}$ (F154: $q^{\mathrm{xf}}_o$, $q^{\mathrm{xr}}_o$, $\phi^{\mathrm{xacc}}_o$, $\phi^{\mathrm{xpaid}}_o$, $\phi^{\mathrm{xowed}}_o$); the owed part is the reservation F157 ($r=g=u=C^{\mathrm{res}}=\Phi^{\mathrm{xowed}}_{i,t}$), the future part the charge $\Phi^{\mathrm{xfut}}_i$ (F155: working-order fee increments plus $\phi^{\mathrm{split}}(\bar q_i)$) inside F064–F066, F145 and F070; conservation F156 (T-32, PROVED); F072 and A-TRIG restated with both terms; OC-5 registered. The registered state is charged $35/2$ (price $10$, owed $5$, increment $\tfrac12$, split $2$) $\ge1599/100$. |
+| Status | **RESOLVED** by the Wave-A correction commit (child of `a5d40aa`); T-10 (x), T-19; evidence in the Wave-A regression matrix and validation table below. |
 
 ### CLOSURE-REV-005
 
@@ -95,7 +99,9 @@ ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assum
 | Object | single $p^{\mathrm{stop}}_i$ in F145, F072, A-TRIG, while one child stop per fill is contemplated (REV-029) |
 | Counterexample (exact) | $n'=200$ at $50$; the $100$ filled carry a child stop trailed to $51$, future fills attach a stop at $49$; mark $52$, $\kappa=0.1$, no fees, $\Lambda=1$: F145 with the held part's stop $110$, worst loss $219$ ($-109$ if $K=110$); with the minimum stop $420$. |
 | Required correction | $p^{\mathrm{stop}}_i$ = minimum over every stop protecting any part of the exposure, including future fills; or charge per part. |
-| Status | OPEN (T-10 open dependency (ii)). G8 already tests every live stop of a held quantity; the charge is not changed. |
+| Reproduction | Reproduced exactly at `a5d40aa` before any change: F145 with the held part's stop $110$; worst loss $219$ (the $100$ held exit at $51-0.1$, the $100$ future fills at $50$ exit at $49-0.1$); $W_{t+1}=F_t-109$ at $K_t=110$; with the minimum stop $420$. |
+| Resolution | Stop-lots $(q^{\mathrm{lot}}_{i,k},p^{\mathrm{stop}}_{i,k})$ per held position (F153, S-312…S-315): each share charged at the stop of its own lot, shares without a live stop (stale, missing, cancelled, replacement in flight) at tier U, future fills at the pending order's current stop; F064, F065, F145, F072, A-TRIG, A-STOP, A-STOPLIVE, D-06, G8 restated per lot; the one-stop charge is admissible only at the minimum $p^{\mathrm{smin}}_{i,t}$ (T-33, PROVED): both options of the required correction are in the constitution, the per-lot charge as the canonical (exact) form and the minimum-stop charge as a proved conservative aggregate. The registered state is charged $220$, exact. |
+| Status | **RESOLVED** by the Wave-A correction commit (child of `a5d40aa`); T-10 (x), T-33; evidence below. |
 
 ### CLOSURE-REV-006
 
@@ -232,7 +238,9 @@ ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assum
 | Object | A-EXE-04 (fees may be booked after an order is terminal) applied to **exit** orders; F144 and F148 reserve the owed fees of entry orders only; T-10, T-19 |
 | Counterexample (exact) | $100$ sh held, stop $49$; the stop sells all $100$ at $48.9$ before $\tau_t$ and the exit order is terminal; its sell fee $\max(1,0.005k)=1$ is not yet booked at the cut. Nothing is held or pending, so $R^{\mathrm{open}}_t=R^{\mathrm{res}}_t=0\le K_t=\tfrac12$; the fee is booked in the period: $W_{t+1}=W_t-1=F_t-\tfrac12$. |
 | Required correction | the exit-side analogue of F148 (owed exit fees reserved until booked, for terminal and for working exit orders, the latter together with CLOSURE-REV-004), or exit fees required to be booked at the cut ($\alpha_t=0$ otherwise). |
-| Status | OPEN (T-10 open dependency (v); T-19 open dependency). Found while correcting CLOSURE-REV-006 and not corrected there; distinct from CLOSURE-REV-004, which concerns a working exit order's fee catch-up. |
+| Reproduction | Reproduced exactly at `a5d40aa` before any change: $R^{\mathrm{open}}_t=R^{\mathrm{res}}_t=0\le K_t=\tfrac12$ with a fee of $1$ owed; $W_{t+1}=F_t-\tfrac12$; T-19 analogue $W^{\min}-1$. |
+| Resolution | The exit-side analogue of F148: F154 ($\phi^{\mathrm{xowed}}_o=\phi^{\mathrm{xacc}}_o-\phi^{\mathrm{xpaid}}_o$ until fee-final; terminal confirmation does not zero it) and the reservation F157 on every instrument with an exit order not fee-final, held or not; conservation F156 (T-32). The registered state carries a reservation of $1>K_t$, so F120 fails. Found with CLOSURE-REV-004 in one model, as required. |
+| Status | **RESOLVED** by the Wave-A correction commit (child of `a5d40aa`); T-10 (x), T-19; evidence below. |
 
 ### CLOSURE-REV-020
 
@@ -350,6 +358,68 @@ order or an invalid lifecycle exists on $i$ (A-SCOPE-05, F151), and no admitted 
 | $W_{t+1}<F_t$ after admission (two fee schedules; $o_1$ $60$ or $100$ filled, terminal or not, owed $0$ or $1$; marks $48.95$, $52$; $o_2$ fills $0$, $50$, $100$, fee booked or not) | $144$ old, $96$ new exact checks | $16$ (down to $-1$) | $0$ (minimum $0$) |
 | Fee dollar neither booked nor reserved through the lifecycle (full fill → entry decision → terminal confirmation → fees final) | $9$ old, $7$ new order-cuts | $1$ | $0$ |
 | T-19 in the overlapping state ($\bar q_i$ of F070 read with the fully filled order) | $1$ exact case | $W_{t+1}=W^{\min}_{t+1}-\tfrac12$ | state excluded by G11 |
+
+## Wave-A regression matrix (CLOSURE-REV-004, 005, 019; exact rational arithmetic)
+
+One instrument. "Old" is the `a5d40aa` charge (one stop per exposure — the held part's live stop, else the pending order's stop; one exit-fee allowance
+$\phi^{\mathrm{split}}(\bar q_i)$; no exit-order state). "Worst" is the largest loss over every further entry fill $e\le q^{\mathrm{unf}}_o$ and every admissible exit routing
+(working-order continuations, cancellations, up to $N^{\mathrm{ex}}$ fresh orders, a remainder at the cut), each lot exiting at its own stop bound, unprotected
+shares at $0$, every owed fee booked in the period. "New" is the Wave-A charge (F064/F145 per lot with $\Phi^{\mathrm{xfut}}$, plus F157). "Min" is the one-stop
+charge at $p^{\mathrm{smin}}_{i,t}$ (T-33; "—" when a part is unprotected). A row passes when charge $-\Lambda_{i,t}\ge$ worst. Prices: mark $50$ and stop $49$ unless
+stated; $\kappa^{\mathrm{out}}=0.1$; exits at $48.9$; fee $\max(1,0.005k)$ per order unless stated; $N^{\mathrm{ex}}=1$ unless stated; $\Lambda_{i,t}=0$ except rows A ($3/2$) and B ($1$).
+
+| # | Case | Old | Worst | New | Min | Old | New |
+|---|---|---|---|---|---|---|---|
+| A | CLOSURE-REV-004 registered state: working stop order, $1{,}000$ of $1{,}100$ sold before the cut, nothing booked; $100$ held at mark $49$ | $12$ | $14$ (registered routing), $1599/100$ (any routing) | $35/2$ | $35/2$ | fails | passes |
+| B | CLOSURE-REV-005 registered state: held lot $(100,51)$, future fills $(100,49)$, mark $52$, no fees | $110$ | $219$ | $220$ (exact) | $420$ | fails | passes |
+| C | CLOSURE-REV-019 registered state: terminal exit order, $100$ sold, fee $1$ unbooked, nothing held | $0$ | $1$ | $1$ (exact) | $1$ | fails | passes |
+| D | working exit order for $100$, nothing executed yet, $100$ held | $112$ | $113$ | $113$ (exact) | $113$ | fails | passes |
+| E | partially executed exit: $60$ of $100$ sold, fee $1$ booked, $40$ held | $46$ | $46$ | $46$ (exact) | $46$ | passes | passes |
+| F | full exit before the cut, terminal, fee final (nothing owed) | $0$ | $0$ | $0$ | $0$ | passes | passes |
+| G | full exit before the cut, terminal, fee reported but not booked; percentage fee $0.1\%$ | $0$ | $489/100$ | $489/100$ (exact) | $489/100$ | fails | passes |
+| H | two working child-stop orders, $30$ of $50$ and $20$ of $50$ sold, $50$ held in two lots; $N^{\mathrm{ex}}=2$ | $58$ | $60$ | $60$ (exact) | $60$ | fails | passes |
+| I | split execution: $N^{\mathrm{ex}}=2$, $100$ held, no exit order | $113$ | $113$ | $113$ (exact) | $113$ | passes | passes |
+| J | minimum-plus-percentage fee $\max(1,\ 0.05\%$ of notional$)$, executed part at $48.9$, the lifetime bound and the split envelope at the mark $50$ (F155); executing exit order, $50$ of $100$ executed, nothing booked | $2289/40$ | $593961/10000$ | $23879/400$ (OC-5 and the mark reference) | $23879/400$ | fails | passes |
+| K | flat per-order fee, terminal exit order with fee unbooked, $100$ still held | $112$ | $113$ | $113$ (exact) | $113$ | fails | passes |
+| L | child stop trailed to $51$ above the pending limit $50$, order stop $49$, $100$ unfilled, mark $52$, no fees | $110$ | $220$ | $220$ (exact) | $420$ | fails | passes |
+| M | replacement stop in flight on one lot ($\bot$), other lot at $49$; $50+50$ held, no fees | $110$ | $2{,}555$ | $2{,}555$ (exact) | — | fails | passes |
+| N | missing stop on the pending order's future fills; held lot at $49$, $100$ unfilled at limit $50$, no fees | $220$ | $5{,}110$ | $5{,}110$ (exact) | — | fails | passes |
+| O | different child stops $(60,49.5)$, $(40,48)$; $\kappa^{\mathrm{out}}=0.1+0.01q$; tiered fee; $N^{\mathrm{ex}}=2$ | $261$ | $321$ | $321$ (exact) | $411$ | fails | passes |
+| P | partial exit while the entry is pending with an executing exit order: $n'=200$, $100$ filled, $40$ held, $60$ sold on a working order of $100$, mark $48.95$, buy fee $1$ booked, $N^{\mathrm{ex}}=2$ (lot stop and order stop) | $115$ | $116$ | $116$ (exact) | $116$ | fails | passes |
+| Q | review cycle 1 (B-1/C-5): four lots of $100$ at $49$, each its own stop order, flat fee $1$, $N^{\mathrm{ex}}=1$, $\Lambda=1$ | $442$ | $443$ | $445$ ($\alpha_t=0$; one fee part per stop order) | $445$ | fails | passes |
+| R | review cycle 1 (C-5): three lots of $1$ sh, $\max(1,0.005k)$, $N^{\mathrm{ex}}=1$ | $53/10$ | $63/10$ | $63/10$ ($\alpha_t=0$) | $63/10$ | fails | passes |
+| S | review cycle 1 (C-1/A-1): terminal exit order, $100$ sh sold at $60$, fee $0.1\%$ of proceeds unbooked, mark $50$, nothing held | $5$ (fee at the mark) | $6$ | $6$ (fee on executed proceeds) | $6$ | fails | passes |
+| T | review cycle 1 (C-4): terminal exit order, fee $1$ confirmed final by the broker but unbooked, nothing held | $0$ (released by the flag) | $1$ | $1$ (released only by a booking) | $1$ | fails | passes |
+| U | review cycle 1 (A-3): executing stop order for $100$, nothing executed, fees marked final; lot $(100,49)$, mark $50$, $\max(1,0.005k)$, $N^{\mathrm{ex}}=1$ | $112$ (order dropped from $\mathcal X$) | $113$ | $113$ | $113$ | fails | passes |
+| V | review cycle 1 (C-3): two executing orders each for the whole holding of $100$ | $114$ (finite) | unbounded (short) | RECOVERY, no finite charge | — | fails | passes |
+| W | review cycle 3 (R3-1): one lot of $20$ at stop $50$, $\kappa^{\mathrm{out}}=0.1$ (bound $49.9$), mark $49.89$, fee $0.05\%$ of notional, $N^{\mathrm{ex}}=1$ | $2989/10000$ (negative lot term, fee at the mark) | $299/1000$ | $1/2$ (lot term clamped at $0$, fee at $p^{\mathrm{fee}}=50$) | $1/2$ | fails | passes |
+| X | re-run enumeration after R3-1: $1$ sh still to fill at limit $50$ with stop $48$ (bound $47.9$), mark $47.5$, fee $0.1\%$, terminal exit order owing its fee, $\Lambda=\tfrac12$ | $2.2453$ (fee at the mark) | $1.7457$ (plus $\Lambda$) | $11229/5000$ (fee at $p^{\mathrm{fee}}=50$) | $11229/5000$ | fails | passes |
+
+## Wave-A validation evidence (exact; scripts kept outside the repository)
+
+Model (re-run at review cycle 1 with every lot its own stop order, accrued fees on executed proceeds, confirmed-but-unbooked fees kept owed,
+contradictory exit remainders excluded as RECOVERY): one instrument; held $0$–$3$ stop-lots (three-lot states sampled, $400$ of $5{,}832$ combinations;
+stops $48$–$51$, $\bot$ for a stale, missing or replacement-in-flight stop); a pending entry order of $0$–$4$ sh with $0$–$4$ filled at limit $50$ and stop
+$48$–$51$ or $\bot$; exit orders none, executing ($0$–$3$ executed, $1$–$2$ remaining) or terminal, fees booked or not, fee-final or not; marks
+$48.95$–$52$; fee schedules zero, $\max(1,0.005k)$, flat, percentage, minimum-plus-percentage, capped percentage and tiered (super-additive), the
+executed part of an executing order at $48.9$, $50$ or $51.3$ (at, or above, the mark reference, review cycle 2); $\kappa^{\mathrm{out}}$ constant and
+super-additive; $N^{\mathrm{ex}}=1,2$ ($365{,}964$ states have more stop orders than $N^{\mathrm{ex}}$: $\alpha_t=0$, charged with one fee part per stop order). The worst loss is the maximum over every further fill
+$e\le q^{\mathrm{unf}}_o$ (comonotone) and every admissible exit routing, in exact rationals.
+
+| Property | Search | Old (`a5d40aa`) | New |
+|---|---|---|---|
+| Charge $-\Lambda$ below the worst loss (T-10 understatement) | $519{,}750$ enumerated states | $379{,}252$ | $0$ |
+| Per-lot charge exact (equal to the worst loss) | $285{,}944$ states without the pending order's clamp in which every order of $\mathcal X_{i,t}$ has nothing left to execute; $11{,}149$ states with a quantity-only schedule and no clamp at all in a dedicated enumeration | — | $83{,}455$; $11{,}149$ of $11{,}149$ quantity-only, clamp-free (lot clamps and the fee reference price over-charge the rest) |
+| One-stop charge at $p^{\mathrm{smin}}$ below the per-lot charge (T-33) | $308{,}353$ states with every part protected | — | $0$ |
+| Adversarial multi-stop search: understatement | $5{,}165$ randomised trials (child stop trailed above the limit $1{,}793$; replacement in flight $1{,}801$; stale $1{,}805$; missing $1{,}754$; different child stops $2{,}077$; partial exit $2{,}396$; partial fill $2{,}708$) | $3{,}487$ | $0$ |
+| Same: $p^{\mathrm{smin}}$ charge below the per-lot charge | same | — | $0$ |
+| Exit-fee conservation (F156, T-32: (a)–(e) after every event) | $4{,}000$ random event sequences, $60{,}000$ events (executions, bookings of none, part or all of the owed fee, terminal and fee-final events, six fee schedules) | — | $0$ violations |
+| $W_{t+1}<W^{\min}_{t+1}$ with prices $\to0$ (T-19) | $2{,}650$ randomised trials (stop-lots, pending orders, working and terminal exit orders, late bookings) | registered states: $W^{\min}-7/2$, $W^{\min}-1$ | $0$ ($2{,}275$ equal) |
+| Checker gate EXIT_FEES_OR_STOP_LOTS_NOT_CHARGED | constitution at `a5d40aa` (gate added at Wave A, extended at review cycle 1) / after the correction | $9$ | $0$ |
+| Mutation suite | $39$ mutations ($9$ added at Wave A) | — | all detected |
+| Independent review, cycle 1 (three fresh-context reviewers on the Wave-A diff: counterexample, proof, accounting/authority) | $19$ findings: $0$ CRITICAL, $9$ IMPORTANT (B-1/C-5, B-2, B-3, B-4/A-7, C-1/A-1, C-2, C-3, C-4, A-2, A-3), $10$ MINOR; every accepted finding reproduced exactly by the lead before correction (rows Q–V) | — | all corrected in the same commit (F153 $K_{i,t}\le N^{\mathrm{ex}}$; F154 membership, executed proceeds, confirmed-but-unbooked fees, RECOVERY on contradictory remainders, unprotected non-stop remainders; S-298 $\bar q_i=n$; T-10, T-19, T-21, T-29, T-32, T-33 restated); reviewer A's exhaustive search ($587{,}664$ states, $\le2$ lots, $N^{\mathrm{ex}}\le3$) found no $W_{t+1}<F_t$ inside T-10's hypotheses |
+| Independent review, cycle 2 (two fresh-context reviewers on the corrected diff: counterexample/accounting, proof/consistency) | proof review: $5$ IMPORTANT (exit-side fee bound stated as accrued fee plus the schedule's increment, R2B-1; "not fee-final" wording replaced by "not booked in full", R2B-2; $0\le\kappa^{\min}<1$ registered for T-33 with the Lipschitz step, R2B-3; an executing order that is not a lot's stop ⇒ RECOVERY, R2B-4; T-32 (d) and F156 bounded by the accrued fee plus the increment, execution clauses before the final confirmation, R2B-5) and $7$ MINOR, all corrected in the same commit; T-10, T-19, T-21, T-29, T-32, T-33 accepted as written after the corrections; no weakening against `a5d40aa`. Counterexample/accounting review: $1$ CRITICAL (R2-1: for a proceeds-dependent, non-linear schedule the increment of the schedule at a reference price understated the fee accrued on shares executed above it — lot of $20$ remaining of a triggered stop order with $40$ executed at $50$, lot of $22$ resting, mark $50$, $\max(1,0.05\%)$ of notional, $N^{\mathrm{ex}}=2$: charge $5067/100$ against a loss of $50{,}689/1{,}000$, $W_{t+1}=F_t-19/1000$; corrected by the lifetime bound $\phi^{\mathrm{xlife}}_o$ on the combined notional, S-327, F155: $507/10$), $2$ IMPORTANT (a final confirmation applied to an order still executing, R2-2 — now ignored while $q^{\mathrm{xr}}_o>0$; T-32 (d)/(e) and F156 restated on $\phi^{\mathrm{xlife}}_o$, R2-3), $3$ MINOR (row J's price convention, $N^{\mathrm{ex}}$ wording, residual "not fee-final" wording), all reproduced by the lead and corrected; the registered rows A–V re-verified by the reviewer | — | $0$ open |
+| Independent review, cycle 3 (one fresh-context reviewer on the exit-fee bound, after the two automatic cycles) | $1$ CRITICAL (R3-1: with a lot's stop bound above the mark the fee reference at the mark fell short of the fee at the exit price while the lot's price term was negative — $20$ sh, stop $50$, $\kappa^{\mathrm{out}}=0.1$, mark $49.89$, fee $0.05\%$ of notional: charge $2989/10000$ against a loss of $299/1000$, $W_{t+1}=F_t-1/10000$; corrected by clamping each held lot's distance at $0$ in F064, F065, F145, as F145 already did for future fills, and by evaluating proceeds-dependent fees at $p^{\mathrm{fee}}_{i,t}$, the mark or the exposure's highest stop (S-328; the clamp alone still failed for a future fill whose stop bound lies above the mark, $1.7453$ against $1.7457$, found by the re-run enumeration): $1/2$), $1$ IMPORTANT (R3-2: a final confirmation applied to a fully executed `NON_TERMINAL` order left its F155 term non-zero; the term is now $0$ whenever $q^{\mathrm{xr}}_o=0$), $2$ MINOR ($\phi^{\mathrm{xlife}}_{o,0}$ defined; row J reproduces); the exit-fee bound otherwise found sound (executed parts above, at and below the mark; minimum reached by the executed part; $q^{\mathrm{xf}}_o=0$; cancelled orders; $K=N^{\mathrm{ex}}$; capped and tiered schedules; terminal orders). **These corrections were reproduced by the lead and mechanically verified (checker, mutation suite, re-run enumeration with marks below every stop bound) but not independently re-reviewed: the two automatic correction/re-review cycles were exhausted — see the Wave-A commit record** | — | $0$ open, $1$ pending independent re-review |
 
 ## CLOSURE-REV-008 regression matrix (exact)
 

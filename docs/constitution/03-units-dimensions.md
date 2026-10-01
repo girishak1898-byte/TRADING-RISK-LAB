@@ -157,6 +157,21 @@ phi_owed S-306 USD
 Q_bar S-307 sh
 n_o S-308 sh
 q_unf S-309 sh
+q_lot S-313 sh
+q_unp S-314 sh
+p_smin S-315 USD/sh
+q_xf S-317 sh
+q_xr S-318 sh
+phi_xacc S-319 USD
+phi_xpaid S-320 USD
+phi_xowed S-321 USD
+Phi_xowed S-322 USD
+Phi_xfut S-323 USD
+V_xf S-324 USD
+phi_xfin S-325 USD
+phi_fin S-326 USD
+phi_xlife S-327 USD
+p_fee S-328 USD/sh
 w_in S-260 day
 h_ex S-262 day
 h S-011 day
@@ -258,6 +273,8 @@ eps_mach S-285 1
 | E-17 | F118 | all in units of $J$ ✓ |
 | E-18 | F110 naive $Q=\lfloor R/\ell^{\mathrm{stop}}\rfloor$ | ✗ floor of $[\mathrm{sh}_i]$ — valid only in the one-share special case $\delta_q=1\,\mathrm{sh}$; corrected form $\delta_q\lfloor R/(\delta_q\ell^{\mathrm{stop}})\rfloor$ (AUD-031) |
 | E-19 | F133 volatility-targeted size | a form "fraction × $W/\hat\sigma$" is ✗ ($[\mathrm{USD}\cdot\mathrm{day}^{1/2}]$); corrected $W\sigma^{\mathrm{target}}/\hat\sigma$ ✓ (AUD-031) |
+| E-20 | F064, F145 per-lot stop charge $\sum_kq^{\mathrm{lot}}_{i,k}(m_i-p^{\mathrm{stop}}_{i,k}+\kappa^{\mathrm{out}}_i)$ | each term [sh$_i$]$\times$[USD/sh$_i$] = [USD] ✓; the unprotected term $q^{\mathrm{unp}}_{i,t}m_i$ [USD] ✓ (Wave A, CLOSURE-REV-005) |
+| E-21 | F155 exit-fee increment $\phi^{\mathrm{sell}}_i(q^{\mathrm{xf}}_o+q^{\mathrm{xr}}_o)-\phi^{\mathrm{sell}}_i(q^{\mathrm{xf}}_o)$ and F157 reservation $\Phi^{\mathrm{xowed}}_{i,t}$ | [USD] − [USD] ✓; a fee reservation added to $C^{\mathrm{res}}$ [USD] ✓, never to a quantity term (Wave A, CLOSURE-REV-004, CLOSURE-REV-019) |
 
 ## 4. Dimension traps (each is a registered failure mode in 09)
 

@@ -419,3 +419,48 @@ correction; the original counterexample ($666$ vs $953$) now gives $\alpha_t=0$ 
 ### 13.4 Decision
 
 **PHASE 0 = NOT PASSED.** CLOSURE-REV-008 is resolved; seven IMPORTANT findings remain open.
+
+## 14. Wave-A correction (execution and floor-risk closure: CLOSURE-REV-004, 005, 019)
+
+### 14.1 Record
+
+| Field | Value |
+|---|---|
+| Parent SHA | `a5d40aad4a5776bf1cd42b45c501f555eba17967` |
+| Correction commit | "Close Phase-0 execution and floor-risk defects", the child of `a5d40aa` (SHA reported in the final report) |
+| Scope | CLOSURE-REV-004, CLOSURE-REV-005 and CLOSURE-REV-019, resolved together in one execution-accounting model. CLOSURE-REV-007, 009, 010, 011 (Wave B) and the MINOR findings are unchanged. No new finding registered. |
+
+### 14.2 What the correction changed
+
+| Object | Correction | Proof / evidence |
+|---|---|---|
+| Stop-lots | $\mathcal Q^{\mathrm{lot}}_{i,t}=\{(q^{\mathrm{lot}}_{i,k},p^{\mathrm{stop}}_{i,k})\}$ per held position, unprotected quantity $q^{\mathrm{unp}}_{i,t}$ at tier U, future fills at the pending order's stop, effective stop $p^{\mathrm{smin}}_{i,t}$ (F153; S-312…S-315); F064, F065, F145, F072, G8, A-STOP, A-STOPLIVE, A-TRIG, D-06, DC-5 per lot | rows B, L–O; $0$ understatements in $519{,}750$ states and $5{,}165$ adversarial trials; T-33 (PROVED): the one-stop charge is admissible only at the minimum |
+| Exit-order fee state | $\mathcal X_{i,t}$ with $q^{\mathrm{xf}}_o$, $q^{\mathrm{xr}}_o$, $\phi^{\mathrm{xacc}}_o$, $\phi^{\mathrm{xpaid}}_o$, $\phi^{\mathrm{xowed}}_o$ (F154; S-316…S-322); terminal confirmation never zeroes the owed part; domain clip, contradictory ⇒ $\alpha_t=0$, missing ⇒ RECOVERY | rows A, C–K, P |
+| Owed exit fees | reservation F157 ($r=g=u=C^{\mathrm{res}}=\Phi^{\mathrm{xowed}}_{i,t}$) on every instrument with an executing or not fully booked exit order, held or not; in F070 through $C^{\mathrm{res}}_t$ | rows A, C, G, K; checker gate |
+| Future exit fees | $\Phi^{\mathrm{xfut}}_i$ (F155: working-order increments plus $\phi^{\mathrm{split}}(\bar q_i)$) in place of $\phi^{\mathrm{split}}$ inside F064–F066, F145, F072 and F070; OC-5 registered (zero without a working exit order) | rows A, D, H, J; T-21 (b), (c) require no working exit order |
+| Conservation | F156, DC-10: each exit-fee dollar in exactly one of $W_t$, F157, F155; T-32 (PROVED) | $4{,}000$ event sequences, $0$ violations |
+| T-10, T-19 | rebuilt in full with every remaining assumption listed; former open dependencies (i), (ii), (v) closed; status unchanged (world assumptions remain) | T-10 (x); T-19 counterexample attempt |
+| A-EXE-04, A-EXE-05, A-AUTH-02, A-ACC-05 | exit side added; A-EXE-06 confined to T-20a | 04 |
+| Tooling | checker gate EXIT_FEES_OR_STOP_LOTS_NOT_CHARGED; $9$ mutations added (owed fee unreserved, floor without future fees, single-stop open risk, A-TRIG without owed fees, terminality erasing an owed fee, unregistered stop-lot symbol, exit-fee dimension error, stop orders beyond $N^{\mathrm{ex}}$, accrued fee at the mark) | $9$ at `a5d40aa`, $0$ after; $39$ mutations all detected |
+| Review cycle 1 | three fresh-context reviewers (counterexample, proof, accounting/authority) on the Wave-A diff: $9$ IMPORTANT and $10$ MINOR findings, $0$ CRITICAL; all reproduced by the lead and corrected before the commit — every live stop-lot is its own exit order and at most $N^{\mathrm{ex}}$ of them (F153); $\mathcal X_{i,t}$ membership by execution state, accrued fees on executed proceeds, confirmed fees released only by a booking, contradictory remainders ⇒ RECOVERY, non-stop remainders unprotected (F154); a candidate order's $\bar q_i=n$ (S-298); T-32 (e), T-33 converse, T-21 attainability, T-10 lemma and assumption list restated; F148/T-29 aligned on fee confirmation | regression rows Q–V; evidence re-run: $519{,}750$ states, $0$ understatements |
+| Review cycle 2 | two fresh-context reviewers on the corrected diff: proof review $5$ IMPORTANT, $7$ MINOR (R2B-1 … R2B-12), all corrected in the same commit — exit-side fee bound as accrued fee plus increment (A-EXE-04, F156, T-32), "not booked in full" wording, $0\le\kappa^{\min}<1$ (S-273, T-33), non-stop executing orders ⇒ RECOVERY (F154), $N^{\mathrm{ex}}$ counted besides $\mathcal X_{i,t}$ (S-294, A-TRIG, F153), F070's sum excludes the candidate's instrument; counterexample/accounting review: $1$ CRITICAL (R2-1, proceeds-dependent fee accrued above the reference price: $W_{t+1}=F_t-19/1000$) corrected by the lifetime exit-fee bound $\phi^{\mathrm{xlife}}_o$ (S-327, F155, A-EXE-04, T-10 lemma, T-32, F156) with the mark as the hard layer's price reference, $2$ IMPORTANT and $3$ MINOR corrected; evidence re-run with capped schedules and executions above the reference (§14.2 counts) | checker GATE_TOTAL $0$; $39$ mutations detected |
+| Review cycle 3 (beyond the two automatic cycles) | one fresh-context reviewer on the exit-fee bound: $1$ CRITICAL (R3-1, a lot's stop bound above the mark: $W_{t+1}=F_t-1/10000$) corrected by the per-lot clamp $(\cdot)^+$ in F064, F065, F145 and the fee reference price $p^{\mathrm{fee}}_{i,t}=\max(m_{i,t},\text{every stop})$ (S-328, F155) — the clamp alone still failed for a future fill with a stop bound above the mark, found by the re-run enumeration (row X); $1$ IMPORTANT (R3-2, confirmation at $q^{\mathrm{xr}}_o=0$ zeroes the F155 term) and $2$ MINOR corrected; reproduced by the lead and mechanically verified; **not independently re-reviewed** — the commit is recorded as pending a final independent re-review, which the human must authorise | regression rows W, X; evidence re-run with marks below every stop bound |
+
+Regression matrix: [09-closure-review-registry.md](09-closure-review-registry.md) — 24 exact cases; 21 fail against `a5d40aa` or an earlier Wave-A draft, all pass after the
+correction; the three registered counterexamples now give $W_{t+1}\ge F_t$ ($35/2\ge1599/100$, $220\ge219$, F120 failing on a reservation of $1>\tfrac12$).
+
+### 14.3 Status after the correction
+
+| Condition (Phase-0 PASS rule) | Result |
+|---|---|
+| GATE_TOTAL = 0 | 0 (checker); the checker verifies form, not truth |
+| UNRESOLVED CRITICAL findings = 0 | 0 |
+| UNRESOLVED IMPORTANT findings | **4 open** (CLOSURE-REV-007, 009, 010, 011 — Wave B) |
+| No known risk understatement | met for execution and floor risk (T-10, T-19: no known counterexample); **not met** for CLOSURE-REV-007 (cash semantics) until Wave B |
+| Hard limits cannot be enlarged by estimates or model output | met for estimator failure (F152, T-31); CLOSURE-REV-011 (strategy id) and the latent CLOSURE-REV-009, 010 remain open |
+| Non-finite numeric states fail closed | met |
+| No executable trading functionality | met |
+
+### 14.4 Decision
+
+**PHASE 0 = NOT PASSED.** CLOSURE-REV-004, 005 and 019 are resolved; four IMPORTANT findings remain open for Wave B.

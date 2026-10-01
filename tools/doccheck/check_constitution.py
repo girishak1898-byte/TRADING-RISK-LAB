@@ -662,6 +662,34 @@ def main():
         efail.append("F111: MISSING or INVALID estimate not mapped to alpha_t=0")
     report["ESTIMATOR_FAILURE_NOT_FAIL_CLOSED"] = efail
 
+    # 4c. Wave A (CLOSURE-REV-004, 005, 019): owed exit fees are reserved, future exit fees and stop-lots are inside the charges,
+    #     the wealth floor subtracts future exit fees, terminality does not erase an owed exit fee, and A-TRIG carries both fee terms
+    xfail = []
+    if r"r=g=u=C^{\mathrm{res}}=\Phi^{\mathrm{xowed}}_{i,t}" not in fby.get("F157", ""):
+        xfail.append("F157: owed exit fees not reserved as r=g=u=C_res=Phi_xowed")
+    if r"\Phi^{\mathrm{xfut}}_{i,0}" not in fby.get("F070", "") or r"C^{\mathrm{res}}_t" not in fby.get("F070", ""):
+        xfail.append("F070: wealth floor without future exit fees or reservations")
+    for fid in ("F064", "F145"):
+        if r"\sum_kq^{\mathrm{lot}}_{i,k}" not in fby.get(fid, "") or r"\Phi^{\mathrm{xfut}}_i" not in fby.get(fid, ""):
+            xfail.append(f"{fid}: charge not per stop-lot or without future exit fees")
+    if "terminality never zeroes" not in fby.get("F154", ""):
+        xfail.append("F154: terminality may erase an owed exit fee")
+    if r"applied to $V^{\mathrm{xf}}_o$, never to the mark" not in fby.get("F154", ""):
+        xfail.append("F154: accrued exit fee not on executed proceeds")
+    if r"$K_{i,t}\le N^{\mathrm{ex}}$" not in fby.get("F153", ""):
+        xfail.append("F153: stop orders not bounded by N^ex")
+    if r"p^{\mathrm{smin}}_{i,t}=\min" not in fby.get("F153", ""):
+        xfail.append("F153: effective stop not the minimum")
+    for section, header, trs in md_tables(d("04")):
+        if header and header[0] == "ID" and "Class" in header:
+            for r in trs:
+                row = dict(zip(header, r))
+                if row["ID"] == "A-TRIG":
+                    st = row.get("Statement", "")
+                    if r"\Phi^{\mathrm{xowed}}_{i,t}" not in st or r"\Phi^{\mathrm{xfut}}_i" not in st or r"q^{\mathrm{lot}}" not in st:
+                        xfail.append("A-TRIG: bound without stop-lots, owed or future exit fees")
+    report["EXIT_FEES_OR_STOP_LOTS_NOT_CHARGED"] = xfail
+
     # 5. dimensions
     table, sids = load_dimtable(d("03"))
     dimerr = []
