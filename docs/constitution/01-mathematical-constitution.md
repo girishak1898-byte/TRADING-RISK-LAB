@@ -61,7 +61,8 @@ historical data that enters only in the conservative direction and is bounded by
 $\Gamma$) is a *hard-layer component*: its estimator definition is frozen, versioned in $\mathsf v$ and set under human authority, and it
 enters only through a policy bound in the conservative direction (F111): a floor for a cost ($\kappa^{\mathrm{out}}$, $\Gamma$, $\Lambda$) and a cap for a
 capacity ($\mathrm{ADV}=\min(\mathrm{ADV}^{\mathrm{est}},\mathrm{ADV}^{\max})$; closure, AUD-040); a statistical cluster map may only merge clusters of the human-set
-map (S-006). A missing estimate gives $\alpha_t=0$, never the policy bound (AUD-041). Invariant: every hard cap computed with any estimates is $\le$
+map (S-006). A missing or invalid estimate gives $\alpha_t=0$, never the policy bound: the bound applies only to a
+validated value (AUD-041, CLOSURE-REV-008, F152). Invariant: every hard cap computed with any estimates is $\le$
 the same cap with every estimated input at its policy bound — at every epoch: no gate predicate uses an estimate in a way that a larger
 estimate could turn FAIL into PASS (T-27), and no carried reference (high-water mark, day and week references, units) stores an estimate; they
 are valued at $W^{\mathrm{R}}=E-\Lambda^{\mathrm{floor}}$ (F146, T-28; CLOSURE-REV-001, CLOSURE-REV-002). Advanced models MUST NOT supply or replace these inputs;

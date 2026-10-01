@@ -641,6 +641,27 @@ def main():
             unlocated.append(fid)
     report["FORMULAS_NOT_REFERENCED_IN_ANY_DOCUMENT"] = unlocated
 
+    # 4b. estimator failure fails closed (CLOSURE-REV-008): no outcome implies a policy bound, the estimator-bearing
+    #     assumptions state alpha_t = 0, and F111 / F152 keep the MISSING-or-INVALID rule
+    efail = []
+    arrow_to_bound = re.compile(r"⇒\s*(?:the\s+)?policy\s+(?:floor|bound|cap)")
+    for name, text in docs.items():
+        for ln, line in enumerate(strip_code(text).splitlines(), 1):
+            if arrow_to_bound.search(line):
+                efail.append(f"{name[:2]}:{ln}: an outcome is mapped to a policy bound")
+    for section, header, trs in md_tables(d("04")):
+        if header and header[0] == "ID" and "Class" in header:
+            for r in trs:
+                row = dict(zip(header, r))
+                if row["ID"] in ("A-EXE-02", "A-LIQ", "A-GAP") and r"\alpha_t=0" not in row.get("Fail-closed check", ""):
+                    efail.append(f"{row['ID']}: estimator failure without alpha_t=0")
+    fby = {r.get("ID"): r.get("Formula", "") for r in frows}
+    if not re.search(r"`MISSING` or `INVALID` ⇒ \$\\alpha_t=0\$", fby.get("F152", "")):
+        efail.append("F152: MISSING or INVALID estimate not mapped to alpha_t=0")
+    if not re.search(r"`MISSING` or `INVALID` estimate ⇒ \$\\alpha_t=0\$", fby.get("F111", "")):
+        efail.append("F111: MISSING or INVALID estimate not mapped to alpha_t=0")
+    report["ESTIMATOR_FAILURE_NOT_FAIL_CLOSED"] = efail
+
     # 5. dimensions
     table, sids = load_dimtable(d("03"))
     dimerr = []

@@ -15,7 +15,8 @@ contact, no parameter optimisation, no backtesting, no Trading OS integration.
 | INDEPENDENT CLOSURE REVIEW | (no commit) | Review of `f37c1b6..5c486f0`: PHASE 0 **NOT PASSED** at `5c486f0` — 3 CRITICAL, 8 IMPORTANT, 5 MINOR ([09-closure-review-registry.md](09-closure-review-registry.md)). |
 | CRITICAL CLOSURE CORRECTIONS | `80ca693` | Resolves CLOSURE-REV-001 (estimate-free gates, T-27; T-07, T-08 restated), CLOSURE-REV-002 (references at $W^{\mathrm{R}}$, F146, T-28) and CLOSURE-REV-003 (fee booking, F148, F149, T-29; T-10, T-19 rebuilt); IMPORTANT findings left open ([08-acceptance-gate.md](08-acceptance-gate.md) §10). |
 | HELD/FILLED QUANTITY CORRECTION | `8dbb0ee` | Resolves CLOSURE-REV-006: held quantity, cumulative fill, order quantity and unfilled remainder kept apart (S-308, S-309), F145 rebuilt, F144 re-audited, validity and fail-closed charge F150, T-10 dependency (iii) closed; registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and 019 (IMPORTANT), not corrected ([08-acceptance-gate.md](08-acceptance-gate.md) §11). |
-| ENTRY-ORDER LIFECYCLE CORRECTION | the child of `8dbb0ee` | Resolves CLOSURE-REV-018: entry-order lifecycle states (S-310, S-311, F151), G11 requires no `NON_TERMINAL` entry order on the instrument, A-SCOPE-05 restated, T-30 added, T-10 dependency (iv) closed ([08-acceptance-gate.md](08-acceptance-gate.md) §12). |
+| ENTRY-ORDER LIFECYCLE CORRECTION | `a87b887` | Resolves CLOSURE-REV-018: entry-order lifecycle states (S-310, S-311, F151), G11 requires no `NON_TERMINAL` entry order on the instrument, A-SCOPE-05 restated, T-30 added, T-10 dependency (iv) closed ([08-acceptance-gate.md](08-acceptance-gate.md) §12). |
+| ESTIMATOR FAILURE CORRECTION | the child of `a87b887` | Resolves CLOSURE-REV-008: `VALID` / `MISSING` / `INVALID` estimator status (F152), validation before the policy bound, a missing or invalid estimate gives $\alpha_t=0$; T-08, T-27 over valid estimates, T-31 added; checker gate ESTIMATOR_FAILURE_NOT_FAIL_CLOSED; registers CLOSURE-REV-020 (MINOR) ([08-acceptance-gate.md](08-acceptance-gate.md) §13). |
 
 Ordering note: because `8198877` preceded the registry, the strict order BASELINE → FINDINGS → CORRECTIONS holds for the second
 correction round; for the first round the registry documents, per finding, which lines of `8198877` correct it and whether the correction
@@ -40,7 +41,7 @@ CRITICAL) and corrected in the same correction commit.
 | [05-hard-safety-cap-audit.md](05-hard-safety-cap-audit.md) | §7 hard-safety cap audit |
 | [07-mechanical-checks-pre-correction.md](07-mechanical-checks-pre-correction.md) | §3–§5 mechanical checks before correction |
 | [08-acceptance-gate.md](08-acceptance-gate.md) | §13 acceptance gate and §14 correction record (added by the correction commit) |
-| [09-closure-review-registry.md](09-closure-review-registry.md) | independent closure review of `5c486f0` (CLOSURE-REV-001 … 016), status NOT PASSED at that SHA, regression matrices of the critical corrections, of CLOSURE-REV-006 and of CLOSURE-REV-018; CLOSURE-REV-017 … 019 found later |
+| [09-closure-review-registry.md](09-closure-review-registry.md) | independent closure review of `5c486f0` (CLOSURE-REV-001 … 016), status NOT PASSED at that SHA, regression matrices of the critical corrections and of CLOSURE-REV-006, 018 and 008; CLOSURE-REV-017 … 020 found later |
 
 Mechanical checker: `python3 tools/doccheck/check_constitution.py [--verbose]` — a documentation linter (no trading logic, no network,
 no market data). Exit status 0 iff every gate count is zero. Its sensitivity is tested by `python3 tools/doccheck/mutation_suite.py`

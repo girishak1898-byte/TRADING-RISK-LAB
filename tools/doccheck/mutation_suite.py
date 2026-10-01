@@ -87,6 +87,13 @@ MUTATIONS = [
      "| S-311 | $\\mathcal E^{\\mathrm{NT}}_{i,t}$ |", "| S-311 | $\\mathcal E^{\\mathrm{XX}}_{i,t}$ |", "UNREGISTERED_SYMBOLS"),
     ("undefined lifecycle theorem reference", C + "06-hard-safety-architecture.md",
      "releases the slot (T-30).", "releases the slot (T-39).", "UNDEFINED_CROSS_REFERENCES"),
+    ("invalid estimator read as the policy floor", C + "04-assumption-and-decision-registry.md",
+     "| grid check at model load and at every estimator version change; a failure makes the estimate `INVALID`: unavailable for authority, "
+     "$\\alpha_t=0$, no new risk (F152) — never the policy floor; existing exposures stay under the floor and RECOVERY rules |",
+     "| grid check at model load; failure ⇒ policy floor only (F111) |", "ESTIMATOR_FAILURE_NOT_FAIL_CLOSED"),
+    ("invalid estimator continues trading", C + "14-formula-registry.md",
+     "`MISSING` or `INVALID` ⇒ $\\alpha_t=0$ (G1, F046), no new risk,", "`MISSING` or `INVALID` ⇒ trading continues with the last value,",
+     "ESTIMATOR_FAILURE_NOT_FAIL_CLOSED"),
 ]
 
 

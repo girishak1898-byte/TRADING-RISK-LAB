@@ -380,3 +380,42 @@ correction; the original counterexample changes from ALLOWED to BLOCKED.
 ### 12.4 Decision
 
 **PHASE 0 = NOT PASSED.** CLOSURE-REV-018 is resolved; eight IMPORTANT findings remain open.
+
+## 13. CLOSURE-REV-008 correction (estimator failure semantics)
+
+### 13.1 Record
+
+| Field | Value |
+|---|---|
+| Parent SHA | `a87b8879b382dc166f7ec93f2c66081bcfcd2d3a` |
+| Correction commit | "Fix Phase-0 estimator failure semantics", the child of `a87b887` (SHA reported in the final report) |
+| Scope | CLOSURE-REV-008 only. CLOSURE-REV-004, 005, 007, 009, 010, 011, 019 and the MINOR findings are unchanged. One new finding registered, not corrected: CLOSURE-REV-020 (MINOR). |
+
+### 13.2 What the correction changed
+
+| Object | Correction | Proof / evidence |
+|---|---|---|
+| Estimator status | `VALID` / `MISSING` / `INVALID` for every required hard-layer estimate (F152), reusing the existing checks (version in $\mathsf v$, A-AUTH-04, F003, F045, 01 §9, declared units and domains, A-EXE-02) | regression rows D–H, X1–X4 |
+| Policy bound | applies to a validated value only; never a substitute for a missing or failed one; F111's $\max$/$\min$ no longer absorb an out-of-domain value | rows C, E, X1 |
+| A-EXE-02, A-LIQ, A-GAP, F111, 01 Art. 6, 06 §5, §5a | a failed or absent estimate gives $\alpha_t=0$, no new risk; existing exposures unchanged | checker gate ESTIMATOR_FAILURE_NOT_FAIL_CLOSED: $6$ at `a87b887`, $0$ after |
+| T-08, T-27, T-31 | T-08 (a) and T-27 over valid estimates only (both PROVED there); T-31 (authority-validity fail-closed admission, PROVED) | $28{,}480$ invalid or missing states all $\alpha_t=0$; $0$ larger $Q^{\mathrm{hard}}$, $0$ gate FAIL → PASS |
+| T-28 | NO CHANGE — carried references contain no estimate | $0$ differences in $20{,}000$ histories |
+
+Regression matrix: [09-closure-review-registry.md](09-closure-review-registry.md) — 13 exact cases; 7 fail against `a87b887`, all pass after the
+correction; the original counterexample ($666$ vs $953$) now gives $\alpha_t=0$ for the failed estimator.
+
+### 13.3 Status after the correction
+
+| Condition (Phase-0 PASS rule) | Result |
+|---|---|
+| GATE_TOTAL = 0 | 0 (checker); the checker verifies form, not truth |
+| UNRESOLVED CRITICAL findings = 0 | 0 |
+| UNRESOLVED IMPORTANT findings | **7 open** (CLOSURE-REV-004, 005, 007, 009, 010, 011, 019) |
+| No known risk understatement | **not met**: CLOSURE-REV-004 (exit-fee catch-up), 005 (several stops), 007 (cash semantics) and 019 (exit fee booked after the cut) |
+| Hard limits cannot be enlarged by estimates or model output | met for estimator failure (F152, T-31); CLOSURE-REV-011 (strategy id) and the latent CLOSURE-REV-009, 010 remain open |
+| Non-finite numeric states fail closed | met; a missing, stale, out-of-domain or otherwise invalid estimate now fails closed as well (F152) |
+| No executable trading functionality | met |
+
+### 13.4 Decision
+
+**PHASE 0 = NOT PASSED.** CLOSURE-REV-008 is resolved; seven IMPORTANT findings remain open.

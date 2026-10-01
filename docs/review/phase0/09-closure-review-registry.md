@@ -1,7 +1,7 @@
 # Phase-0 Review — Independent Closure Review of `5c486f0` (CLOSURE-REV registry)
 
 This file is permanent failure evidence. It records that the Phase-0 closure state was wrong, how the three CRITICAL defects were corrected, and
-how CLOSURE-REV-006 and CLOSURE-REV-018 were corrected afterwards.
+how CLOSURE-REV-006, CLOSURE-REV-018 and CLOSURE-REV-008 were corrected afterwards.
 It does not rewrite earlier records: the PASS decision in [08-acceptance-gate.md](08-acceptance-gate.md) §9 is kept as written and is superseded
 by this registry (§10 there).
 
@@ -13,7 +13,7 @@ by this registry (§10 there).
 | Findings | CRITICAL 3 (CLOSURE-REV-001, CLOSURE-REV-002, CLOSURE-REV-003) · IMPORTANT 8 (CLOSURE-REV-004 … 011) · MINOR 5 (CLOSURE-REV-012 … 016) |
 | Review method | Adversarial review of the diff in the authoring session, with two fresh-context sub-reviewers; every finding reproduced by the author in exact rational arithmetic before classification. Not an organisationally independent review. |
 | Superseded record | 08-acceptance-gate.md §9 "PHASE 0 = PASS" at `5c486f0` |
-| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN; `8dbb0ee`'s child "Fix Phase-0 entry-order lifecycle exclusivity" resolves CLOSURE-REV-018 |
+| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN; `8dbb0ee`'s child "Fix Phase-0 entry-order lifecycle exclusivity" resolves CLOSURE-REV-018; `a87b887`'s child "Fix Phase-0 estimator failure semantics" resolves CLOSURE-REV-008 and registers CLOSURE-REV-020 (MINOR, OPEN) |
 
 ## Status after the correction commits
 
@@ -26,7 +26,7 @@ by this registry (§10 there).
 | CLOSURE-REV-005 | IMPORTANT | exposures protected by several stops | OPEN |
 | CLOSURE-REV-006 | IMPORTANT | held vs filled quantity in F144/F145; no guard for $q>n'$ | **RESOLVED** by the held/filled quantity correction commit (child of `80ca693`) |
 | CLOSURE-REV-007 | IMPORTANT | H14 cash semantics (F048, remaining-only $C^{\mathrm{res}}$) | OPEN |
-| CLOSURE-REV-008 | IMPORTANT | A-EXE-02 falls back to the policy floor on an invalid estimator | OPEN |
+| CLOSURE-REV-008 | IMPORTANT | A-EXE-02 falls back to the policy floor on an invalid estimator | **RESOLVED** by the estimator failure correction commit (child of `a87b887`) |
 | CLOSURE-REV-009 | IMPORTANT | rounding direction of $\nu^{\mathrm{day}}_0$ used as a base; $B^{\mathrm{win}}$ has none | OPEN |
 | CLOSURE-REV-010 | IMPORTANT | H3 window base enlarges the cap beyond the claimed double count | OPEN |
 | CLOSURE-REV-011 | IMPORTANT | strategy id classed as an order parameter selects the H3 budget | OPEN |
@@ -34,6 +34,7 @@ by this registry (§10 there).
 | CLOSURE-REV-019 | IMPORTANT | exit fee of an exit executed before the cut and booked after it is charged nowhere (found at the CLOSURE-REV-006 correction) | OPEN |
 | CLOSURE-REV-012 … 016 | MINOR | T-21 qualifications; canonical bytes; edge-case consistency; lifecycle wording; registry hygiene | OPEN |
 | CLOSURE-REV-017 | MINOR | source class of $\phi^{\mathrm{paid}}_o$ (found at the CLOSURE-REV-006 correction) | OPEN |
+| CLOSURE-REV-020 | MINOR | existing-portfolio floor check undefined under a missing or invalid $\hat\Lambda$ (found at the CLOSURE-REV-008 correction) | OPEN |
 
 T-10 lists CLOSURE-REV-004, 005 and 019 as open dependencies (006 and 018, its former dependencies (iii) and (iv), are resolved) and stays PROOF REQUIRES ADDITIONAL
 ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assumption.
@@ -124,7 +125,9 @@ ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assum
 | Severity | IMPORTANT |
 | Object | 04 A-EXE-02 fail-closed column: "grid check failure ⇒ policy floor only" |
 | Finding | survives AUD-041: an invalid estimator yields the most permissive admissible value. T-08(a) and T-27 now assume admissible (load-checked) estimates. |
-| Status | OPEN |
+| Reproduction | Reproduced exactly at `a87b887` before any change. H1 with $f^{\mathrm{trd}}B=1{,}000$, limit $50$, stop $49$, $\kappa^{\min}=0.001$ (floor $0.049$), no fees: a valid pessimistic $\hat\kappa^{\mathrm{out}}=0.5$ gives $666$ sh; the estimator failing its grid check, read as the policy floor, gives $953$; with $n^{\min}=700$ the valid estimate gives NO\_TRADE and the failed check TRADE. F111's $\max$ absorbs an out-of-domain $\hat\kappa^{\mathrm{out}}=-0.5$ into the floor ($953$). A failed $\kappa^{\mathrm{liq}}$ check read as $\Lambda^{\mathrm{floor}}=100$: $E_t=100{,}000$, $F_t=96{,}000$, valid $\hat\Lambda=5{,}000$ gives $K_t=-1{,}000$ (G3 fails), the floor $K_t=3{,}900$ (G3 passes). |
+| Resolution | Three states per required hard-layer estimate (F152): `VALID` (exists and passes every mandatory check: declared version, instrument and cut, $t^{\mathrm{know}}\le\tau_t$, age within TTL, canonical and finite, declared unit and domain, A-EXE-02 grid check), `MISSING` (no value for the cut), `INVALID` (exists, fails a check). Pipeline raw observation → estimator → validation → policy bound → hard-layer use; the policy bound applies to valid values only; `MISSING` or `INVALID` ⇒ $\alpha_t=0$, no new risk, never the bound, $0$, a last or default value, a model or optimiser value. A-EXE-02, A-LIQ, A-GAP, F111, 01 Art. 6, 06 §5 and §5a, S-214, S-299 restated; T-08 (a) and T-27 stated over valid estimates only; the failure rule is the separate theorem T-31 (PROVED); T-28 unchanged (carried references contain no estimate); FM-OPS-14; checker gate ESTIMATOR_FAILURE_NOT_FAIL_CLOSED. Existing exposures stay under the floor and RECOVERY rules (see CLOSURE-REV-020). |
+| Status | **RESOLVED** by the estimator failure correction commit (child of `a87b887`); evidence in the CLOSURE-REV-008 regression matrix and validation table below and in 08 T-31. |
 
 ### CLOSURE-REV-009
 
@@ -230,6 +233,15 @@ ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assum
 | Counterexample (exact) | $100$ sh held, stop $49$; the stop sells all $100$ at $48.9$ before $\tau_t$ and the exit order is terminal; its sell fee $\max(1,0.005k)=1$ is not yet booked at the cut. Nothing is held or pending, so $R^{\mathrm{open}}_t=R^{\mathrm{res}}_t=0\le K_t=\tfrac12$; the fee is booked in the period: $W_{t+1}=W_t-1=F_t-\tfrac12$. |
 | Required correction | the exit-side analogue of F148 (owed exit fees reserved until booked, for terminal and for working exit orders, the latter together with CLOSURE-REV-004), or exit fees required to be booked at the cut ($\alpha_t=0$ otherwise). |
 | Status | OPEN (T-10 open dependency (v); T-19 open dependency). Found while correcting CLOSURE-REV-006 and not corrected there; distinct from CLOSURE-REV-004, which concerns a working exit order's fee catch-up. |
+
+### CLOSURE-REV-020
+
+| Field | Value |
+|---|---|
+| Severity | MINOR — advisory output only; no admission effect |
+| Object | F034 and the existing-portfolio floor conditions F120–F122 (RECOVERY, 01 Art. 4) when $\hat\Lambda_{i,t}$ is not `VALID` |
+| Finding | With $\hat\Lambda_{i,t}$ `MISSING` or `INVALID`, $W_t=E_t-\Lambda_t$ — hence $K_t$ and $\mathrm{DD}_t$ — is undefined. New risk is blocked ($\alpha_t=0$, F152), but the constitution does not say whether the existing-portfolio floor check then reports RECOVERY, evaluated at the A-ACC-05 worst case $\Lambda_{i,t}\le q_{i,t}m_{i,t}+\phi^{\mathrm{sell}}_{i,0}(q_{i,t})$, or only NO\_TRADE; evaluating it at $\Lambda^{\mathrm{floor}}$ would overstate $K_t$ ($E_t=100{,}000$, $F_t=96{,}000$, liquidation cost $5{,}000$: $K_t=3{,}900$ instead of $-1{,}000$). Found while correcting CLOSURE-REV-008, whose scope is new-risk admission. |
+| Status | OPEN |
 
 ## Regression matrix (exact rational arithmetic)
 
@@ -338,3 +350,43 @@ order or an invalid lifecycle exists on $i$ (A-SCOPE-05, F151), and no admitted 
 | $W_{t+1}<F_t$ after admission (two fee schedules; $o_1$ $60$ or $100$ filled, terminal or not, owed $0$ or $1$; marks $48.95$, $52$; $o_2$ fills $0$, $50$, $100$, fee booked or not) | $144$ old, $96$ new exact checks | $16$ (down to $-1$) | $0$ (minimum $0$) |
 | Fee dollar neither booked nor reserved through the lifecycle (full fill → entry decision → terminal confirmation → fees final) | $9$ old, $7$ new order-cuts | $1$ | $0$ |
 | T-19 in the overlapping state ($\bar q_i$ of F070 read with the fully filled order) | $1$ exact case | $W_{t+1}=W^{\min}_{t+1}-\tfrac12$ | state excluded by G11 |
+
+## CLOSURE-REV-008 regression matrix (exact)
+
+H1 alone: $f^{\mathrm{trd}}B=1{,}000$, limit $50$, stop $49$, $\kappa^{\min}=0.001$ (policy floor $\kappa^{\min}p^{\mathrm{stop}}=0.049$), no fees; $n^{\min}=0$ except in row I.
+"Old" is the `a87b887` rule set (F111 missing ⇒ $\alpha_t=0$; 01 §9 items 5, 17 for non-finite fields; A-EXE-02's fallback to the policy floor on a
+failed grid check; F111's $\max$ on any number). A row passes when every `MISSING` or `INVALID` status gives $\alpha_t=0$ and no failed estimator
+yields a larger quantity than the valid pessimistic estimate.
+
+| # | Case | Raw status | Validated value | Bounded value | $\alpha_t$ | Admission (new) | Old (`a87b887`) | Old | New |
+|---|---|---|---|---|---|---|---|---|---|
+| A | valid estimate above the floor ($0.5$) | `VALID` | $0.5$ | $0.5$ | $1$ | $666$ sh, TRADE | $666$, TRADE | passes | passes |
+| B | valid estimate exactly at the floor ($0.049$) | `VALID` | $0.049$ | $0.049$ | $1$ | $953$ sh, TRADE | $953$, TRADE | passes | passes |
+| C | valid estimate below the floor before bounding ($0.01$) | `VALID` | $0.01$ | $0.049$ | $1$ | $953$ sh, TRADE | $953$, TRADE | passes | passes |
+| D | missing estimate | `MISSING` | — | — | $0$ | NO\_TRADE | $\alpha_t=0$ (F111) | passes | passes |
+| E | estimator fails its load-time grid check (fitted $0.5$ up to $700$ sh, $0.3$ above) | `INVALID` | — | — | $0$ | NO\_TRADE | policy floor: $953$, TRADE | fails | passes |
+| F | stale estimate (age $>$ TTL) | `INVALID` | — | — | $0$ | NO\_TRADE | no stated rule ($666$ if used as valid, $953$ by the A-EXE-02 analogy) | fails | passes |
+| G | non-finite estimate (NaN) | `INVALID` | — | — | $0$ | NO\_TRADE | $\alpha_t=0$ (01 §9) | passes | passes |
+| H | wrong estimator version or provenance | `INVALID` | — | — | $0$ | NO\_TRADE | no stated rule ($666$ or $953$) | fails | passes |
+| I | valid pessimistic $0.5$ vs failed check, $n^{\min}=700$ | `VALID` / `INVALID` | $0.5$ / — | $0.5$ / — | $1$ / $0$ | NO\_TRADE / NO\_TRADE | NO\_TRADE / TRADE ($953$) | fails | passes |
+| X1 | out of domain ($\hat\kappa^{\mathrm{out}}=-0.5$) | `INVALID` | — | — | $0$ | NO\_TRADE | F111 $\max$: $0.049$, $953$, TRADE | fails | passes |
+| X2 | wrong unit (basis points read as USD/sh) | `INVALID` | — | — | $0$ | NO\_TRADE | no stated rule | fails | passes |
+| X3 | wrong instrument | `INVALID` | — | — | $0$ | NO\_TRADE | no stated rule | fails | passes |
+| X4 | wrong cut ($t^{\mathrm{know}}>\tau_t$) | `INVALID` | — | — | $0$ | NO\_TRADE | not admitted (F003) ⇒ missing, $\alpha_t=0$ | passes | passes |
+
+## CLOSURE-REV-008 validation evidence (exact; scripts kept outside the repository)
+
+Model: caps H1 ($f^{\mathrm{trd}}B=1{,}000$), H2 ($\mu^K K_t$, $\mu^K=0.1$), H5 (gap budget $2{,}000$), H12 ($\rho^{\mathrm{in}}w^{\mathrm{in}}=0.01$, $\mathrm{ADV}^{\max}=10^6$), gate G3
+with $E_t=100{,}000$, $F_t=96{,}000$, $\Lambda^{\mathrm{floor}}=100$; four estimators $\hat\kappa^{\mathrm{out}},\hat\Gamma,\hat\Lambda,\mathrm{ADV}^{\mathrm{est}}$, each valid (above, at or on the
+permissive side of its bound), missing, or invalid in nine ways (stale, non-finite, outside its domain low or high, wrong unit, instrument or
+cut, failed grid or load check, failed version).
+
+| Property | Search | Old (`a87b887`, explicit rules) | New |
+|---|---|---|---|
+| States with a missing or invalid estimate admitted ($\alpha_t=1$) | $28{,}561$ status combinations, $28{,}480$ with a missing or invalid estimate | $544$ ($12{,}019$ if unstated cases are read through F111's bound) | $0$ |
+| A value substituted after a failed check | same | A-EXE-02 floor; F111 $\max$/$\min$ | $0$ |
+| Single-estimator degradation `VALID` → `MISSING`/`INVALID`: $Q^{\mathrm{hard}}$ larger; NO\_TRADE → TRADE; TRADE → TRADE; G3 FAIL → PASS | $263{,}640$ pairs ($n^{\min}=0$) | $376$; $200$; $1{,}660$; $250$ | $0$; $0$; $0$; $0$ |
+| Same with $n^{\min}=300$ | $263{,}640$ pairs | $256$; $256$; $656$; $250$ | $0$; $0$; $0$; $0$ |
+| Valid domain (T-08, T-27, T-28): a more conservative valid estimate raises $Q^{\mathrm{hard}}$ or turns G3 FAIL → PASS; $Q^{\mathrm{hard}}$ above its policy-bound value | $625$ valid points, $2{,}000$ ordered pairs | — | $0$; $0$; $0$ |
+| Carried references ($H$, units) differ because of an estimator status | $20{,}000$ random five-epoch histories with flows | — | $0$ (T-28: NO CHANGE) |
+| Checker gate ESTIMATOR_FAILURE_NOT_FAIL_CLOSED | constitution at `a87b887` / after the correction | $6$ | $0$ |
