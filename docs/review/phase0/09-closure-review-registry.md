@@ -1,7 +1,7 @@
 # Phase-0 Review — Independent Closure Review of `5c486f0` (CLOSURE-REV registry)
 
 This file is permanent failure evidence. It records that the Phase-0 closure state was wrong, how the three CRITICAL defects were corrected, and
-how CLOSURE-REV-006 was corrected afterwards.
+how CLOSURE-REV-006 and CLOSURE-REV-018 were corrected afterwards.
 It does not rewrite earlier records: the PASS decision in [08-acceptance-gate.md](08-acceptance-gate.md) §9 is kept as written and is superseded
 by this registry (§10 there).
 
@@ -13,7 +13,7 @@ by this registry (§10 there).
 | Findings | CRITICAL 3 (CLOSURE-REV-001, CLOSURE-REV-002, CLOSURE-REV-003) · IMPORTANT 8 (CLOSURE-REV-004 … 011) · MINOR 5 (CLOSURE-REV-012 … 016) |
 | Review method | Adversarial review of the diff in the authoring session, with two fresh-context sub-reviewers; every finding reproduced by the author in exact rational arithmetic before classification. Not an organisationally independent review. |
 | Superseded record | 08-acceptance-gate.md §9 "PHASE 0 = PASS" at `5c486f0` |
-| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN |
+| Later correction commits | `80ca693` resolved CLOSURE-REV-001 … 003; its child "Fix Phase-0 held and filled quantity semantics" resolves CLOSURE-REV-006 and registers CLOSURE-REV-017 (MINOR), CLOSURE-REV-018 and CLOSURE-REV-019 (IMPORTANT), all OPEN; `8dbb0ee`'s child "Fix Phase-0 entry-order lifecycle exclusivity" resolves CLOSURE-REV-018 |
 
 ## Status after the correction commits
 
@@ -30,12 +30,12 @@ by this registry (§10 there).
 | CLOSURE-REV-009 | IMPORTANT | rounding direction of $\nu^{\mathrm{day}}_0$ used as a base; $B^{\mathrm{win}}$ has none | OPEN |
 | CLOSURE-REV-010 | IMPORTANT | H3 window base enlarges the cap beyond the claimed double count | OPEN |
 | CLOSURE-REV-011 | IMPORTANT | strategy id classed as an order parameter selects the H3 budget | OPEN |
-| CLOSURE-REV-018 | IMPORTANT | G11 admits a second non-terminal entry order on an instrument (found at the CLOSURE-REV-006 correction) | OPEN |
+| CLOSURE-REV-018 | IMPORTANT | G11 admits a second non-terminal entry order on an instrument (found at the CLOSURE-REV-006 correction) | **RESOLVED** by the entry-order lifecycle correction commit (child of `8dbb0ee`) |
 | CLOSURE-REV-019 | IMPORTANT | exit fee of an exit executed before the cut and booked after it is charged nowhere (found at the CLOSURE-REV-006 correction) | OPEN |
 | CLOSURE-REV-012 … 016 | MINOR | T-21 qualifications; canonical bytes; edge-case consistency; lifecycle wording; registry hygiene | OPEN |
 | CLOSURE-REV-017 | MINOR | source class of $\phi^{\mathrm{paid}}_o$ (found at the CLOSURE-REV-006 correction) | OPEN |
 
-T-10 lists CLOSURE-REV-004, 005, 018 and 019 as open dependencies (006, its former dependency (iii), is resolved) and stays PROOF REQUIRES ADDITIONAL
+T-10 lists CLOSURE-REV-004, 005 and 019 as open dependencies (006 and 018, its former dependencies (iii) and (iv), are resolved) and stays PROOF REQUIRES ADDITIONAL
 ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assumption.
 
 ## Findings
@@ -215,7 +215,11 @@ ASSUMPTIONS. No IMPORTANT finding was hidden by strengthening an unrelated assum
 | Object | gate G11 and A-SCOPE-05 (test $Q^{\mathrm{res}}_{i,t}=0$); F144, F145, F150, written for one non-terminal entry order per instrument |
 | Counterexample (exact) | entry order $o_1$ for $100$ fully filled but not yet venue-confirmed terminal, entry fee $\max(1,0.005k)$ owed and not booked, every share exited: $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=q^{\mathrm{unf}}_{o_1}=0$, so G11 admits $o_2$ for $100$ on the same instrument; $o_2$ fills fully (fee $1$ booked), $100$ held, mark $52$, stop $49$, limit $50$, $\kappa^{\mathrm{out}}=0.01$, sell fee $0$, spread $0.01$ ($\Lambda_{i,t}=1/2$). One F145 for $i$ with $o_2$ charges $301$ against a worst loss of $603/2$ — the owed fee $1$ of $o_1$ is charged nowhere: $W_{t+1}=F_t-\tfrac12$ at $K_t=301$. Evaluated per order instead, the held part is charged twice: conservative at mark $52$, but at mark $48.95$ (sell fee $\max(1,0.005k)$, $\Lambda_{i,t}=3/2$) the sum is $2$ below the exact worst case. |
 | Required correction | G11 to require that no non-terminal entry order exists on $i$ (not only $Q^{\mathrm{res}}_{i,t}=0$), or F144, F145 and F150 defined per instrument over all of its non-terminal entry orders. |
-| Status | OPEN (T-10 open dependency (iv)). Found while correcting CLOSURE-REV-006 and not corrected there; it is pre-existing at `80ca693`, whose F144 also gave $Q^{\mathrm{res}}=n'-q^{\mathrm{fill}}=0$ for a fully filled order. |
+| Origin | Found while correcting CLOSURE-REV-006 and not corrected there; pre-existing at `80ca693`, whose F144 also gave $Q^{\mathrm{res}}=n'-q^{\mathrm{fill}}=0$ for a fully filled order. |
+| Reproduction | Reproduced exactly at `8dbb0ee` before any change: the old G11 admits $o_2$; one F145 for $i$ (with $o_2$) $301$, worst loss $603/2$, $\Lambda_{i,t}=1/2$, $W_{t+1}=F_t-\tfrac12$. |
+| Authority error | $Q^{\mathrm{res}}_{i,t}=0$ (no unfilled quantity on $i$) was taken for "no pending entry order on $i$". A fully filled order awaiting its terminal confirmation has $q^{\mathrm{unf}}_o=0$ yet is still the instrument's pending entry order: it carries the owed fee, can still receive execution corrections, and owns the instrument's F145. |
+| Resolution | Lifecycle states `NON_TERMINAL`, `TERMINAL_CONFIRMED`, and $\bot$ for missing, ambiguous or contradictory evidence (S-310, S-311, F151), independent of fee finality. G11: $q_{i,t}=0\wedge Q^{\mathrm{res}}_{i,t}=0\wedge\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$ with a valid lifecycle; $\bot$ or two `NON_TERMINAL` entry orders on one instrument ⇒ $\alpha_t=0$ and no finite charge for that instrument (RECOVERY), no order chosen as authoritative. A-SCOPE-05 (one entry-order authority per instrument) and A-AUTH-02 restated; F144 and F145 keep one pending entry order per instrument; a terminal order's owed fee stays in the F144 reservation (CLOSURE-REV-003 rule) and does not block G11. T-30 (gate lifecycle monotonicity, PROVED); T-10 open dependency (iv) closed. T-19: the overlapping state had also made $\bar q_i$ in F070 ambiguous ($W_{t+1}=W^{\min}_{t+1}-\tfrac12$ under one reading); the same gate excludes it, T-19's statement and dependencies are unchanged. FM-OPS-13. |
+| Status | **RESOLVED** by the entry-order lifecycle correction commit (child of `8dbb0ee`); evidence in the CLOSURE-REV-018 regression matrix and validation table below and in 08 T-10 (ix), T-30. |
 
 ### CLOSURE-REV-019
 
@@ -302,3 +306,35 @@ future fills) but under-charged row 10, with the mark above the stop and $\alpha
 | Invalid states with $\alpha_t\neq0$ | $1{,}212$ states (missing, off the lattice, $q_{i,t}<0$, $q^{\mathrm{fill}}_o<0$, $n'\le0$, $q_{i,t}>q^{\mathrm{fill}}_o$, $q^{\mathrm{fill}}_o>n'$, $q_{i,t}>n'$) | no guard | $0$ ($883$ with no finite charge) |
 | F150 charge below the same tier's charge of a valid reading, the visible holding's own charges or the reported fill's fee | $329$ states with a finite charge, $3{,}981{,}600$ checks | — | $0$ (the tier-U component alone: $10{,}056$) |
 | Conservation: share partition, $Q^{\mathrm{res}}$ under exits and fills, committed entry cash, F149, owed fee kept, booked fee not repeated | $83$ states; $20{,}000$ random lifecycles, $260{,}100$ cuts | exited shares in a quantity term in $56$ of $83$ states under either reading; an exit raises $Q^{\mathrm{res}}$ from $100$ to $160$ under the holding reading | $0$ violations; no valid lifecycle state flagged invalid |
+
+## CLOSURE-REV-018 regression matrix (exact)
+
+Instrument $i$: limit $50$, stop $49$, $\kappa^{\mathrm{out}}=0.01$, spread $0.01$, $N^{\mathrm{ex}}=1$; $o_1$, $o_2$ for $100$ sh each; entry fee $\max(1,0.005k)$, sell
+fee $0$, mark $52$. "Old" is G11 at `8dbb0ee` ($q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$); "new" adds $\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$ with a valid lifecycle (F151).
+$W_{t+1}-F_t$ is the worst outcome with $K_t$ equal to the charge. A row passes when the gate admits no new entry while a `NON_TERMINAL` entry
+order or an invalid lifecycle exists on $i$ (A-SCOPE-05, F151), and no admitted state leaves $o_1$'s owed fee outside every charge.
+
+| # | Case | Old G11 | New G11 | New entry (new) | $o_1$'s fee liability: old → new | Old | New |
+|---|---|---|---|---|---|---|---|
+| 1 | original REV-018: $o_1$ fully filled, `NON_TERMINAL`, fee $1$ owed, nothing held; $o_2$ for $100$ fills and is held | ALLOWED | BLOCKED | no | one F145 for $i$ (with $o_2$) $301$ against $603/2$: $W_{t+1}-F_t=-1/2$, fee in no charge → $o_1$'s own F145 $=1$ carries it | fails | passes |
+| 2 | fully filled `NON_TERMINAL`, $q^{\mathrm{unf}}_{o_1}=0$, fee booked (owed $0$) | ALLOWED | BLOCKED | no | none owed; $o_1$ keeps the slot | fails | passes |
+| 3 | fully filled `TERMINAL_CONFIRMED`, owed $0$ | ALLOWED | ALLOWED | yes | none owed; after $o_2$ fills $301$ against $601/2$: $+1/2$ | passes | passes |
+| 4 | `TERMINAL_CONFIRMED`, fees not final (owed $1$) | ALLOWED | ALLOWED | yes | F144 terminal reservation $1$; after $o_2$ fills $302$ against $603/2$: $+1/2$ | passes | passes |
+| 5 | two `NON_TERMINAL` entry orders observed on $i$ ($o_1$ as in row 1, $o_2$ filled) | ALLOWED (no rule) | $\alpha_t=0$ | no | one F145 for $i$ drops $o_1$'s fee ($-1/2$) → no finite charge for $i$ (RECOVERY), both obligations kept | fails | passes |
+| 6 | nothing held, `NON_TERMINAL`, $60$ filled, $40$ unfilled, owed $1$ | BLOCKED | BLOCKED | no | $o_1$'s F145 $=207/5$ | passes | passes |
+| 7 | $40$ held, `NON_TERMINAL`, owed $1$ | BLOCKED | BLOCKED | no | $o_1$'s F145 $=607/5$ | passes | passes |
+| 8 | full fill (epoch $t$), terminal confirmation at $t+1$, owed $1$ | ALLOWED / ALLOWED | BLOCKED / ALLOWED | no / yes | at $t+1$ F144 terminal reservation $1$; after $o_2$ fills $302$ against $603/2$ | fails | passes |
+| 9 | terminal confirmation (epoch $t$, owed $1$), fees final at $t+1$ | ALLOWED / ALLOWED | ALLOWED / ALLOWED | yes / yes | reservation $1$, then $0$ with the fee booked in $W$ (F149, T-29) | passes | passes |
+| 10 | lifecycle state of $o_1$ missing, $q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$ | ALLOWED | $\alpha_t=0$ | no | — | fails | passes |
+| 11 | $o_1$ marked terminal while the venue reports it active | ALLOWED | $\alpha_t=0$ | no | — | fails | passes |
+
+## CLOSURE-REV-018 validation evidence (exact; scripts kept outside the repository)
+
+| Property | Search | Old (`8dbb0ee`) | New |
+|---|---|---|---|
+| New entry admitted; admitted with a `NON_TERMINAL` entry order on $i$; admitted with an invalid lifecycle; an owed fee left outside every charge | Boolean product: $q^{\mathrm{unf}}_{o_1}$, terminal confirmation, owed fee, holding each zero or not; $0$, $1$, $2$ non-terminal entry orders; evidence consistent, missing or contradictory: $144$ states ($120$ invalid) | $54$; $36$; $44$; $9$ | $4$; $0$; $0$; $0$ |
+| Same lifecycle, $q^{\mathrm{unf}}_{o_1}>0\to0$: BLOCKED → ALLOWED (T-30) | $36$ pairs | $18$ | $0$ |
+| Fee representation changed by $q^{\mathrm{unf}}$ alone | $144$ states | — | $0$ |
+| $W_{t+1}<F_t$ after admission (two fee schedules; $o_1$ $60$ or $100$ filled, terminal or not, owed $0$ or $1$; marks $48.95$, $52$; $o_2$ fills $0$, $50$, $100$, fee booked or not) | $144$ old, $96$ new exact checks | $16$ (down to $-1$) | $0$ (minimum $0$) |
+| Fee dollar neither booked nor reserved through the lifecycle (full fill → entry decision → terminal confirmation → fees final) | $9$ old, $7$ new order-cuts | $1$ | $0$ |
+| T-19 in the overlapping state ($\bar q_i$ of F070 read with the fully filled order) | $1$ exact case | $W_{t+1}=W^{\min}_{t+1}-\tfrac12$ | state excluded by G11 |

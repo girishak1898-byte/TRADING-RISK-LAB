@@ -66,12 +66,13 @@ Worked examples use $\delta_q=1$ sh and USD prices unless stated.
 | T-27 | Gate monotonicity in estimates | PROVED | F092, F111 |
 | T-28 | Estimate dominance at every epoch (instantaneous and temporal) | PROVED | F146, F037, F069 |
 | T-29 | Entry-fee booking conservation | PROVED | F148, F149 |
+| T-30 | Entry-gate lifecycle monotonicity | PROVED | F092, F151 |
 | OPEN-1 | Multi-step viability kernel | NOT YET PROVEN | F120, F122 |
 | OPEN-2 | Certified-advantage validity | UNDEFINED | F027 |
 | OPEN-3 | Required-input registry completeness | NOT YET PROVEN | F046 |
 | OPEN-4 | Market-wide cost perturbations of $\Delta J$ | NOT YET PROVEN | F025 |
 
-Counts: PROVED 25 · PROOF REQUIRES ADDITIONAL ASSUMPTIONS 8 · DISPROVED 11 · NOT YET PROVEN 4 · UNDEFINED 1 · total 49.
+Counts: PROVED 26 · PROOF REQUIRES ADDITIONAL ASSUMPTIONS 8 · DISPROVED 11 · NOT YET PROVEN 4 · UNDEFINED 1 · total 50.
 
 **Revision R1 (v0.1 → v0.1.1).** An independent adversarial review found 4 blockers, 9 major and 11 minor defects (registered as
 REV-001 … REV-024 in `docs/review/phase0/`). Blockers: T-10 failed for add-ons (→ G11); T-07 was false because open risk credited $\Lambda$ (→ OC-1);
@@ -115,6 +116,14 @@ charge otherwise). T-10's open dependency (iii) is closed; (i) CLOSURE-REV-004 a
 non-terminal entry order per instrument) and (v) CLOSURE-REV-019 (exit fees booked after the cut), both found during this correction and not
 corrected, are added; its status is unchanged. T-21 is updated
 mechanically. No theorem is added; counts are unchanged.
+
+**Revision R6 (entry-order lifecycle exclusivity, CLOSURE-REV-018).** G11 tested $Q^{\mathrm{res}}_{i,t}=0$, which a fully filled order awaiting its terminal
+confirmation satisfies while it is still pending. The lifecycle state of an entry order is now explicit — `NON_TERMINAL` or `TERMINAL_CONFIRMED`,
+$\bot$ when the evidence is missing, ambiguous or contradictory (F151, S-310, S-311) — and G11 also requires that no entry order on the
+instrument is `NON_TERMINAL`; A-SCOPE-05 is restated as one entry-order authority per instrument. Terminal confirmation and fee finality stay
+distinct: a terminal order's owed fee stays in the F144 reservation (CLOSURE-REV-003). T-30 (gate lifecycle monotonicity, PROVED) is added; T-10's
+open dependency (iv) is closed, (i), (ii) and (v) remain, its status is unchanged. T-19's statement, proof and dependencies are unchanged; one
+counterexample-attempt line records that the overlapping state had also made $\bar q_i$ in F070 ambiguous.
 
 ---
 
@@ -554,7 +563,8 @@ larger ambiguity set increased the chosen size. ∎
 **STATEMENT.** Tier S: $R^{\mathrm{open}}_t+R^{\mathrm{res}}_t+L^{\mathrm{stop}}(n)\le K_t\ \Rightarrow\ W_{t+1}\ge F_t$ (F120). Tier G: $G^{\mathrm{open}}_t+G^{\mathrm{res}}_t+L^{\mathrm{gap}}(n)\le K_t\Rightarrow W_{t+1}\ge F_t$
 (F121). Tier U: $Z^{\mathrm{open}}_t+Z^{\mathrm{res}}_t+L^{\mathrm{abs}}(n)\le K_t\Rightarrow W_{t+1}\ge F_t$ (F122).
 
-**ASSUMPTIONS.** Tier S: A-MATH-01; A-SCOPE-03; A-SCOPE-05 with G11; A-FLOW-01 ($X_{t+1}=0$); A-ACC-01, A-ACC-02, A-ACC-03 (transition
+**ASSUMPTIONS.** Tier S: A-MATH-01; A-SCOPE-03; A-SCOPE-05 with G11 (corrected: at most one `NON_TERMINAL` entry order per instrument and a valid
+lifecycle state, F151); A-FLOW-01 ($X_{t+1}=0$); A-ACC-01, A-ACC-02, A-ACC-03 (transition
 F055, fee postings included in $\mathcal J_{t+1}$, 05 §1); A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$); A-ACC-04; A-ACC-06 ($\Lambda\ge0$); A-MKT-05
 (every entry fill $\le p^{\mathrm{lim}}$); A-EXE-01, A-EXE-02; A-EXE-03 (cumulative fill $\le$ order quantity); **A-EXE-04 with the booking semantics of
 F148**: the entry fees of one order over its lifetime are at most $\phi^{\mathrm{buy}}$ of its cumulative filled quantity and may be booked into $W$ at the
@@ -571,9 +581,11 @@ exposure, including one whose exit order is partially executed at $\tau_t$, wher
 (CLOSURE-REV-005; F145 remains conditional on it). **Quantity state (CLOSURE-REV-006, resolved; no longer an open dependency):** every pending
 entry order satisfies F150 — held $q_{i,t}$, cumulative fill $q^{\mathrm{fill}}_o$ and order quantity $n'_o$ present, on the lattice, $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$;
 exits while the entry is pending are covered by case (2′); an invalid state has $\alpha_t=0$ and the F150 charge, for which T-10 claims only the
-dominance of (viii). **Open dependencies registered at that correction:** (iv) at most one non-terminal entry order per instrument — G11's test
-$Q^{\mathrm{res}}_{i,t}=0$ admits a second entry order while a fully filled order awaits its terminal confirmation (CLOSURE-REV-018, OPEN); (v) every
-exit fee of an exit executed before $\tau_t$ is booked into $W_t$ at the cut — no exit-side owed-fee reservation exists (CLOSURE-REV-019, OPEN).
+dominance of (viii). **Open dependency registered at that correction:** (v) every exit fee of an exit executed before $\tau_t$ is booked into $W_t$
+at the cut — no exit-side owed-fee reservation exists (CLOSURE-REV-019, OPEN). **Entry-order exclusivity (CLOSURE-REV-018, resolved; former open
+dependency (iv)):** G11 admits a new entry order on $i$ only if no entry order on $i$ is `NON_TERMINAL` (F151), so a fully filled order awaiting
+its terminal confirmation keeps the instrument's single pending slot; a snapshot with two `NON_TERMINAL` entry orders on one instrument, or a
+lifecycle state $\bot$, has $\alpha_t=0$ and no finite charge for that instrument (RECOVERY) and is outside these hypotheses (ix).
 Tier G: A-GAP (tier-G form of F072) instead of A-TRIG. Tier U: A-MKT-01 and A-ACC-05 (tier-U form of F072) instead of A-TRIG.
 
 **PROOF STATUS.** PROOF REQUIRES ADDITIONAL ASSUMPTIONS
@@ -652,12 +664,23 @@ charge): $\alpha_t=0$ in every one; the F150 charge is at least the same tier's 
 holding's own charges and the reported fill's fee ($3{,}981{,}600$ checks, none violated; the tier-U component alone: $10{,}056$ violations).
 Dominance: for a valid reading, $\bar q_i\le q_{i,t}+n'$, the remainder is $\le n'$ and $\phi^{\mathrm{buy}}(n')-\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{buy}}(\max(q_{i,t},q^{\mathrm{fill}}_o)+n')$, and
 every term of F145 is monotone in these ($\kappa^{\mathrm{out}}$, $\phi$ non-decreasing, $p^{\mathrm{gx}}$ non-increasing).
+(ix) Entry-order exclusivity (CLOSURE-REV-018, at `8dbb0ee`, where G11 tested $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=0$ only): $o_1$ for $100$ fully filled,
+`NON_TERMINAL`, entry fee $\max(1,0.005k)=1$ owed, nothing held, so $Q^{\mathrm{res}}_{i,t}=q^{\mathrm{unf}}_{o_1}=0$ and G11 admitted $o_2$ for $100$; $o_2$ filled
+(fee $1$ booked), $100$ held, mark $52$, stop $49$, limit $50$, $\kappa^{\mathrm{out}}=0.01$, sell fee $0$, spread $0.01$ ($\Lambda_{i,t}=1/2$): one F145 for $i$
+(with $o_2$) charged $301$ against a worst loss of $603/2$, $W_{t+1}=F_t-\tfrac12$. With G11 corrected, $o_2$ is not admitted and $o_1$'s F145 ($1$, its owed
+fee) stands until $o_1$ is `TERMINAL_CONFIRMED`; then $o_1$'s owed fee is the F144 terminal reservation, $o_2$ may be admitted, and the charge is
+$302=301+1$ against $603/2$ (exact). Lifecycle enumeration ($q^{\mathrm{unf}}_{o_1}$, terminal confirmation, owed fee and holding each zero or not;
+$0$, $1$ or $2$ non-terminal entry orders on $i$; consistent, missing or contradictory evidence: $144$ states): the corrected gate admits a new entry
+in $4$ states, none with a non-terminal entry order and none with an invalid lifecycle ($120$ invalid states, all $\alpha_t=0$), against $54$, $36$
+and $44$ for the old gate; no admitted state leaves an owed fee outside every charge (old: $9$); exact two-order checks after admission ($96$
+corrected, $144$ old): no $W_{t+1}<F_t$, against $16$ (down to $W_{t+1}=F_t-1$).
 
 **NUMERICAL EDGE CASES.** Equality in the premise (floor attained, not breached); aggregates rounded up and $K_t$ rounded down (T-24); fees
 quantised up (01 §9 item 15); $e=0$; a stop exactly at the limit ($x=\kappa^{\mathrm{out}}(n')>0$, clamp inactive); $-0$ rejected at the boundary;
 $\phi^{\mathrm{paid}}_o=\phi^{\mathrm{acc}}_o$ (nothing owed); $\phi^{\mathrm{paid}}_o>\phi^{\mathrm{acc}}_o$ ⇒ $\alpha_t=0$, no credit (F148); $q_{i,t}=0<q^{\mathrm{fill}}_o$ (every filled
 share exited: remainder and owed fees only); $q^{\mathrm{fill}}_o=n'_o$ before the terminal confirmation ($q^{\mathrm{unf}}_o=0$); a quantity state outside F150 ⇒
-$\alpha_t=0$ and the F150 charge.
+$\alpha_t=0$ and the F150 charge; a fully filled `NON_TERMINAL` entry order ($q^{\mathrm{unf}}_o=0$, still pending: G11 blocks a new entry on $i$);
+terminal confirmation and fee finality in different epochs.
 
 **MACHINE-TESTABLE INVARIANT.** Simulator with adversarial paths drawn inside the tier's disturbance set (comonotone all-stops scenario,
 triggered-unfilled states, split fills, partial exits at the cut) ⇒ $W_{t+1}\ge F_t$; F072 checked per exposure ex post; each T-10N
@@ -1054,7 +1077,10 @@ pending $10$ @ $10$, $W^{\min}=900$; a fill at $12$ above the limit (A-MKT-05 fa
 (A-EXE-05 fails) gives $W_{t+1}=0$ and an undefined logarithm. Owed fee of a terminal order (CLOSURE-REV-003, `5c486f0`): cash $1{,}000$,
 $10$ sh held, exit fee $\max(1,0.005k)$ per order in two parts at price $0$, owed entry fee $1$: bound $W^{\min}=998$ against $W_{t+1}=997$; with F148
 $W^{\min}=997=W_{t+1}$. Exact fee-timing enumeration ($168$ states, prices $\to0$, bookings at the fill, later or after the terminal state): $56$
-violations at `5c486f0`, $0$ with F148.
+violations at `5c486f0`, $0$ with F148. Two pending entry orders on one instrument (the CLOSURE-REV-018 state, admitted by the `8dbb0ee`
+G11) left $\bar q_i$ ambiguous: $o_1$ for $100$ fully filled and sold, its fee owed; $o_2$ for $100$ with $50$ filled and held; fees $0.01$ per share;
+read with $o_1$, $\bar q_i=50$ instead of $100$ and $W_{t+1}=W^{\min}_{t+1}-\tfrac12$. The corrected G11 (F151) excludes the state; the statement,
+proof and dependencies of T-19 are unchanged.
 
 **NUMERICAL EDGE CASES.** `Decimal(0).ln()` returns `-Infinity` without a signal (observed): the domain check precedes evaluation;
 $W^{\min}=0$ exactly is excluded (strict inequality).
@@ -1327,7 +1353,7 @@ $\mathrm{DD}_t$ by F038.
 
 **PROOF.** It suffices to list the estimate-dependent gates. G1 ($\alpha_t$): validity and presence of inputs, not their size — a missing or invalid
 estimate fails G1 whatever the other estimates are (F111). G2, G5, G6, G9, G10, G11: trading status, spread and mark observations, event flags,
-direction, universe, held and reserved quantities — no estimate. G7 (closure form): $p^{\mathrm{lim}},p^{\mathrm{stop}}_o,m^{\mathrm{arr}},p^{\mathrm{ask}}$ and the policy values
+direction, universe, held and reserved quantities, entry-order lifecycle states (F151) — no estimate. G7 (closure form): $p^{\mathrm{lim}},p^{\mathrm{stop}}_o,m^{\mathrm{arr}},p^{\mathrm{ask}}$ and the policy values
 $\kappa^{\min},\ell^{\min},\chi$ — no estimate. Its cost clause is the infimum of the sizing per-share loss $p^{\mathrm{lim}}-p^{\mathrm{stop}}_o+\kappa^{\mathrm{out}}(n)$ over every
 quantity and every admissible estimate ($\kappa^{\mathrm{out}}\ge\kappa^{\min}p^{\mathrm{stop}}_o$, F111), so it still establishes the division guard of 01 §9 item 16 for
 every estimate. G8: authoritative marks and live stops — no estimate, no fee. G3 ($K_t>0$): $K_t=W_t-F_t$; $W_t$ is non-increasing in
@@ -1431,6 +1457,40 @@ fees confirmed final below the bound (release).
 
 **MACHINE-TESTABLE INVARIANT.** Event-sequence property test: (a)–(c) exactly at every step; in the simulated engine every booked fee is in
 $W_t$ and every owed fee in exactly one charge; $W_t-\sum_o\phi^{\mathrm{owed}}_o$ constant across bookings.
+
+---
+
+### T-30 Entry-Gate Lifecycle Monotonicity
+
+**THEOREM ID.** T-30
+
+**STATEMENT.** Let two snapshots agree in the authoritative lifecycle state $\mathrm{lc}_{o,t}$ of every entry order, differing at most in quantities
+($q^{\mathrm{unf}}_o$, $q^{\mathrm{fill}}_o$, $Q^{\mathrm{res}}_{i,t}$, $q_{i,t}$) or fee state. (a) If $\mathcal E^{\mathrm{NT}}_{i,t}\ne\varnothing$, G11 fails for $i$ in both; in particular
+$q^{\mathrm{unf}}_o\to0$ alone, with $o$ `NON_TERMINAL`, never turns G11 from FAIL into PASS. (b) G11 passes for $i$ only if every entry order on $i$ is
+`TERMINAL_CONFIRMED` by authoritative evidence; a state $\bot$ never lets a new entry pass. (c) The transition FAIL → PASS of G11 for $i$, with
+$q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=0$ unchanged, requires a change of authoritative lifecycle evidence, not of any quantity.
+
+**ASSUMPTIONS.** A-MATH-01.
+
+**PROOF STATUS.** PROVED
+
+**PROOF.** G11 (F092, F151) is the conjunction of $q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$ and $\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$, evaluated only when the lifecycle is
+valid (otherwise $\alpha_t=0$ and G1 fails). $\mathcal E^{\mathrm{NT}}_{i,t}$ is a function of the lifecycle states alone, so it is the same set in both
+snapshots. (a) A non-empty set falsifies the third conjunct in both, whatever the quantities. (b) If G11 passes, the lifecycle is valid, so no
+entry order on $i$ has state $\bot$, and $\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$, so none is `NON_TERMINAL`: each is `TERMINAL_CONFIRMED`. A state $\bot$
+makes the lifecycle invalid, $\alpha_t=0$. (c) With the first two conjuncts true in both snapshots, G11 changes value only if
+$\mathcal E^{\mathrm{NT}}_{i,t}$ does, i.e. only if some lifecycle state changes. ∎
+
+**COUNTEREXAMPLE ATTEMPT.** Under the `8dbb0ee` gate ($q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$ only) (a) is false: an order with $40$ unfilled blocks a new
+entry, the same order fully filled ($q^{\mathrm{unf}}_o=0$) and still `NON_TERMINAL` admitted one (CLOSURE-REV-018). In the Boolean lifecycle
+enumeration of T-10 (ix) (09 closure-review registry), $18$ of $36$ pairs "same lifecycle, $q^{\mathrm{unf}}_o>0\to0$" turn BLOCKED into ALLOWED under the old gate, $0$ under the
+corrected one.
+
+**NUMERICAL EDGE CASES.** $q^{\mathrm{unf}}_o=0$ exactly; terminal by cancellation with an unfilled remainder (`TERMINAL_CONFIRMED`, no reservation of the
+remainder, F144); terminal confirmation and fee finality in different epochs; a correction contradicting a terminal record ($\bot$).
+
+**MACHINE-TESTABLE INVARIANT.** For every snapshot and every `NON_TERMINAL` entry order $o$ on $i$, setting $q^{\mathrm{unf}}_o$ to $0$ (and $Q^{\mathrm{res}}_{i,t}$
+accordingly) leaves G11 FAIL; G11 PASS implies every entry order on $i$ `TERMINAL_CONFIRMED`; a state $\bot$ anywhere implies $\alpha_t=0$.
 
 ---
 

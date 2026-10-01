@@ -164,6 +164,7 @@ FOUND = the unrestricted claim is DISPROVED; REQUIRES ADDITIONAL ASSUMPTION = PR
 | FM-OPS-10 | Reservation computed with inputs older than the epoch's (exit-cost estimate raised, stop widened) | pending order under-charged; floor breached by 40 in the T-10N example | F144: every reservation re-evaluated from the order state at $\tau_t$ |
 | FM-OPS-11 | Stop of a pending or partially filled order trailed to or above its limit after G7 | the unclamped per-share distance is negative: charge $-87$ for a fresh order, floor breached by $29$ for a partially filled one (08 T-10N) | per-share distance clamped at $0$ in F144, F145 (closure, AUD-039) |
 | FM-OPS-12 | A gate predicate that uses an estimate or a fee (G7 on $\kappa^{\mathrm{out}}$; G8 as a sign test of F064) | a larger estimate or fee turns NO\_TRADE into TRADE ($Q=0\to9{,}090$; raw $-3.1\to+12$) | gates estimate-free: G7 on $\kappa^{\min}$, G8 on the mark (T-27; CLOSURE-REV-001) |
+| FM-OPS-13 | Entry exclusivity keyed on remaining quantity: a fully filled order awaiting terminal confirmation looks absent ($Q^{\mathrm{res}}_{i,t}=0$) | a second entry order on the instrument; one F145 for $i$ drops the first order's owed fee ($W_{t+1}=F_t-\tfrac12$) | G11 requires no `NON_TERMINAL` entry order on $i$; a lifecycle state $\bot$ or two non-terminal entry orders ⇒ $\alpha_t=0$ (F151, T-30; CLOSURE-REV-018) |
 
 ### Dimensional (FM-DIM, added v0.2, AUD-031)
 

@@ -80,6 +80,13 @@ MUTATIONS = [
      "DIMENSIONAL_CONFLICTS"),
     ("unregistered unfilled-remainder symbol", C + "02-symbol-registry.md",
      "| S-309 | $q^{\\mathrm{unf}}_o$ |", "| S-309 | $q^{\\mathrm{zzz}}_o$ |", "UNREGISTERED_SYMBOLS"),
+    ("entry-order lifecycle formula row incomplete", C + "14-formula-registry.md",
+     "| entry-order lifecycle and exclusivity: one entry-order authority per instrument, released only by authoritative terminal confirmation |",
+     "|  |", "INCOMPLETE_FORMULA_ROWS"),
+    ("unregistered non-terminal entry-order set", C + "02-symbol-registry.md",
+     "| S-311 | $\\mathcal E^{\\mathrm{NT}}_{i,t}$ |", "| S-311 | $\\mathcal E^{\\mathrm{XX}}_{i,t}$ |", "UNREGISTERED_SYMBOLS"),
+    ("undefined lifecycle theorem reference", C + "06-hard-safety-architecture.md",
+     "releases the slot (T-30).", "releases the slot (T-39).", "UNDEFINED_CROSS_REFERENCES"),
 ]
 
 

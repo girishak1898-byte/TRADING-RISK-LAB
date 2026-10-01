@@ -12,11 +12,11 @@ A later layer never overrides an earlier one.
 
 **Phase 0 — Mathematical Constitution v0.2: NOT PASSED.** An independent review of the closure commit `5c486f0` found 3 CRITICAL,
 8 IMPORTANT and 5 MINOR defects ([docs/review/phase0/09-closure-review-registry.md](docs/review/phase0/09-closure-review-registry.md)); the PASS
-recorded at `5c486f0` is superseded. The three CRITICAL defects are corrected (acceptance gate §10), and so is CLOSURE-REV-006 (held vs filled
-quantity, §11); the other IMPORTANT findings, and CLOSURE-REV-018 and 019 found during that correction, are open. Not adopted.
+recorded at `5c486f0` is superseded. The three CRITICAL defects are corrected (acceptance gate §10), and so are CLOSURE-REV-006 (held vs filled
+quantity, §11) and CLOSURE-REV-018 (entry-order lifecycle exclusivity, §12); the other IMPORTANT findings, including CLOSURE-REV-019, are open. Not adopted.
 Revised after independent reviews:
 v0.1.1 (adversarial review, revision note in 08), v0.2 (Phase-0 independent mathematical review) and the Phase-0 closure corrections
-(revisions R3–R5 in 08; record and acceptance gate in [docs/review/phase0/](docs/review/phase0/README.md)). No trading code exists. No formula has
+(revisions R3–R6 in 08; record and acceptance gate in [docs/review/phase0/](docs/review/phase0/README.md)). No trading code exists. No formula has
 been adopted. No parameters have been chosen. The only code in the repository is documentation tooling: the linter
 `tools/doccheck/check_constitution.py` and its mutation suite `tools/doccheck/mutation_suite.py` (no trading logic, no network).
 

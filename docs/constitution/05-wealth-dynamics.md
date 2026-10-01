@@ -287,7 +287,12 @@ sell fee $0$) and a reported but unbooked fee was counted as paid ($F_t-4.75$); 
 risk of adding $n$ to a held $q$ is **not** $r^{\mathrm{open}}(q)+L^{\mathrm{stop}}(n)$. Counterexample (exact): $q=100$ at $50$, stop $49$,
 $\kappa^{\mathrm{out}}(n)=0.001n$, $\Lambda(n)=0.001n^2$; add $100$ at $50$: the per-lot charges total $r^{\mathrm{open}}(100)+L^{\mathrm{stop}}(100)=110+110=220$ but the
 combined worst case is $230$, and an
-untriggered outcome at $49.01$ already loses $228$. v0 therefore admits a new order on $i$ only if $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=0$ (gate G11).
+untriggered outcome at $49.01$ already loses $228$. v0 therefore admits a new order on $i$ only if $q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$ and no entry order on $i$
+is `NON_TERMINAL` (gate G11, F151). $Q^{\mathrm{res}}_{i,t}=0$ alone is not enough: a fully filled order awaiting its terminal confirmation has $q^{\mathrm{unf}}_o=0$
+while it is still pending, and a second order then made one F145 for $i$ drop the first order's owed fee ($o_1$ for $100$ filled, fee $1$ owed, nothing held;
+$o_2$ for $100$ filled and held, mark $52$, stop $49$, limit $50$, $\kappa^{\mathrm{out}}=0.01$, sell fee $0$: charge $301$ against a worst loss of $603/2$,
+$W_{t+1}=F_t-\tfrac12$; CLOSURE-REV-018). After the terminal confirmation the owed fee stays reserved in F144 until booked, so a new entry need not
+wait for fee finality.
 The incremental charge for a future add-on is F068
 ($=130$ in the example; $r^{\mathrm{open}}(100)-\Lambda_{i,t}+130=110-10+130=230$, so $r^{\mathrm{open}}+130=240$ is conservative by $\Lambda_{i,t}$, OC-1),
 proposed only — pending orders on the same instrument are not yet covered (RQ-34).

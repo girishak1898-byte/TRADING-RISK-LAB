@@ -18,8 +18,8 @@ the world. Conflating the two is the central error this architecture is designed
 
 ## 2. Guarantee tiers (aligned with T-10 in v0.2)
 
-Common hypotheses of every floor tier (T-10): A-MATH-01, A-SCOPE-03 (long-only), A-SCOPE-05 with gate G11 (one exposure per
-instrument), A-FLOW-01 ($X_{t+1}=0$ inside the period), A-ACC-01…04, A-ACC-06 ($\Lambda\ge0$), A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$),
+Common hypotheses of every floor tier (T-10): A-MATH-01, A-SCOPE-03 (long-only), A-SCOPE-05 with gate G11 (one exposure and at most one `NON_TERMINAL` entry order per
+instrument, F151), A-FLOW-01 ($X_{t+1}=0$ inside the period), A-ACC-01…04, A-ACC-06 ($\Lambda\ge0$), A-ACC-07 ($\mathrm{Fin}=\mathrm{Accr}=0$, $\mathrm{Inc}\ge0$),
 A-MKT-05 (every entry fill $\le p^{\mathrm{lim}}$), A-EXE-01, A-EXE-02, A-EXE-03 (cumulative fill $\le$ order quantity), A-EXE-04 (fees on cumulative
 filled quantity, booked into $W$ at the fill or later; owed fees reserved until booked, F148), A-EXE-05 (no other orders), A-AUTH-02 (complete
 ledger, including each pending order's filled quantity and fees booked, and terminal entry orders whose fees are not final),
@@ -120,7 +120,8 @@ $0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$, or with a quantity missing or off
 charge when every quantity is well formed, otherwise no finite charge (RECOVERY); never $0$, never a quantity inferred from another (CLOSURE-REV-006).
 The per-share distance of the unfilled part, $p'^{\mathrm{lim}}-p^{\mathrm{stop}}_i+\kappa^{\mathrm{out}}_i(\bar q_i)$ (and $p'^{\mathrm{lim}}-p^{\mathrm{gx}}_i(\bar q_i)$), is clamped at $0$: G7 checks the stop
 only when the order is placed, and a stop trailed to or above the limit afterwards made the unclamped charge negative (third review:
-$W_{t+1}=F_t-29$ at `f37c1b6`; AUD-039). An order is pending until it is venue-confirmed terminal (AUD-050). $\phi^{\mathrm{paid}}_o$ is the part of the
+$W_{t+1}=F_t-29$ at `f37c1b6`; AUD-039). An order is pending — `NON_TERMINAL`, F151 — until it is venue-confirmed terminal (AUD-050), whatever its remaining quantity;
+terminal confirmation and fee finality are distinct. $\phi^{\mathrm{paid}}_o$ is the part of the
 order's entry fees booked into $W_t$ (F148); a venue-confirmed terminal entry order whose fees are not yet final stays in the order state with the
 reservation $r=g=u=C^{\mathrm{res}}=\phi^{\mathrm{owed}}_o$ until the fees are booked or confirmed final, so an owed fee is never dropped (CLOSURE-REV-003, T-29).
 Ledger values are not engine inputs. A reservation computed with older inputs (or before a stop was widened) would under-charge the order
@@ -155,7 +156,7 @@ which the deterministic function $Q^{\mathrm{hard}}$ is evaluated and do not cha
 | $\mathrm{BP}_t$ | EXTERNAL OBSERVATION | F048 only through $\min(\cdot)$ | **restrictive only** |
 | $\hat\kappa^{\mathrm{out}},\hat\Gamma_i,\hat\Lambda_i$ | STATISTICAL ESTIMATE | only through $\max$ with a policy floor (F111); never in a gate predicate (G7 uses $\kappa^{\min}$) and never in a carried reference (F146) | every cap is non-increasing in $\kappa^{\mathrm{out}},\Gamma_i,\Lambda$ (T-08), no gate passes at a larger estimate where it fails at a smaller one (T-27), and no estimate is stored for a later epoch (T-28): **restrictive only**, at every epoch |
 | carried references $H_t$, $\nu^{\mathrm{day}}_0$, $\nu^{\mathrm{wk}}_0$, $U_t$ | DERIVED from AUTHORITATIVE state ($E_u$, flows), EXTERNAL OBSERVATION (spread) and POLICY (fee schedule) through $W^{\mathrm{R}}=E-\Lambda^{\mathrm{floor}}$ (F146) | floors F040–F042, bases B2, B4, G4 | identical for every estimate path; at least as high as with any estimate (floors at least as high): **estimate-free** (T-28; CLOSURE-REV-002) |
-| $\phi^{\mathrm{paid}}_o$, $q^{\mathrm{fill}}_o$, fee-final confirmation | AUTHORITATIVE (order state, A-AUTH-02) | F144, F145, F148, F150 | domain-checked ($0\le\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o$, else $\alpha_t=0$, no credit); owed fees reserved until booked (CLOSURE-REV-003); quantity state checked ($0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ on the lattice, else $\alpha_t=0$ and the F150 charge; CLOSURE-REV-006) |
+| $\phi^{\mathrm{paid}}_o$, $q^{\mathrm{fill}}_o$, fee-final confirmation, lifecycle state $\mathrm{lc}_{o,t}$ | AUTHORITATIVE (order state, A-AUTH-02) | F144, F145, F148, F150, F151, G11 | domain-checked ($0\le\phi^{\mathrm{paid}}_o\le\phi^{\mathrm{acc}}_o$, else $\alpha_t=0$, no credit); owed fees reserved until booked (CLOSURE-REV-003); quantity state checked ($0\le q_{i,t}\le q^{\mathrm{fill}}_o\le n'_o$ on the lattice, else $\alpha_t=0$ and the F150 charge; CLOSURE-REV-006); lifecycle state $\bot$ or two `NON_TERMINAL` entry orders on one instrument ⇒ $\alpha_t=0$, never defaulted to terminal (F151; CLOSURE-REV-018) |
 | $\mathrm{ADV}^{\mathrm{est}}_{i,t}$ | STATISTICAL ESTIMATE (frozen estimator) | H12, H13 only through $\min(\cdot,\mathrm{ADV}^{\max}_i)$ (F111) | caps are non-decreasing in ADV, so the cap never exceeds its value at $\mathrm{ADV}^{\max}_i$: **restrictive only** relative to the policy cap; no model may supply it (Art. 6 amendment) |
 | statistical cluster map (RQ-10) | STATISTICAL ESTIMATE | H9, H10 only by merging clusters of $\mathrm{cl}$ | merging only enlarges cluster aggregates: **restrictive only** |
 | $b^{\mathrm{mod}}_k$, $R^{\mathrm{mod}}_t$ | MODEL OUTPUT | only through $\min(b^{\mathrm{hard}}_k,\mathfrak s(b^{\mathrm{mod}}_k))$ (F049) | **restrictive or neutral** (T-01) |
@@ -176,7 +177,7 @@ the action evaluated; every cap additionally passes through F049 for MODEL OUTPU
 | H12, H13 | A: $\rho^{\mathrm{in}},w^{\mathrm{in}},\rho^{\mathrm{ex}},h^{\mathrm{ex}}$, $q$, $Q^{\mathrm{res}}$, $\mathrm{ADV}^{\max}_i$; S (capped by policy): $\mathrm{ADV}_{i,t}=\min(\mathrm{ADV}^{\mathrm{est}}_{i,t},\mathrm{ADV}^{\max}_i)$ |
 | H14 | O: $p^{\mathrm{lim}}$; A: $\phi^{\mathrm{buy}}$, $C^{\mathrm{avail}}$, $C^{\mathrm{res}}$ (F144); X: $\mathrm{BP}_t$ (only restrictive) |
 | H16 | O: $p^{\mathrm{lim}}$; A: $\phi$, $q$, pending orders; X: $m$; A+X+S: $K_t$ |
-| G1–G11, post-filter | A: validators, $\theta$, universe, $q$, $Q^{\mathrm{res}}$, $n^{\min}$, live stops (G8); X: $\mathrm{st}_i,\varsigma_i,m_i,\mathrm{ev}_i$; A+X+S: $K_t,\mathrm{DD}_t$ (non-increasing in conservativeness, references estimate-free); O: $d$, $p^{\mathrm{lim}},p^{\mathrm{stop}}_o$; P: $\kappa^{\min},\ell^{\min},\chi$ (G7) — no gate predicate uses an estimate directly; FAIL→PASS under a more conservative estimate is impossible (T-27) |
+| G1–G11, post-filter | A: validators, $\theta$, universe, $q$, $Q^{\mathrm{res}}$, entry-order lifecycle states (G11, F151), $n^{\min}$, live stops (G8); X: $\mathrm{st}_i,\varsigma_i,m_i,\mathrm{ev}_i$; A+X+S: $K_t,\mathrm{DD}_t$ (non-increasing in conservativeness, references estimate-free); O: $d$, $p^{\mathrm{lim}},p^{\mathrm{stop}}_o$; P: $\kappa^{\min},\ell^{\min},\chi$ (G7) — no gate predicate uses an estimate directly; FAIL→PASS under a more conservative estimate is impossible (T-27) |
 
 Hence no MODEL OUTPUT or OPTIMISER OUTPUT can raise any $Q_k$ or $Q^{\mathrm{hard}}$ for a given order: each enters only through $\min$, a verifier
 bounded by $Q^{\mathrm{hard}}$, or an additional blocking condition; and no STATISTICAL ESTIMATE can raise $Q^{\mathrm{hard}}_t$ above the policy-bound envelope
@@ -213,8 +214,13 @@ estimate can never make it pass; with $\kappa^{\mathrm{out}}$ in its place a pes
 state: for every held quantity with a live stop, $m_{i,t}>p^{\mathrm{stop}}_i$ (long); a mark at or below the stop fails G8 ($\alpha_t=0$ for new risk) whatever
 costs, fees or estimates (05 §5; it covers every negative raw value of F064, F065, F145; the `5c486f0` sign test was masked by a larger estimate
 or fee and missed $m=48.99<49$, CLOSURE-REV-001); gate monotonicity in estimates: T-27; G9 $d=+1$ (D-01); G10 $i\in\mathbb I_t$ and
-$p^{\min}\le m^{\mathrm{arr}}\le p^{\max}$ (A-MKT-06); **G11** $q_{i,t}=0$ and $Q^{\mathrm{res}}_{i,t}=0$ (one exposure per instrument, A-SCOPE-05 — per-lot risk is not
-additive under super-additive exit costs, 05 §5).
+$p^{\min}\le m^{\mathrm{arr}}\le p^{\max}$ (A-MKT-06); **G11** $q_{i,t}=0$, $Q^{\mathrm{res}}_{i,t}=0$ and $\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$ — no entry order on $i$ is `NON_TERMINAL`, whatever its remaining
+quantity **[F151]** (one exposure and one entry-order authority per instrument, A-SCOPE-05 — per-lot risk is not additive under super-additive
+exit costs, 05 §5; a fully filled order awaiting its terminal confirmation has $Q^{\mathrm{res}}=0$ but still occupies the slot: with $Q^{\mathrm{res}}_{i,t}=0$
+alone a second order made one F145 for $i$ drop the first order's owed fee, $W_{t+1}=F_t-\tfrac12$, CLOSURE-REV-018). A lifecycle state $\bot$ (missing,
+ambiguous or contradictory evidence) or two `NON_TERMINAL` entry orders on one instrument give $\alpha_t=0$ and, for that instrument, no finite charge
+(RECOVERY). The gate never infers terminality from $q^{\mathrm{unf}}_o=0$, $q^{\mathrm{fill}}_o=n'_o$ or $q_{i,t}=0$; only authoritative terminal confirmation
+releases the slot (T-30).
 
 **Post-filter (non-monotone, never a cap):** minimum order size $n^{\min}$: $Q^{\mathrm{fin}}=Q$ if $Q\ge n^{\min}$ else $0$ **[F093]** (T-03N counterexample
 explains why it cannot be folded into the min-of-caps).

@@ -342,3 +342,41 @@ all pass after the correction.
 
 **PHASE 0 = NOT PASSED.** CLOSURE-REV-006 is resolved; nine IMPORTANT findings remain open, two of them (CLOSURE-REV-018, 019) found during
 this correction.
+
+## 12. CLOSURE-REV-018 correction (entry-order lifecycle exclusivity)
+
+### 12.1 Record
+
+| Field | Value |
+|---|---|
+| Parent SHA | `8dbb0ee669ad6816062164716e8b19a594754934` |
+| Correction commit | "Fix Phase-0 entry-order lifecycle exclusivity", the child of `8dbb0ee` (SHA reported in the final report) |
+| Scope | CLOSURE-REV-018 only. CLOSURE-REV-004, 005, 007 … 011, 019 and the MINOR findings are unchanged. No new finding. |
+
+### 12.2 What the correction changed
+
+| Object | Correction | Proof / evidence |
+|---|---|---|
+| Lifecycle | `NON_TERMINAL` / `TERMINAL_CONFIRMED` / $\bot$ (S-310, S-311, F151); never inferred from quantities; independent of fee finality | regression rows 1, 2, 8–11 |
+| G11, A-SCOPE-05 | $q_{i,t}=0\wedge Q^{\mathrm{res}}_{i,t}=0\wedge\mathcal E^{\mathrm{NT}}_{i,t}=\varnothing$ with a valid lifecycle; one entry-order authority per instrument; $\bot$ or two `NON_TERMINAL` entry orders ⇒ $\alpha_t=0$, RECOVERY | $144$-state product: no admission with a non-terminal order or an invalid lifecycle; T-30 PROVED |
+| F144, F145, F148, F149 | unchanged in substance; F144/F145 state that the pending order is the instrument's unique `NON_TERMINAL` entry order; a terminal order's owed fee stays in the F144 reservation | $0$ fee dollars lost through the lifecycle (old: $1$); $0$ floor breaches in $96$ exact two-order checks (old: $16$) |
+| T-10, T-19 | T-10 dependency (iv) closed, (i), (ii), (v) kept; T-19 unchanged except one counterexample-attempt line | statuses unchanged (PROOF REQUIRES ADDITIONAL ASSUMPTIONS) |
+
+Regression matrix: [09-closure-review-registry.md](09-closure-review-registry.md) — 11 exact cases; 6 fail against `8dbb0ee`, all pass after the
+correction; the original counterexample changes from ALLOWED to BLOCKED.
+
+### 12.3 Status after the correction
+
+| Condition (Phase-0 PASS rule) | Result |
+|---|---|
+| GATE_TOTAL = 0 | 0 (checker); the checker verifies form, not truth |
+| UNRESOLVED CRITICAL findings = 0 | 0 |
+| UNRESOLVED IMPORTANT findings | **8 open** (CLOSURE-REV-004, 005, 007 … 011, 019) |
+| No known risk understatement | **not met**: CLOSURE-REV-004 (exit-fee catch-up), 005 (several stops), 007 (cash semantics) and 019 (exit fee booked after the cut) |
+| Hard limits cannot be enlarged by estimates or model output | unchanged from §10.3 (CLOSURE-REV-008, 011 open) |
+| Non-finite numeric states fail closed | met; a missing or contradictory entry-order lifecycle now fails closed as well (F151) |
+| No executable trading functionality | met |
+
+### 12.4 Decision
+
+**PHASE 0 = NOT PASSED.** CLOSURE-REV-018 is resolved; eight IMPORTANT findings remain open.
